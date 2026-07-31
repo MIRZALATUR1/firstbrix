@@ -1,0 +1,3151 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FirstBrix Infratech — Expense Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   YAHAN APNA FIREBASE CONFIG PASTE KARO
+   Firebase Console → Project settings → Your apps → Config
+   Ye values public hoti hain, inhe chhupane ki zaroorat nahi.
+   ═══════════════════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBJb0uDD-JJDl6laK7fo1CflNz_nYL7BWc",
+  authDomain:        "firstbrix.firebaseapp.com",
+  projectId:         "firstbrix",
+  storageBucket:     "firstbrix.firebasestorage.app",
+  messagingSenderId: "793220743714",
+  appId:             "1:793220743714:web:f64cd1d24603fef10bc07b"
+};
+
+/* Owner ka email — isi se login karne wala owner banega.
+   Firestore rules mein bhi bilkul yahi email daala hua hai. */
+const OWNER_EMAIL = "sallumirza64@gmail.com";
+</script>
+<style>
+  :root{
+    /* Grounded in the materials of the work: structural steel, cured concrete,
+       drawing-office blue, and the amber of a site safety vest. */
+    --steel-900:#0F1722;
+    --steel-800:#16202E;
+    --steel-700:#1E2A3A;
+    --canvas:#EAEEF3;
+    --surface:#FFFFFF;
+    --surface-2:#F5F7FA;
+    --blue:#1B4F8C;
+    --blue-dark:#143A67;
+    --blue-soft:#E3ECF6;
+    --hivis:#E8940C;
+    --hivis-soft:#FDF0D8;
+    --ink:#101823;
+    --ink-soft:#5C6B7E;
+    --line:#D6DEE8;
+    --good:#0F7355;
+    --good-soft:#DDF0E9;
+    --bad:#B3372C;
+    --bad-soft:#FBE4E1;
+    /* legacy aliases so existing markup keeps working */
+    --charcoal:#0F1722; --charcoal-2:#1E2A3A; --concrete:#EAEEF3; --paper:#FFFFFF;
+    --brick:#1B4F8C; --brick-dark:#143A67; --amber:#E8940C;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'IBM Plex Sans',sans-serif;background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .app{display:flex;min-height:100vh;}
+  ::selection{background:var(--blue);color:#fff;}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+
+  /* ---- Sidebar ---- */
+  .sidebar{width:236px;background:var(--steel-900);color:#E7ECF3;flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;}
+  .brand{padding:20px 20px 15px;border-bottom:1px solid rgba(255,255,255,0.07);}
+  .brand-mark{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:25px;letter-spacing:0.6px;line-height:1;color:#fff;text-transform:uppercase;}
+  .brand-mark span{color:var(--hivis);}
+  .brand-sub{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:#7E8DA1;margin-top:6px;}
+  /* Signature: a surveyor's rule. Ticks, not decoration — it reads as measurement. */
+  .brickstrip{height:9px;width:100%;background:var(--hivis);
+    background-image:linear-gradient(90deg, rgba(15,23,34,0.85) 0 1.5px, transparent 1.5px 100%);
+    background-size:9px 9px;}
+  nav.tabs{padding:12px 9px;display:flex;flex-direction:column;gap:1px;flex:1;overflow-y:auto;}
+  nav.tabs button{
+    all:unset;cursor:pointer;padding:10px 13px;border-radius:5px;font-size:13.5px;font-weight:500;
+    color:#A9B6C7;display:flex;align-items:center;gap:11px;transition:background .12s,color .12s;
+  }
+  nav.tabs button:hover{background:rgba(255,255,255,0.055);color:#fff;}
+  nav.tabs button.active{background:var(--blue);color:#fff;font-weight:600;box-shadow:inset 3px 0 0 var(--hivis);}
+  .tab-ico{width:15px;text-align:center;font-size:13px;opacity:.85;}
+  .sidebar-foot{padding:13px 20px;font-size:10.5px;color:#5E6C7E;border-top:1px solid rgba(255,255,255,0.07);line-height:1.5;}
+
+  /* ---- Main ---- */
+  main{flex:1;padding:26px 32px 70px;max-width:1520px;margin:0 auto;width:100%;}
+  h1.page-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;line-height:1.05;margin:0 0 3px;color:var(--ink);text-transform:uppercase;letter-spacing:0.4px;}
+  .page-sub{font-size:13px;color:var(--ink-soft);margin:0 0 22px;max-width:70ch;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(16,24,35,0.04);}
+  .card h2{font-family:'Barlow Condensed',sans-serif;font-size:19px;margin:0 0 16px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink);font-weight:700;
+    padding-bottom:9px;border-bottom:1px solid var(--line);}
+  .card h2 small{display:block;font-family:'IBM Plex Sans',sans-serif;text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink-soft);font-size:12px;margin-top:4px;}
+
+  .grid{display:grid;gap:14px;}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr);}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:900px){.grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:1fr 1fr;}}
+
+  label{display:block;font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;}
+  input,select,textarea{
+    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:5px;font-size:13.5px;
+    font-family:'IBM Plex Sans',sans-serif;background:var(--surface);color:var(--ink);transition:border-color .12s,box-shadow .12s;
+  }
+  input[type=number],.amt-input{font-family:'IBM Plex Mono',monospace;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft);}
+  .field{margin-bottom:14px;}
+  textarea{resize:vertical;min-height:44px;}
+
+  .btn{all:unset;cursor:pointer;padding:10px 18px;border-radius:5px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:background .12s,transform .06s;}
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary:hover{background:var(--blue-dark);}
+  .btn-steel{background:var(--steel-700);color:#fff;}
+  .btn-steel:hover{background:var(--steel-800);}
+  .btn-ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink);}
+  .btn-ghost:hover{background:var(--surface-2);border-color:#BFCBDA;}
+  .btn-danger-text{color:var(--bad);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none;padding:0;}
+  .btn-danger-text:hover{text-decoration:underline;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit, minmax(168px, 1fr));gap:12px;margin-bottom:20px;}
+  .stat{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--steel-700);
+    border-radius:7px;padding:14px 16px;color:var(--ink);position:relative;overflow:hidden;}
+  .stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-soft);margin-bottom:7px;font-weight:600;}
+  .stat .val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;letter-spacing:-0.3px;}
+  .stat.brick{border-left-color:var(--blue);}
+  .stat.brick .val{color:var(--blue);}
+  .stat.steel{border-left-color:var(--steel-700);}
+  .stat.amber{border-left-color:var(--hivis);}
+  .stat.amber .val{color:#A66A05;}
+  .stat.good{border-left-color:var(--good);}
+  .stat.good .val{color:var(--good);}
+  .stat.bad{border-left-color:var(--bad);}
+  .stat.bad .val{color:var(--bad);}
+  .stat.purple{border-left-color:#6B4A8A;}
+  .stat.purple .val{color:#6B4A8A;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink-soft);padding:9px 10px;border-bottom:1px solid var(--line);background:var(--surface-2);font-weight:600;white-space:nowrap;}
+  td{padding:10px;border-bottom:1px solid var(--line);color:var(--ink);}
+  tbody tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--surface-2);}
+  .tag{display:inline-block;padding:2px 9px;border-radius:3px;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;}
+  .tag.labour{background:var(--blue-soft);color:var(--blue-dark);}
+  .tag.material{background:#E5E9EE;color:var(--steel-700);}
+  .tag.other{background:var(--hivis-soft);color:#8A5A05;}
+  .tag.paid{background:var(--good-soft);color:var(--good);}
+  .tag.pending{background:var(--hivis-soft);color:#8A5A05;}
+  .amt{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:-0.2px;}
+  .empty{padding:34px;text-align:center;color:var(--ink-soft);font-size:13px;}
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .toolbar-left{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .toolbar select, .toolbar input{width:auto;min-width:150px;}
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--steel-900);color:#fff;padding:12px 18px;border-radius:6px;font-size:13px;box-shadow:0 8px 24px rgba(16,24,35,0.3);opacity:0;transform:translateY(10px);transition:all .22s;pointer-events:none;z-index:120;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  .footnote{font-size:11.5px;color:var(--ink-soft);margin-top:9px;font-family:'IBM Plex Mono',monospace;}
+  .split{display:flex;gap:20px;}
+  .split > div{flex:1;}
+  @media(max-width:900px){.split{flex-direction:column;}}
+
+  /* ---- Quick add: floating action button ---- */
+  .fab{
+    position:fixed;right:26px;bottom:26px;z-index:70;
+    background:var(--blue);color:#fff;border:none;cursor:pointer;
+    padding:15px 22px;border-radius:40px;font-size:14px;font-weight:600;
+    font-family:'IBM Plex Sans',sans-serif;
+    display:flex;align-items:center;gap:9px;
+    box-shadow:0 6px 20px rgba(27,79,140,0.35);
+    transition:background .14s, box-shadow .14s, transform .08s;
+  }
+  .fab:hover{background:var(--blue-dark);box-shadow:0 8px 26px rgba(27,79,140,0.45);}
+  .fab:active{transform:translateY(1px);}
+  .fab .plus{font-size:19px;line-height:1;font-weight:400;}
+  .quick-modal{width:440px;}
+  .quick-modal .modal-head{
+    margin:-26px -28px 18px;padding:16px 28px;background:var(--steel-900);
+    border-radius:12px 12px 0 0;color:#fff;
+  }
+  .quick-modal .modal-head h3{margin:0;color:#fff;}
+  .quick-modal .modal-head p{margin:3px 0 0;color:#93A2B5;font-size:12px;}
+  @media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important;}}
+
+  /* ---- Login screen ---- */
+  #loginScreen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:var(--steel-900);position:relative;overflow:hidden;
+  }
+  /* Drafting-sheet grid: the surface every one of these numbers starts life on. */
+  #loginScreen::before{
+    content:"";position:absolute;inset:0;opacity:0.5;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,0.09) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.09) 1px, transparent 1px);
+    background-size:22px 22px, 22px 22px, 110px 110px, 110px 110px;
+  }
+  .login-card{
+    position:relative;z-index:2;width:372px;max-width:100%;background:var(--surface);
+    border-radius:10px;padding:0 30px 28px;box-shadow:0 24px 60px rgba(0,0,0,0.45);overflow:hidden;
+  }
+  .login-card .brand-mark{font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;font-size:30px;line-height:1;color:var(--ink);margin-bottom:5px;padding-top:32px;letter-spacing:0.6px;}
+  .login-card .brand-mark span{color:var(--hivis);}
+  .login-card .brand-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:20px;}
+  .login-card .brickstrip{margin:0 -30px 24px;width:calc(100% + 60px);}
+  .pw-wrap{position:relative;}
+  .pw-wrap input{padding-right:42px;}
+  .pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-soft);font-size:17px;padding:2px 4px;line-height:1;}
+  .pw-eye:hover{color:var(--ink);}
+  .login-links{display:flex;justify-content:space-between;align-items:center;margin:-4px 0 14px;gap:10px;}
+  .link-btn{background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--blue);text-decoration:underline;padding:0;}
+  .link-btn:hover{color:var(--blue-dark);}
+  /* Modals */
+  .modal-bg{position:fixed;inset:0;background:rgba(15,23,34,0.6);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:100;padding:18px;}
+  .modal{background:var(--surface);border-radius:10px;padding:26px 28px 22px;width:360px;max-width:100%;box-shadow:0 18px 50px rgba(0,0,0,0.4);max-height:90vh;overflow-y:auto;}
+  .modal h3{margin:0 0 6px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;font-size:22px;line-height:1.1;}
+  .modal p{font-size:13px;color:var(--ink-soft);margin:0 0 14px;line-height:1.55;}
+  .modal-cred{background:var(--steel-900);border-radius:6px;padding:14px 16px;margin-bottom:14px;}
+  .modal-cred .role{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#8B9AAE;margin-bottom:5px;font-weight:600;}
+  .modal-cred .cred-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:12px;}
+  .modal-cred .cred-row:last-child{margin-bottom:0;}
+  .modal-cred .cred-label{font-size:12px;color:#B7C3D2;}
+  .modal-cred .cred-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:#fff;letter-spacing:0.5px;}
+  .modal-close{width:100%;margin-top:4px;justify-content:center;}
+  .remember-row input{width:auto;accent-color:var(--blue);}
+  .lang-switch{display:flex;gap:6px;margin:10px 0 14px;flex-wrap:wrap;}
+  .lang-switch button{all:unset;cursor:pointer;padding:5px 11px;border-radius:20px;font-size:11.5px;font-weight:600;
+    border:1px solid var(--line);color:var(--ink-soft);}
+  .lang-switch button.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .lang-switch button:hover{border-color:var(--blue);}
+  .remember-row label{margin:0;font-weight:500;color:var(--ink);font-size:13px;}
+  .login-error{color:var(--bad);font-size:12.5px;font-weight:600;margin:-6px 0 14px;min-height:16px;}
+  .login-card .btn{width:100%;justify-content:center;padding:11px;}
+
+  /* ---- Top status bar ---- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 18px;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+  .topbar .who{font-size:13px;color:var(--ink-soft);}
+  .topbar .who strong{color:var(--ink);}
+  .topbar-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .auto-status{font-size:12px;color:var(--ink-soft);background:#EFE9DC;padding:6px 12px;border-radius:20px;}
+  .auto-status strong{color:var(--brick-dark);}
+  body.role-employee .owner-only{display:none !important;}
+  .import-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);}
+  .import-row input, .import-row select{padding:6px 8px;font-size:12.5px;}
+  .import-preview-wrap{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;}
+  /* ---------- Mobile / responsive ---------- */
+  .menu-btn{display:none;}
+  @media(max-width:820px){
+    .app{flex-direction:column;}
+    .sidebar{
+      position:sticky;top:0;width:100%;height:auto;z-index:40;
+    }
+    .brand{padding:12px 16px 10px;display:flex;align-items:center;justify-content:space-between;}
+    .brand-mark{font-size:17px;}
+    .brand-sub{display:none;}
+    .menu-btn{
+      display:block;background:rgba(255,255,255,0.1);border:none;color:#fff;
+      font-size:20px;line-height:1;padding:7px 12px;border-radius:6px;cursor:pointer;
+    }
+    nav.tabs{
+      display:none;flex-direction:column;padding:8px;
+      max-height:65vh;overflow-y:auto;
+    }
+    nav.tabs.open{display:flex;}
+    nav.tabs button{padding:13px 14px;font-size:15px;}
+    .sidebar-foot{display:none;}
+    main{padding:16px 14px 50px;max-width:100%;}
+    h1.page-title{font-size:19px;}
+    .card{padding:15px 14px;border-radius:9px;}
+    .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:1fr;}
+    .split{flex-direction:column;gap:0;}
+    .stat-row{grid-template-columns:1fr 1fr;gap:10px;}
+    .stat{padding:12px 13px;}
+    .stat .val{font-size:17px;}
+    .topbar{flex-direction:column;align-items:stretch;gap:8px;}
+    .topbar-right{justify-content:space-between;}
+    .toolbar{flex-direction:column;align-items:stretch;}
+    .toolbar-left{flex-direction:column;align-items:stretch;}
+    .toolbar select,.toolbar input{width:100%;min-width:0;}
+    /* inputs at 16px stop iOS from zooming in on focus */
+    input,select,textarea{font-size:16px;padding:11px 10px;}
+    .btn{padding:12px 18px;}
+    table{font-size:12.5px;}
+    th,td{padding:8px 7px;white-space:nowrap;}
+    .login-card{padding:26px 20px 22px;}
+    .modal{padding:22px 18px 18px;}
+    #dlFallback{left:12px;right:12px;bottom:12px;max-width:none;}
+    .fab{right:16px;bottom:16px;padding:14px 20px;font-size:14.5px;}
+    .quick-modal{width:100%;}
+    .quick-modal .modal-head{margin:-26px -18px 16px;padding:15px 18px;}
+    .toast{left:14px;right:14px;bottom:84px;text-align:center;}
+  }
+</style>
+</head>
+<body>
+
+<div id="bootLoader" style="position:fixed;inset:0;background:var(--steel-900);display:flex;align-items:center;justify-content:center;z-index:200;">
+  <div style="text-align:center;color:#fff">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;text-transform:uppercase;letter-spacing:0.5px">
+      First<span style="color:var(--hivis)">Brix</span> Infratech
+    </div>
+    <div style="margin-top:14px;width:34px;height:34px;border:3px solid rgba(255,255,255,0.25);border-top-color:var(--hivis);border-radius:50%;animation:spin 0.8s linear infinite;margin-left:auto;margin-right:auto"></div>
+  </div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<div id="loginScreen" style="display:none">
+  <div class="login-card">
+    <div class="brand-mark">First<span>Brix</span> Infratech</div>
+    <div class="brand-sub">Site Expense Manager</div>
+    <div class="lang-switch" id="langSwitchLogin">
+      <button data-lang="hinglish" class="active">Hinglish</button>
+      <button data-lang="en">English</button>
+      <button data-lang="hi">हिंदी</button>
+      <button data-lang="mr">मराठी</button>
+    </div>
+    <div class="brickstrip"></div>
+
+    <div id="configWarn" style="display:none;background:var(--bad-soft);border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;color:#8A2B22;line-height:1.55">
+      <strong>Firebase config nahi mila.</strong> File ke sabse upar wale <code>FIREBASE_CONFIG</code> block mein apni details paste karo, phir page refresh karo.
+    </div>
+
+    <div id="authBox">
+      <button class="btn btn-ghost" id="googleBtn" style="width:100%;justify-content:center;margin-bottom:14px;gap:10px;padding:12px">
+        <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.2-.4-4.7H24v8.9h11.8c-.5 2.7-2.1 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.3z"/><path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.3l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.1H4.3v5.7C7.9 41.1 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.6 28.2c-.4-1.3-.7-2.7-.7-4.2s.3-2.9.7-4.2v-5.7H4.3C2.8 17 2 20.4 2 24s.8 7 2.3 9.9l7.3-5.7z"/><path fill="#EA4335" d="M24 10.7c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 4.1 30 2 24 2 15.4 2 7.9 6.9 4.3 14.1l7.3 5.7c1.7-5.2 6.6-9.1 12.4-9.1z"/></svg>
+        <span data-i18n="btn_google">Google se login karo</span>
+      </button>
+
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--ink-soft);font-size:11px;text-transform:uppercase;letter-spacing:1px">
+        <span style="flex:1;height:1px;background:var(--line)"></span>ya email se<span style="flex:1;height:1px;background:var(--line)"></span>
+      </div>
+
+      <div class="field"><label data-i18n="lbl_email">Email</label><input id="loginId" type="email" placeholder="aapka@email.com" autocomplete="username"></div>
+      <div class="field">
+        <label data-i18n="lbl_password">Password</label>
+        <div class="pw-wrap">
+          <input id="loginPw" type="password" placeholder="Password" autocomplete="current-password">
+          <button class="pw-eye" id="pwToggle" type="button" title="Show/Hide">👁</button>
+        </div>
+      </div>
+      <div class="login-links">
+        <button class="link-btn" id="signupBtn" type="button"><span data-i18n="btn_signup">Naya account banao</span></button>
+        <button class="link-btn" id="forgotBtn" type="button"><span data-i18n="btn_forgot">Password bhool gaye?</span></button>
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <button class="btn btn-primary" id="loginBtn" style="width:100%;justify-content:center"><span data-i18n="btn_login">Login</span></button>
+      <div class="footnote" id="authNote" style="text-align:center"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal-bg" id="forgotModal" style="display:none">
+  <div class="modal">
+    <h3>Password Bhool Gaye?</h3>
+    <p>Security ke liye password yahan nahi dikhaya ja sakta — warna employee bhi yahi button dabakar aapka owner password padh leta.</p>
+    <div class="modal-cred">
+      <div class="role">👑 Owner ID</div>
+      <div class="cred-row"><span class="cred-label">User ID</span><span class="cred-val">firstbrix</span></div>
+      <div class="role" style="margin-top:10px">👷 Employee ID</div>
+      <div class="cred-row"><span class="cred-label">User ID</span><span class="cred-val">employee</span></div>
+    </div>
+    <p style="margin-top:12px;font-size:12.5px">
+      <strong>Employee password bhool gaye?</strong> Owner login karke topbar ke <em>Passwords</em> button se naya set kar do.<br><br>
+      <strong>Owner password bhool gaye?</strong> Financial data encrypted hai, isliye use khola nahi ja sakta. Aapki backup JSON file se data wapas laana padega. Isiliye <strong>regular backup lete raho</strong>.
+    </p>
+    <button class="btn btn-primary modal-close" id="closeForgotBtn" style="width:100%">Samajh gaya</button>
+  </div>
+</div>
+
+<!-- Autocomplete suggestion lists (invisible, feed the input fields below) -->
+<datalist id="dl-labour-names"></datalist>
+<datalist id="dl-material-names"></datalist>
+<datalist id="dl-other-names"></datalist>
+<datalist id="dl-materials"></datalist>
+<datalist id="dl-units"></datalist>
+<datalist id="dl-suppliers"></datalist>
+<datalist id="dl-clients"></datalist>
+<datalist id="dl-investors"></datalist>
+<datalist id="dl-employees"></datalist>
+<datalist id="dl-sites-location"></datalist>
+
+<div class="app" id="appRoot" style="display:none">
+  <aside class="sidebar">
+    <div class="brand">
+      <div>
+        <div class="brand-mark">First<span>Brix</span> Infratech</div>
+        <div class="brand-sub">Site Expense Manager</div>
+      </div>
+      <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+    </div>
+    <div class="brickstrip"></div>
+    <nav class="tabs" id="navTabs">
+      <button data-tab="dashboard" class="active"><span class="tab-ico">▦</span> <span data-i18n="dashboard">Dashboard</span></button>
+      <button data-tab="sites"><span class="tab-ico">◆</span> <span data-i18n="sites">Sites</span></button>
+      <button data-tab="expense"><span class="tab-ico">₹</span> <span data-i18n="expense">Add Expense</span></button>
+      <button data-tab="udhar"><span class="tab-ico">↺</span> <span data-i18n="udhar">Udhar Material</span></button>
+      <button data-tab="contractwork"><span class="tab-ico">⚒</span> <span data-i18n="contractwork">Contractor Work</span></button>
+      <button data-tab="import"><span class="tab-ico">⇪</span> <span data-i18n="import">Import Data</span></button>
+      <button data-tab="clientpay" class="owner-only"><span class="tab-ico">⇩</span> <span data-i18n="clientpay">Client Payments</span></button>
+      <button data-tab="investor" class="owner-only"><span class="tab-ico">⇧</span> <span data-i18n="investor">Investor Funding</span></button>
+      <button data-tab="office" class="owner-only"><span class="tab-ico">⌂</span> <span data-i18n="office_nav">Office Expense</span></button>
+      <button data-tab="pnl" class="owner-only"><span class="tab-ico">±</span> <span data-i18n="pnl">Profit &amp; Loss</span></button>
+      <button data-tab="team" class="owner-only"><span class="tab-ico">👥</span> <span data-i18n="team">Team Logins</span></button>
+      <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
+    </nav>
+    <div class="sidebar-foot">Data is saved automatically to your account, per browser session.</div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div class="who">Logged in as <strong id="whoLabel">firstbrix</strong></div>
+      <div class="topbar-right">
+        <select id="langSwitchApp" style="width:auto;min-width:0;padding:7px 10px;font-size:12px">
+          <option value="hinglish">Hinglish</option>
+          <option value="en">English</option>
+          <option value="hi">हिंदी</option>
+          <option value="mr">मराठी</option>
+        </select>
+        <div class="auto-status" id="autoStatus">Auto report status loading…</div>
+        <button class="btn btn-ghost" id="manualAutoReportBtn" style="padding:7px 12px;font-size:12px;">Generate 15-day Report Now</button>
+        <button class="btn btn-ghost" id="logoutBtn" style="padding:7px 12px;font-size:12px;"><span data-i18n="btn_logout">Logout</span></button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard">
+      <h1 class="page-title" data-i18n="dashboard">Dashboard</h1>
+      <p class="page-sub" data-i18n="sub_dashboard">Sabhi sites ka overall expense summary.</p>
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <select id="dashSiteFilter"></select>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat brick"><div class="lbl" data-i18n="stat_total">Total Expense</div><div class="val" id="statTotal">₹0</div></div>
+        <div class="stat steel"><div class="lbl" data-i18n="stat_labour">Labour</div><div class="val" id="statLabour">₹0</div></div>
+        <div class="stat steel"><div class="lbl" data-i18n="stat_material">Material</div><div class="val" id="statMaterial">₹0</div></div>
+        <div class="stat amber"><div class="lbl" data-i18n="stat_udhar">Udhar Pending</div><div class="val" id="statUdhar">₹0</div></div>
+        <div class="stat good owner-only"><div class="lbl" data-i18n="stat_clientpending">Client Pending</div><div class="val" id="statClientPending">₹0</div></div>
+        <div class="stat bad owner-only"><div class="lbl" data-i18n="stat_investorpending">Investor Pending Return</div><div class="val" id="statInvestorPending">₹0</div></div>
+        <div class="stat purple"><div class="lbl" data-i18n="stat_contractorbal">Contractor Balance Due</div><div class="val" id="statContractorBalance">₹0</div></div>
+      </div>
+
+      <div class="card" id="insightsCard">
+        <h2><span data-i18n="h2_performance">Company Performance</span> <small>Aapke data se nikaale gaye patterns — final faisla khud lena</small></h2>
+        <ul id="insightsList" style="margin:0;padding-left:20px;line-height:1.9;font-size:13.5px"></ul>
+      </div>
+
+      <div class="grid cols-2">
+        <div class="card">
+          <h2><span data-i18n="h2_sitesplit">Site-wise Expense Split</span></h2>
+          <div style="position:relative;height:260px"><canvas id="chartSiteBar"></canvas></div>
+        </div>
+        <div class="card">
+          <h2><span data-i18n="h2_typesplit">Expense Type Split</span> <small>Labour vs Material vs Other</small></h2>
+          <div style="position:relative;height:260px"><canvas id="chartTypeDonut"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span data-i18n="h2_trend">Monthly Trend</span> <small>Pichle mahino ka total kharcha</small></h2>
+        <div style="position:relative;height:260px"><canvas id="chartTrend"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h2><span data-i18n="h2_sitesummary">Site-wise Summary</span></h2>
+        <div class="table-wrap"><table id="siteSummaryTable"><thead><tr>
+          <th data-i18n="th_site">Site</th><th>Labour</th><th>Material</th><th>Other</th><th>Udhar (Pending)</th><th data-i18n="th_total">Total</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2><span data-i18n="h2_recent">Recent Entries</span></h2>
+        <div class="table-wrap"><table id="recentTable"><thead><tr>
+          <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th data-i18n="th_type">Type</th><th>Category / Item</th><th data-i18n="th_name">Name</th><th data-i18n="th_amount">Amount</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- SITES -->
+    <section id="tab-sites" style="display:none">
+      <h1 class="page-title" data-i18n="sites">Sites</h1>
+      <p class="page-sub" data-i18n="sub_sites">Har construction site ko yahan add karo, phir uske expenses track karo.</p>
+
+      <div class="card">
+        <h2><span data-i18n="h2_addsite">Add New Site</span></h2>
+        <div class="split">
+          <div class="field" style="flex:2"><label data-i18n="lbl_sitename">Site Name</label><input id="newSiteName" placeholder="e.g. Nashik Road Bungalow"></div>
+          <div class="field" style="flex:2"><label data-i18n="lbl_location_opt">Location (optional)</label><input id="newSiteLocation" list="dl-sites-location" placeholder="e.g. Nashik, Maharashtra"></div>
+          <div class="field owner-only" style="flex:1.4"><label data-i18n="lbl_contractvalue">Contract Value (₹) — optional</label><input id="newSiteContract" type="number" min="0" placeholder="Client se total kitna aana hai"></div>
+          <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="addSiteBtn">+ <span data-i18n="btn_addsite">Add Site</span></button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span data-i18n="h2_allsites">All Sites</span></h2>
+        <div class="table-wrap"><table id="sitesTable"><thead><tr>
+          <th data-i18n="th_site">Site</th><th data-i18n="th_location">Location</th><th class="owner-only">Contract Value</th><th class="owner-only">Received</th><th class="owner-only">Client Pending</th><th>Site Cost</th><th data-i18n="th_entries">Entries</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ADD EXPENSE -->
+    <section id="tab-expense" style="display:none">
+      <h1 class="page-title" data-i18n="expense">Add Expense</h1>
+      <p class="page-sub" data-i18n="sub_expense">Labour, material ya koi bhi other expense yahan se add karo.</p>
+
+      <div class="card">
+        <h2><span data-i18n="h2_newexpense">New Expense Entry</span></h2>
+        <div class="grid cols-3">
+          <div class="field"><label data-i18n="lbl_site">Site</label><select id="expSite"></select></div>
+          <div class="field"><label data-i18n="lbl_expensetype">Expense Type</label>
+            <select id="expType">
+              <option value="labour">Labour</option>
+              <option value="material">Material</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field" id="expCategoryWrap"><label data-i18n="lbl_labourcat">Labour Category</label>
+            <select id="expCategory">
+              <option>RCC</option><option>Brickwork</option><option>Plaster</option><option>Tiles</option>
+              <option>Paint</option><option>Fabrication</option><option>Door</option><option>Window</option>
+              <option>Electric</option><option>Plumbing</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label id="expNameLabel">Contractor Name</label><input id="expName" list="dl-labour-names" placeholder="e.g. Ramesh Kumar"></div>
+          <div class="field"><label data-i18n="lbl_date">Date</label><input id="expDate" type="date"></div>
+          <div class="field"><label data-i18n="lbl_amount">Amount (₹)</label><input id="expAmount" type="number" min="0" placeholder="0"></div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label data-i18n="lbl_paymode">Payment Mode</label>
+            <select id="expMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option></select>
+          </div>
+          <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="expNote" placeholder="e.g. 2nd floor slab payment"></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" id="addExpenseBtn">+ <span data-i18n="btn_addexpense">Add Expense</span></button>
+          <button class="btn btn-ghost" id="cancelEditBtn" style="display:none">Cancel Edit</button>
+          <span class="hint" id="expEditNote" style="margin:0;color:var(--brick-dark);font-weight:600"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h2 style="margin:0">All Expense Entries</h2>
+          <div class="toolbar-left">
+            <input id="expSearch" placeholder="🔍 Search naam / note…" style="min-width:190px">
+            <select id="expListSiteFilter"><option value="all">All Sites</option></select>
+            <select id="expListTypeFilter">
+              <option value="all">All Types</option><option value="labour">Labour</option>
+              <option value="material">Material</option><option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="expenseTable"><thead><tr>
+          <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th data-i18n="th_type">Type</th><th data-i18n="th_category">Category</th><th data-i18n="th_name">Name</th><th data-i18n="th_mode">Mode</th><th data-i18n="th_note">Note</th><th data-i18n="th_amount">Amount</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+        <div class="footnote" id="expTotalLine"></div>
+      </div>
+    </section>
+
+    <!-- UDHAR MATERIAL -->
+    <section id="tab-udhar" style="display:none">
+      <h1 class="page-title" data-i18n="udhar">Udhar Material</h1>
+      <p class="page-sub" data-i18n="sub_udhar">Kisi supplier se udhar (credit) par liya gaya material yahan add karo.</p>
+
+      <div class="card">
+        <h2><span data-i18n="h2_newudhar">New Udhar Entry</span></h2>
+        <div class="grid cols-3">
+          <div class="field"><label data-i18n="lbl_site">Site</label><select id="udSite"></select></div>
+          <div class="field"><label data-i18n="lbl_suppliername">Supplier Name</label><input id="udSupplier" list="dl-suppliers" placeholder="e.g. Shree Hardware Store"></div>
+          <div class="field"><label data-i18n="lbl_materialname">Material Name</label><input id="udMaterial" list="dl-materials" placeholder="e.g. Cement, Steel, Sand"></div>
+        </div>
+        <div class="grid cols-4">
+          <div class="field"><label data-i18n="lbl_qty">Quantity</label><input id="udQty" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label data-i18n="lbl_unit">Unit</label><input id="udUnit" list="dl-units" placeholder="e.g. bags / kg / ton"></div>
+          <div class="field"><label data-i18n="lbl_date">Date</label><input id="udDate" type="date"></div>
+          <div class="field"><label data-i18n="lbl_amount">Amount (₹)</label><input id="udAmount" type="number" min="0" placeholder="0"></div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label data-i18n="lbl_status">Status</label>
+            <select id="udStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
+          </div>
+          <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="udNote" placeholder="e.g. bill no. / remarks"></div>
+        </div>
+        <button class="btn btn-primary" id="addUdharBtn">+ <span data-i18n="btn_addudhar">Add Udhar Entry</span></button>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h2 style="margin:0">All Udhar Entries</h2>
+          <div class="toolbar-left">
+            <select id="udListSiteFilter"><option value="all">All Sites</option></select>
+            <select id="udListStatusFilter"><option value="all">All Status</option><option value="pending">Pending</option><option value="paid">Paid</option></select>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="udharTable"><thead><tr>
+          <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Supplier</th><th>Material</th><th>Qty</th><th data-i18n="th_amount">Amount</th><th data-i18n="th_status">Status</th><th data-i18n="th_note">Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- CONTRACTOR WORK AGREEMENT -->
+    <section id="tab-contractwork" style="display:none">
+      <h1 class="page-title" data-i18n="contractwork">Contractor Work</h1>
+      <p class="page-sub" data-i18n="sub_contractwork">Har contractor ka site pe kaam kitne mein fix hua hai, ab tak kitna diya hai, aur kitna dena baki hai — sab yahan dikhega.</p>
+
+      <div class="card">
+        <h2><span data-i18n="h2_newagreement">New Work Agreement (Fixed Amount)</span></h2>
+        <div class="grid cols-3">
+          <div class="field"><label data-i18n="lbl_site">Site</label><select id="agSite"></select></div>
+          <div class="field"><label data-i18n="lbl_contractorname">Contractor Name</label><input id="agContractor" list="dl-labour-names" placeholder="e.g. Ramesh Kumar"></div>
+          <div class="field"><label data-i18n="lbl_workcat">Work Category</label>
+            <select id="agCategory">
+              <option value="All">All / Mixed Work</option>
+              <option>RCC</option><option>Brickwork</option><option>Plaster</option><option>Tiles</option>
+              <option>Paint</option><option>Fabrication</option><option>Door</option><option>Window</option>
+              <option>Electric</option><option>Plumbing</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label data-i18n="lbl_fixedamount">Fixed Work Amount (₹)</label><input id="agAmount" type="number" min="0" placeholder="Total kaam kitne mein fix hua hai"></div>
+          <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="agNote" placeholder="e.g. agreement / scope details"></div>
+        </div>
+        <button class="btn btn-primary" id="addAgreementBtn">+ <span data-i18n="btn_addagreement">Add Work Agreement</span></button>
+        <div class="hint">"Paid Till Date" apne aap Labour Expense entries se calculate hoti hai (usi Site + usi Contractor Name + usi Category ki entries se).</div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h2 style="margin:0">Contractor Ledger</h2>
+          <div class="toolbar-left"><select id="agListSiteFilter"><option value="all">All Sites</option></select></div>
+        </div>
+        <div class="table-wrap"><table id="agreementsTable"><thead><tr>
+          <th data-i18n="th_site">Site</th><th>Contractor</th><th data-i18n="th_category">Category</th><th>Fixed Amount</th><th>Paid Till Date</th><th>Balance Due</th><th data-i18n="th_note">Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+        <div class="footnote" id="agTotalLine"></div>
+      </div>
+    </section>
+
+    <!-- CLIENT PAYMENTS -->
+    <section id="tab-import" style="display:none">
+      <h1 class="page-title" data-i18n="import">Import Data</h1>
+      <p class="page-sub" data-i18n="sub_import">Apni site ki Excel/CSV file upload karo — data seedha us site ke expense records mein add ho jayega. (PDF bhi try kar sakte ho, par wo best-effort hai, Excel/CSV zyada reliable hai.)</p>
+
+      <div class="card">
+        <h2><span data-i18n="h2_importstep1">Step 1 — Site aur File Select karo</span></h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Import kis Site ke liye karna hai</label><select id="impSite"></select></div>
+          <div class="field"><label>Default Type (agar column na mile)</label>
+            <select id="impDefaultType">
+              <option value="labour">Labour</option>
+              <option value="material" selected>Material</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Default Labour Category (agar Type=Labour ho)</label>
+            <select id="impDefaultCategory">
+              <option>RCC</option><option>Brickwork</option><option>Plaster</option><option>Tiles</option>
+              <option>Paint</option><option>Fabrication</option><option>Door</option><option>Window</option>
+              <option>Electric</option><option>Plumbing</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>File Upload (.xlsx, .xls, .csv, .pdf)</label><input type="file" id="impFile" accept=".xlsx,.xls,.csv,.pdf"></div>
+        <button class="btn btn-steel" id="impParseBtn">Parse File &amp; Preview</button>
+        <div class="hint">Excel/CSV mein agar Date, Type, Category, Name/Contractor, Amount, Note, Mode jaisi column headings ho to wo automatically pehchani jaayengi. Nahi milne par upar wali default value use hogi.</div>
+        <div class="footnote" id="impStatus"></div>
+      </div>
+
+      <div class="card" id="impPreviewCard" style="display:none">
+        <div class="toolbar">
+          <h2 style="margin:0">Step 2 — Preview &amp; Confirm <small id="impPreviewCount"></small></h2>
+          <div class="toolbar-left">
+            <button class="btn btn-ghost" id="impSelectAllBtn" style="padding:7px 12px;font-size:12px;">Select All</button>
+            <button class="btn btn-ghost" id="impSelectNoneBtn" style="padding:7px 12px;font-size:12px;">Select None</button>
+          </div>
+        </div>
+        <div class="import-preview-wrap">
+          <table id="impPreviewTable"><thead><tr>
+            <th></th><th data-i18n="th_date">Date</th><th data-i18n="th_type">Type</th><th data-i18n="th_category">Category</th><th data-i18n="th_name">Name</th><th data-i18n="th_amount">Amount</th><th data-i18n="th_mode">Mode</th><th data-i18n="th_note">Note</th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+        <button class="btn btn-primary" id="impConfirmBtn" style="margin-top:14px;">+ Import Selected Rows</button>
+      </div>
+
+      <div class="card owner-only">
+        <h2><span data-i18n="h2_backup">Backup &amp; Restore</span> <small>Apna poora data ek file mein save karo, ya doosre PC pe le jao</small></h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-steel" id="backupBtn">⬇ <span data-i18n="btn_backup">Download Full Backup</span></button>
+          <label class="btn btn-ghost" style="cursor:pointer;margin:0">
+            ⬆ Restore From Backup
+            <input type="file" id="restoreFile" accept=".json" style="display:none">
+          </label>
+        </div>
+        <div class="footnote" id="storageModeNote"></div>
+      </div>
+    </section>
+
+    <!-- CLIENT PAYMENTS -->
+    <section id="tab-clientpay" style="display:none">
+      <h1 class="page-title" data-i18n="clientpay">Client Payments</h1>
+      <p class="page-sub" data-i18n="sub_clientpay">Jo bhi payment client se site ke liye receive hui hai, wo yahan add karo. Contract Value site add karte waqt set kar sakte ho, taaki pending amount apne aap calculate ho.</p>
+
+      <div class="card">
+        <h2><span data-i18n="h2_newclientpay">New Client Payment</span></h2>
+        <div class="grid cols-3">
+          <div class="field"><label data-i18n="lbl_site">Site</label><select id="cpSite"></select></div>
+          <div class="field"><label data-i18n="lbl_clientname">Client Name</label><input id="cpClient" list="dl-clients" placeholder="e.g. Mr. Sharma"></div>
+          <div class="field"><label data-i18n="lbl_date">Date</label><input id="cpDate" type="date"></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label data-i18n="lbl_amountreceived">Amount Received (₹)</label><input id="cpAmount" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label data-i18n="lbl_paymode">Payment Mode</label>
+            <select id="cpMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option></select>
+          </div>
+          <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="cpNote" placeholder="e.g. 2nd installment"></div>
+        </div>
+        <button class="btn btn-primary" id="addClientPayBtn">+ <span data-i18n="btn_addpayment">Add Payment</span></button>
+      </div>
+
+      <div class="card">
+        <h2><span data-i18n="h2_clientbalance">Site-wise Client Balance</span></h2>
+        <div class="table-wrap"><table id="clientBalanceTable"><thead><tr>
+          <th data-i18n="th_site">Site</th><th>Contract Value</th><th>Received</th><th>Pending</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h2 style="margin:0">All Client Payments</h2>
+          <div class="toolbar-left"><select id="cpListSiteFilter"><option value="all">All Sites</option></select></div>
+        </div>
+        <div class="table-wrap"><table id="clientPayTable"><thead><tr>
+          <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Client</th><th data-i18n="th_mode">Mode</th><th data-i18n="th_note">Note</th><th data-i18n="th_amount">Amount</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- INVESTOR FUNDING -->
+    <section id="tab-investor" style="display:none">
+      <h1 class="page-title" data-i18n="investor">Investor Funding</h1>
+      <p class="page-sub" data-i18n="sub_investor">Investor se site ke liye jo bhi udhar paisa liya hai, aur baad mein jitna return dena hai, wo yahan track karo.</p>
+
+      <div class="card">
+        <h2><span data-i18n="h2_newinvestor">New Investor Entry</span></h2>
+        <div class="grid cols-3">
+          <div class="field"><label data-i18n="lbl_site">Site</label><select id="invSite"><option value="general">General (koi specific site nahi)</option></select></div>
+          <div class="field"><label data-i18n="lbl_investorname">Investor Name</label><input id="invName" list="dl-investors" placeholder="e.g. Mr. Deshmukh"></div>
+          <div class="field"><label data-i18n="lbl_datetaken">Date Taken</label><input id="invDate" type="date"></div>
+        </div>
+        <div class="grid cols-4">
+          <div class="field"><label data-i18n="lbl_amounttaken">Amount Taken (₹)</label><input id="invTaken" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label data-i18n="lbl_totalreturn">Total Return Amount (₹)</label><input id="invReturn" type="number" min="0" placeholder="Interest/profit share sahit"></div>
+          <div class="field"><label data-i18n="lbl_expdate">Expected Return Date</label><input id="invExpDate" type="date"></div>
+          <div class="field"><label data-i18n="lbl_status">Status</label>
+            <select id="invStatus"><option value="pending">Pending</option><option value="returned">Returned</option></select>
+          </div>
+        </div>
+        <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="invNote" placeholder="e.g. agreement details"></div>
+        <button class="btn btn-primary" id="addInvestorBtn">+ <span data-i18n="btn_addinvestor">Add Investor Entry</span></button>
+        <div class="hint">Agar sirf mool raqam hi wapas deni hai (bina interest ke), to "Total Return Amount" mein wahi amount daalo jo "Amount Taken" mein daala hai.</div>
+      </div>
+
+      <div class="card">
+        <h2><span data-i18n="h2_allinvestors">All Investor Entries</span></h2>
+        <div class="table-wrap"><table id="investorTable"><thead><tr>
+          <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Investor</th><th>Taken</th><th>Return Due</th><th>Extra (Interest)</th><th>Expected Date</th><th data-i18n="th_status">Status</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- OFFICE & EMPLOYEE EXPENSE -->
+    <section id="tab-office" style="display:none">
+      <h1 class="page-title" data-i18n="office">Office &amp; Employee Expense</h1>
+      <p class="page-sub" data-i18n="sub_office">Site se bahar ka office/company kharcha — staff salary, rent, bills, vagaira yahan add karo.</p>
+
+      <div class="card">
+        <h2><span data-i18n="h2_newoffice">New Office Expense</span></h2>
+        <div class="grid cols-3">
+          <div class="field"><label data-i18n="lbl_category">Category</label>
+            <select id="ofCategory">
+              <option>Employee Salary</option><option>Office Rent</option><option>Utility Bill</option>
+              <option>Stationery / Supplies</option><option>Travel / Conveyance</option><option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label data-i18n="lbl_paidto">Paid To / Employee Name</label><input id="ofName" list="dl-employees" placeholder="e.g. Suresh (Site Supervisor)"></div>
+          <div class="field"><label data-i18n="lbl_date">Date</label><input id="ofDate" type="date"></div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label data-i18n="lbl_amount">Amount (₹)</label><input id="ofAmount" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="ofNote" placeholder="e.g. July month salary"></div>
+        </div>
+        <button class="btn btn-primary" id="addOfficeBtn">+ <span data-i18n="btn_addoffice">Add Office Expense</span></button>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h2 style="margin:0">All Office &amp; Employee Expenses</h2>
+          <div class="toolbar-left"><select id="ofListCategoryFilter"><option value="all">All Categories</option></select></div>
+        </div>
+        <div class="table-wrap"><table id="officeTable"><thead><tr>
+          <th data-i18n="th_date">Date</th><th data-i18n="th_category">Category</th><th>Paid To</th><th data-i18n="th_note">Note</th><th data-i18n="th_amount">Amount</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- PROFIT & LOSS -->
+    <section id="tab-pnl" style="display:none">
+      <h1 class="page-title" data-i18n="pnl">Profit &amp; Loss</h1>
+      <p class="page-sub" data-i18n="sub_pnl">Client se aaya paisa, site ka kharcha, aur office kharcha — sab milaake overall profit ya loss.</p>
+
+      <div class="stat-row">
+        <div class="stat brick"><div class="lbl" data-i18n="pnl_income">Total Client Received</div><div class="val" id="pnlIncome">₹0</div></div>
+        <div class="stat steel"><div class="lbl" data-i18n="pnl_sitecost">Total Site Cost</div><div class="val" id="pnlSiteCost">₹0</div></div>
+        <div class="stat steel"><div class="lbl" data-i18n="pnl_office">Office Expense</div><div class="val" id="pnlOfficeCost">₹0</div></div>
+        <div class="stat amber"><div class="lbl" data-i18n="pnl_interest">Investor Interest Cost</div><div class="val" id="pnlInterestCost">₹0</div></div>
+      </div>
+      <div class="card" style="text-align:center;padding:26px">
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px">Net Profit / Loss</div>
+        <div id="pnlNet" style="font-family:'IBM Plex Mono',monospace;font-size:34px;font-weight:700;">₹0</div>
+        <div class="footnote" id="pnlFormula">Net = Client Received − Site Cost − Office Expense − Investor Interest Cost</div>
+      </div>
+
+      <div class="card">
+        <h2><span data-i18n="h2_sitepnl">Site-wise Profit &amp; Loss</span></h2>
+        <div class="table-wrap"><table id="pnlTable"><thead><tr>
+          <th data-i18n="th_site">Site</th><th>Contract Value</th><th>Client Received</th><th>Client Pending</th><th>Site Cost (Labour+Material+Other+Udhar)</th><th>Profit / Loss</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2><span data-i18n="h2_investorsummary">Investor Funding Summary</span></h2>
+        <div class="table-wrap"><table id="investorSummaryTable"><thead><tr>
+          <th>Total Taken</th><th>Total Return Due</th><th>Already Returned</th><th>Pending Return</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- TEAM LOGINS -->
+    <section id="tab-team" style="display:none">
+      <h1 class="page-title" data-i18n="team">Team Logins</h1>
+      <p class="page-sub" data-i18n="sub_team">Apne staff ke liye login banao. Unhe sirf sites, expenses, udhar aur contractor work dikhega — client payment, investor funding aur profit &amp; loss nahi.</p>
+
+      <div class="card">
+        <h2><span data-i18n="h2_inviteteam">Naye member ko invite karo</span></h2>
+        <div class="grid cols-2">
+          <div class="field"><label data-i18n="lbl_empname">Employee ka naam</label><input id="tmName" placeholder="e.g. Suresh Patil"></div>
+          <div class="field"><label data-i18n="lbl_emailaddr">Email address</label><input id="tmUser" type="email" placeholder="suresh@gmail.com" autocapitalize="off"></div>
+        </div>
+        <div class="login-error" id="tmErr"></div>
+        <button class="btn btn-primary" id="tmAddBtn">+ <span data-i18n="btn_sendinvite">Send invite</span></button>
+        <div class="hint">Employee apna password khud banayega — aap sirf email add karo. Gmail hai to wo Google se seedha login kar sakta hai.</div>
+      </div>
+
+      <div class="card">
+        <h2><span data-i18n="h2_teammembers">Team members</span></h2>
+        <div class="table-wrap"><table id="teamTable"><thead><tr>
+          <th data-i18n="th_name">Name</th><th>Email</th><th>Joined</th><th data-i18n="th_status">Status</th><th data-i18n="th_actions">Actions</th>
+        </tr></thead><tbody></tbody></table></div>
+        <div class="footnote">Password Firebase sambhalta hai — na aap dekh sakte ho, na koi aur. Bhool jaye to wo khud "Password bhool gaye?" se reset kar sakta hai.</div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="tab-reports" style="display:none">
+      <h1 class="page-title" data-i18n="reports">Reports</h1>
+      <p class="page-sub" data-i18n="sub_reports">Report type aur filter select karo, phir Excel me download karo.</p>
+
+      <div class="card">
+        <div class="grid cols-4">
+          <div class="field"><label data-i18n="lbl_reporttype">Report Type</label>
+            <select id="repType">
+              <option value="overall">Overall Expense Report</option>
+              <option value="labour">Labour Expense Report</option>
+              <option value="material">Material Expense Report</option>
+              <option value="other">Other Expense Report</option>
+              <option value="udhar">Udhar Material Report</option>
+              <option value="agreements">Contractor Balance Report</option>
+              <option value="clientpay" class="owner-only-opt">Client Payment Report</option>
+              <option value="investor" class="owner-only-opt">Investor Funding Report</option>
+              <option value="office" class="owner-only-opt">Office &amp; Employee Expense Report</option>
+              <option value="pnl" class="owner-only-opt">Profit &amp; Loss Summary Report</option>
+            </select>
+          </div>
+          <div class="field"><label data-i18n="lbl_site">Site</label><select id="repSite"><option value="all">All Sites</option></select></div>
+          <div class="field"><label data-i18n="lbl_fromdate">From Date</label><input id="repFrom" type="date"></div>
+          <div class="field"><label data-i18n="lbl_todate">To Date</label><input id="repTo" type="date"></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-steel" id="genReportBtn">Generate Report</button>
+          <button class="btn btn-primary" id="downloadExcelBtn">⬇ <span data-i18n="btn_downloadexcel">Download Excel</span></button>
+          <button class="btn btn-primary" id="downloadPdfBtn" style="background:var(--charcoal-2)">⬇ <span data-i18n="btn_downloadpdf">Download PDF</span></button>
+        </div>
+        <div class="footnote">Report preview neeche dikhega. Download button se .xlsx file banegi.</div>
+      </div>
+
+      <div class="card">
+        <h2 id="repTitle">Overall Expense Report <small>Sabhi entries niche di gayi hai</small></h2>
+        <div class="table-wrap"><table id="reportTable"><thead></thead><tbody></tbody></table></div>
+        <div class="footnote" id="repTotalLine"></div>
+      </div>
+    </section>
+  </main>
+</div>
+<button class="fab" id="quickAddFab" style="display:none"><span class="plus">+</span> <span data-i18n="btn_addexpense_fab">Add expense</span></button>
+
+<div class="modal-bg" id="quickModal" style="display:none">
+  <div class="modal quick-modal">
+    <div class="modal-head">
+      <h3>Add expense</h3>
+      <p>Kharcha turant record karo</p>
+    </div>
+    <div class="grid cols-2">
+      <div class="field"><label data-i18n="lbl_site">Site</label><select id="qSite"></select></div>
+      <div class="field"><label>Type</label>
+        <select id="qType">
+          <option value="labour">Labour</option>
+          <option value="material">Material</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" id="qCategoryWrap"><label>Work category</label>
+      <select id="qCategory">
+        <option>RCC</option><option>Brickwork</option><option>Plaster</option><option>Tiles</option>
+        <option>Paint</option><option>Fabrication</option><option>Door</option><option>Window</option>
+        <option>Electric</option><option>Plumbing</option><option>Other</option>
+      </select>
+    </div>
+    <div class="field"><label id="qNameLabel">Contractor name</label><input id="qName" list="dl-labour-names" placeholder="Naam likho ya list se chuno"></div>
+    <div class="grid cols-2">
+      <div class="field"><label data-i18n="lbl_date">Date</label><input id="qDate" type="date"></div>
+      <div class="field"><label data-i18n="lbl_amount">Amount (₹)</label><input id="qAmount" type="number" min="0" placeholder="0"></div>
+    </div>
+    <div class="grid cols-2">
+      <div class="field"><label data-i18n="lbl_paidby">Paid by</label>
+        <select id="qMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option></select>
+      </div>
+      <div class="field"><label data-i18n="lbl_note">Note</label><input id="qNote" placeholder="Optional"></div>
+    </div>
+    <div class="login-error" id="qErr"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" id="qCancel" style="flex:1;justify-content:center">Cancel</button>
+      <button class="btn btn-primary" id="qSave" style="flex:1.4;justify-content:center">Save expense</button>
+    </div>
+    <div class="footnote" id="qSavedHint"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* --- Mobile menu --- */
+document.getElementById('menuBtn').addEventListener('click', ()=>{
+  document.getElementById('navTabs').classList.toggle('open');
+});
+
+/* ---------------- In-page dialogs ----------------
+   Native confirm()/alert()/prompt() are blocked inside sandboxed frames,
+   which silently broke setup and delete actions. These replacements always work. */
+function uiConfirm(message, okLabel){
+  return new Promise(resolve=>{
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal">
+      <h3>Confirm</h3>
+      <p style="white-space:pre-line">${String(message).replace(/</g,'&lt;')}</p>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button class="btn btn-ghost" data-no style="flex:1;justify-content:center">Cancel</button>
+        <button class="btn btn-primary" data-yes style="flex:1;justify-content:center">${okLabel||'Haan, karo'}</button>
+      </div></div>`;
+    document.body.appendChild(bg);
+    const done = v => { bg.remove(); resolve(v); };
+    bg.querySelector('[data-yes]').onclick = ()=>done(true);
+    bg.querySelector('[data-no]').onclick  = ()=>done(false);
+    bg.onclick = e => { if(e.target===bg) done(false); };
+  });
+}
+function uiAlert(message, title){
+  return new Promise(resolve=>{
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal">
+      <h3>${title||'Info'}</h3>
+      <p style="white-space:pre-line">${String(message).replace(/</g,'&lt;')}</p>
+      <button class="btn btn-primary" data-ok style="width:100%;justify-content:center">Theek hai</button>
+      </div>`;
+    document.body.appendChild(bg);
+    bg.querySelector('[data-ok]').onclick = ()=>{ bg.remove(); resolve(); };
+  });
+}
+
+/* ---------------- Firebase: auth + data ----------------
+   Security is enforced by Firestore rules on the server, not by this file.
+   Staff accounts are simply refused the private/ documents, so client
+   payments, investor funding and profit & loss never reach their device. */
+let fb = null, auth = null, db = null;
+let currentRole = null;      // 'owner' | 'staff'
+let currentUser = null;      // { uid, email, name, role }
+let unsubs = [];             // live listeners
+
+const CONFIG_OK = FIREBASE_CONFIG && !String(FIREBASE_CONFIG.apiKey).startsWith('PASTE_');
+
+/* Which Firestore collection each in-memory array maps to */
+const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses' };
+const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
+
+/* Snapshot of what the server currently holds, so saveData() can write only
+   what actually changed. That keeps two people editing at once from
+   overwriting each other's entries. */
+let serverState = {};
+
+async function initFirebase(){
+  if(!CONFIG_OK){
+    document.getElementById('configWarn').style.display = 'block';
+    document.getElementById('authBox').style.display = 'none';
+    hideBootLoader();
+    return false;
+  }
+  fb = firebase.initializeApp(FIREBASE_CONFIG);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); // offline cache, ignored if unsupported
+  /* Persistence MUST finish resolving before anything else touches auth,
+     otherwise a race can drop the session — this was why closing the window
+     (or reopening on mobile) was silently logging people out. */
+  try{ await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){}
+  return true;
+}
+
+const IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+async function completeRedirectSignIn(){
+  try{ await auth.getRedirectResult(); }
+  catch(e){ showAuthError(e); }
+}
+
+function authMessage(code){
+  const m = {
+    'auth/invalid-email':'Email sahi nahi hai.',
+    'auth/user-not-found':'Is email ka account nahi mila. "Naya account banao" dabao.',
+    'auth/wrong-password':'Galat password.',
+    'auth/invalid-credential':'Email ya password galat hai.',
+    'auth/email-already-in-use':'Ye email pehle se registered hai. Seedha Login dabao.',
+    'auth/weak-password':'Password kam se kam 6 characters ka rakho.',
+    'auth/popup-closed-by-user':'Google window band ho gayi. Dobara try karo.',
+    'auth/unauthorized-domain':'Ye domain Firebase mein allowed nahi hai. Authentication → Settings → Authorized domains mein isko add karo.',
+    'auth/operation-not-allowed':'Firebase Console mein ye sign-in method abhi enable nahi kiya gaya.'
+  };
+  return m[code] || null;
+}
+function showAuthError(e){
+  document.getElementById('loginError').textContent =
+    authMessage(e && e.code) || ('Error: ' + (e && e.message ? e.message : e));
+}
+
+/* --- sign in --- */
+document.getElementById('loginBtn').addEventListener('click', async ()=>{
+  const email = document.getElementById('loginId').value.trim();
+  const pw    = document.getElementById('loginPw').value;
+  document.getElementById('loginError').textContent = '';
+  if(!email || !pw){ document.getElementById('loginError').textContent = 'Email aur password dono daalo.'; return; }
+  try{ await auth.signInWithEmailAndPassword(email, pw); }
+  catch(e){ showAuthError(e); }
+});
+
+document.getElementById('signupBtn').addEventListener('click', async ()=>{
+  const email = document.getElementById('loginId').value.trim();
+  const pw    = document.getElementById('loginPw').value;
+  document.getElementById('loginError').textContent = '';
+  if(!email || pw.length < 6){
+    document.getElementById('loginError').textContent = 'Email daalo aur password kam se kam 6 characters ka rakho.';
+    return;
+  }
+  try{
+    await auth.createUserWithEmailAndPassword(email, pw);
+    showToast('Account ban gaya ✓');
+  }catch(e){ showAuthError(e); }
+});
+
+document.getElementById('googleBtn').addEventListener('click', async ()=>{
+  document.getElementById('loginError').textContent = '';
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try{
+    if(IS_MOBILE){
+      await auth.signInWithRedirect(provider);   // more reliable on phones
+    } else {
+      await auth.signInWithPopup(provider);
+    }
+  }catch(e){ showAuthError(e); }
+});
+
+document.getElementById('forgotBtn').addEventListener('click', async ()=>{
+  const email = document.getElementById('loginId').value.trim();
+  if(!email){ document.getElementById('loginError').textContent = 'Pehle upar apna email daalo, phir ye dabao.'; return; }
+  try{
+    await auth.sendPasswordResetEmail(email);
+    await uiAlert('Password reset link ' + email + ' pe bhej diya hai.\nInbox (aur spam) check karo.', 'Email bhej diya');
+  }catch(e){ showAuthError(e); }
+});
+
+/* ---------------- Language / i18n ---------------- */
+const I18N = {
+hinglish: {
+  dashboard:'Dashboard', sites:'Sites', expense:'Add Expense', udhar:'Udhar Material',
+  contractwork:'Contractor Work', import:'Import Data', clientpay:'Client Payments',
+  investor:'Investor Funding', office:'Office & Employee Expense', office_nav:'Office Expense',
+  pnl:'Profit & Loss', team:'Team Logins', reports:'Reports',
+  sub_dashboard:'Sabhi sites ka overall expense summary.',
+  sub_sites:'Har construction site ko yahan add karo, phir uske expenses track karo.',
+  sub_expense:'Labour, material ya koi bhi other expense yahan se add karo.',
+  sub_udhar:'Kisi supplier se udhar (credit) par liya gaya material yahan add karo.',
+  sub_contractwork:'Har contractor ka site pe kaam kitne mein fix hua hai, ab tak kitna diya hai, aur kitna dena baki hai — sab yahan dikhega.',
+  sub_import:'Apni site ki Excel/CSV file upload karo — data seedha us site ke expense records mein add ho jayega.',
+  sub_clientpay:'Jo bhi payment client se site ke liye receive hui hai, wo yahan add karo.',
+  sub_investor:'Investor se site ke liye jo bhi udhar paisa liya hai, aur baad mein jitna return dena hai, wo yahan track karo.',
+  sub_office:'Site se bahar ka office/company kharcha — staff salary, rent, bills, vagaira yahan add karo.',
+  sub_pnl:'Client se aaya paisa, site ka kharcha, aur office kharcha — sab milaake overall profit ya loss.',
+  sub_team:'Apne staff ke liye login banao. Unhe sirf sites, expenses, udhar aur contractor work dikhega.',
+  sub_reports:'Report type aur filter select karo, phir Excel me download karo.',
+  stat_total:'Total Expense', stat_labour:'Labour', stat_material:'Material', stat_udhar:'Udhar Pending',
+  stat_clientpending:'Client Pending', stat_investorpending:'Investor Pending Return', stat_contractorbal:'Contractor Balance Due',
+  pnl_income:'Total Client Received', pnl_sitecost:'Total Site Cost', pnl_office:'Office Expense', pnl_interest:'Investor Interest Cost',
+  h2_performance:'Company Performance', h2_sitesplit:'Site-wise Expense Split', h2_typesplit:'Expense Type Split',
+  h2_trend:'Monthly Trend', h2_sitesummary:'Site-wise Summary', h2_recent:'Recent Entries',
+  h2_addsite:'Add New Site', h2_allsites:'All Sites', h2_newexpense:'New Expense Entry', h2_newudhar:'New Udhar Entry',
+  h2_newagreement:'New Work Agreement (Fixed Amount)', h2_importstep1:'Step 1 — Site aur File Select karo',
+  h2_backup:'Backup & Restore', h2_newclientpay:'New Client Payment', h2_clientbalance:'Site-wise Client Balance',
+  h2_newinvestor:'New Investor Entry', h2_allinvestors:'All Investor Entries', h2_newoffice:'New Office Expense',
+  h2_sitepnl:'Site-wise Profit & Loss', h2_investorsummary:'Investor Funding Summary',
+  h2_inviteteam:'Naye member ko invite karo', h2_teammembers:'Team members',
+  btn_addsite:'Add Site', btn_addexpense:'Add Expense', btn_addudhar:'Add Udhar Entry', btn_addagreement:'Add Work Agreement',
+  btn_backup:'Download Full Backup', btn_addpayment:'Add Payment', btn_addinvestor:'Add Investor Entry',
+  btn_addoffice:'Add Office Expense', btn_sendinvite:'Send invite', btn_downloadexcel:'Download Excel', btn_downloadpdf:'Download PDF',
+  btn_signup:'Naya account banao', btn_forgot:'Password bhool gaye?', btn_login:'Login', btn_logout:'Logout',
+  btn_addexpense_fab:'Add expense', btn_google:'Google se login karo',
+  th_site:'Site', th_date:'Date', th_note:'Note', th_amount:'Amount', th_name:'Name', th_category:'Category',
+  th_type:'Type', th_status:'Status', th_mode:'Mode', th_actions:'Actions', th_entries:'Entries', th_location:'Location', th_total:'Total',
+  lbl_site:'Site', lbl_note_opt:'Note (optional)', lbl_date:'Date', lbl_amount:'Amount (₹)', lbl_status:'Status',
+  lbl_paymode:'Payment Mode', lbl_note:'Note', lbl_category:'Category', lbl_email:'Email', lbl_sitename:'Site Name',
+  lbl_location_opt:'Location (optional)', lbl_contractvalue:'Contract Value (₹) — optional', lbl_expensetype:'Expense Type',
+  lbl_labourcat:'Labour Category', lbl_contractorname:'Contractor Name', lbl_suppliername:'Supplier Name',
+  lbl_materialname:'Material Name', lbl_qty:'Quantity', lbl_unit:'Unit', lbl_workcat:'Work Category',
+  lbl_fixedamount:'Fixed Work Amount (₹)', lbl_clientname:'Client Name', lbl_amountreceived:'Amount Received (₹)',
+  lbl_investorname:'Investor Name', lbl_datetaken:'Date Taken', lbl_amounttaken:'Amount Taken (₹)',
+  lbl_totalreturn:'Total Return Amount (₹)', lbl_expdate:'Expected Return Date', lbl_paidto:'Paid To / Employee Name',
+  lbl_paidby:'Paid by', lbl_empname:'Employee ka naam', lbl_emailaddr:'Email address', lbl_password:'Password',
+  lbl_reporttype:'Report Type', lbl_fromdate:'From Date', lbl_todate:'To Date'
+},
+en: {
+  dashboard:'Dashboard', sites:'Sites', expense:'Add Expense', udhar:'Credit Material', contractwork:'Contractor Work',
+  import:'Import Data', clientpay:'Client Payments', investor:'Investor Funding', office:'Office & Employee Expense',
+  office_nav:'Office Expense', pnl:'Profit & Loss', team:'Team Logins', reports:'Reports',
+  sub_dashboard:'Overall expense summary across all sites.',
+  sub_sites:'Add each construction site here, then track its expenses.',
+  sub_expense:'Add labour, material, or any other expense here.',
+  sub_udhar:'Add material taken on credit from a supplier here.',
+  sub_contractwork:'See what each contractor\'s work is fixed at per site, how much has been paid, and how much is still due.',
+  sub_import:'Upload your site\'s Excel/CSV file — the data will be added directly to that site\'s expense records.',
+  sub_clientpay:'Add any payment received from the client for this site here.',
+  sub_investor:'Track money borrowed from an investor for a site, and how much needs to be returned.',
+  sub_office:'Office/company expenses outside the sites — staff salary, rent, bills, etc.',
+  sub_pnl:'Money received from clients, site costs, and office costs — combined into overall profit or loss.',
+  sub_team:'Create logins for your staff. They\'ll only see sites, expenses, udhar and contractor work.',
+  sub_reports:'Select a report type and filters, then download as Excel.',
+  stat_total:'Total Expense', stat_labour:'Labour', stat_material:'Material', stat_udhar:'Credit Pending',
+  stat_clientpending:'Client Pending', stat_investorpending:'Investor Pending Return', stat_contractorbal:'Contractor Balance Due',
+  pnl_income:'Total Client Received', pnl_sitecost:'Total Site Cost', pnl_office:'Office Expense', pnl_interest:'Investor Interest Cost',
+  h2_performance:'Company Performance', h2_sitesplit:'Site-wise Expense Split', h2_typesplit:'Expense Type Split',
+  h2_trend:'Monthly Trend', h2_sitesummary:'Site-wise Summary', h2_recent:'Recent Entries',
+  h2_addsite:'Add New Site', h2_allsites:'All Sites', h2_newexpense:'New Expense Entry', h2_newudhar:'New Credit Entry',
+  h2_newagreement:'New Work Agreement (Fixed Amount)', h2_importstep1:'Step 1 — Select Site and File',
+  h2_backup:'Backup & Restore', h2_newclientpay:'New Client Payment', h2_clientbalance:'Site-wise Client Balance',
+  h2_newinvestor:'New Investor Entry', h2_allinvestors:'All Investor Entries', h2_newoffice:'New Office Expense',
+  h2_sitepnl:'Site-wise Profit & Loss', h2_investorsummary:'Investor Funding Summary',
+  h2_inviteteam:'Invite a new team member', h2_teammembers:'Team members',
+  btn_addsite:'Add Site', btn_addexpense:'Add Expense', btn_addudhar:'Add Credit Entry', btn_addagreement:'Add Work Agreement',
+  btn_backup:'Download Full Backup', btn_addpayment:'Add Payment', btn_addinvestor:'Add Investor Entry',
+  btn_addoffice:'Add Office Expense', btn_sendinvite:'Send invite', btn_downloadexcel:'Download Excel', btn_downloadpdf:'Download PDF',
+  btn_signup:'Create new account', btn_forgot:'Forgot password?', btn_login:'Login', btn_logout:'Logout',
+  btn_addexpense_fab:'Add expense', btn_google:'Sign in with Google',
+  th_site:'Site', th_date:'Date', th_note:'Note', th_amount:'Amount', th_name:'Name', th_category:'Category',
+  th_type:'Type', th_status:'Status', th_mode:'Mode', th_actions:'Actions', th_entries:'Entries', th_location:'Location', th_total:'Total',
+  lbl_site:'Site', lbl_note_opt:'Note (optional)', lbl_date:'Date', lbl_amount:'Amount (₹)', lbl_status:'Status',
+  lbl_paymode:'Payment Mode', lbl_note:'Note', lbl_category:'Category', lbl_email:'Email', lbl_sitename:'Site Name',
+  lbl_location_opt:'Location (optional)', lbl_contractvalue:'Contract Value (₹) — optional', lbl_expensetype:'Expense Type',
+  lbl_labourcat:'Labour Category', lbl_contractorname:'Contractor Name', lbl_suppliername:'Supplier Name',
+  lbl_materialname:'Material Name', lbl_qty:'Quantity', lbl_unit:'Unit', lbl_workcat:'Work Category',
+  lbl_fixedamount:'Fixed Work Amount (₹)', lbl_clientname:'Client Name', lbl_amountreceived:'Amount Received (₹)',
+  lbl_investorname:'Investor Name', lbl_datetaken:'Date Taken', lbl_amounttaken:'Amount Taken (₹)',
+  lbl_totalreturn:'Total Return Amount (₹)', lbl_expdate:'Expected Return Date', lbl_paidto:'Paid To / Employee Name',
+  lbl_paidby:'Paid by', lbl_empname:'Employee Name', lbl_emailaddr:'Email Address', lbl_password:'Password',
+  lbl_reporttype:'Report Type', lbl_fromdate:'From Date', lbl_todate:'To Date'
+},
+hi: {
+  dashboard:'डैशबोर्ड', sites:'साइट्स', expense:'खर्च जोड़ें', udhar:'उधार सामान', contractwork:'ठेकेदार का काम',
+  import:'डेटा इम्पोर्ट करें', clientpay:'क्लाइंट भुगतान', investor:'निवेशक फंडिंग', office:'ऑफिस और कर्मचारी खर्च',
+  office_nav:'ऑफिस खर्च', pnl:'लाभ और हानि', team:'टीम लॉगिन', reports:'रिपोर्ट्स',
+  sub_dashboard:'सभी साइट्स का कुल खर्च सारांश।',
+  sub_sites:'हर निर्माण साइट यहाँ जोड़ें, फिर उसका खर्च ट्रैक करें।',
+  sub_expense:'लेबर, सामान या कोई भी अन्य खर्च यहाँ से जोड़ें।',
+  sub_udhar:'किसी सप्लायर से उधार लिया गया सामान यहाँ जोड़ें।',
+  sub_contractwork:'हर ठेकेदार का साइट पर काम कितने में तय हुआ है, अब तक कितना दिया गया है, और कितना बाकी है — सब यहाँ दिखेगा।',
+  sub_import:'अपनी साइट की Excel/CSV फ़ाइल अपलोड करें — डेटा सीधे उस साइट के खर्च रिकॉर्ड में जुड़ जाएगा।',
+  sub_clientpay:'क्लाइंट से साइट के लिए मिली कोई भी पेमेंट यहाँ जोड़ें।',
+  sub_investor:'किसी निवेशक से साइट के लिए लिया गया उधार पैसा, और बाद में कितना लौटाना है — यहाँ ट्रैक करें।',
+  sub_office:'साइट के बाहर का ऑफिस/कंपनी खर्च — स्टाफ सैलरी, किराया, बिल वगैरह यहाँ जोड़ें।',
+  sub_pnl:'क्लाइंट से आया पैसा, साइट का खर्च, और ऑफिस का खर्च — सब मिलाकर कुल लाभ या हानि।',
+  sub_team:'अपने स्टाफ के लिए लॉगिन बनाएं। उन्हें केवल साइट्स, खर्च, उधार और ठेकेदार का काम दिखेगा।',
+  sub_reports:'रिपोर्ट टाइप और फ़िल्टर चुनें, फिर Excel में डाउनलोड करें।',
+  stat_total:'कुल खर्च', stat_labour:'लेबर', stat_material:'सामान', stat_udhar:'उधार बकाया',
+  stat_clientpending:'क्लाइंट से बाकी', stat_investorpending:'निवेशक को लौटाना बाकी', stat_contractorbal:'ठेकेदार को देना बाकी',
+  pnl_income:'क्लाइंट से कुल मिला', pnl_sitecost:'कुल साइट खर्च', pnl_office:'ऑफिस खर्च', pnl_interest:'निवेशक ब्याज खर्च',
+  h2_performance:'कंपनी की परफॉरमेंस', h2_sitesplit:'साइट-वार खर्च विभाजन', h2_typesplit:'खर्च के प्रकार का विभाजन',
+  h2_trend:'महीने-वार रुझान', h2_sitesummary:'साइट-वार सारांश', h2_recent:'हाल की एंट्रीज़',
+  h2_addsite:'नई साइट जोड़ें', h2_allsites:'सभी साइट्स', h2_newexpense:'नई खर्च एंट्री', h2_newudhar:'नई उधार एंट्री',
+  h2_newagreement:'नया कार्य समझौता (तय राशि)', h2_importstep1:'चरण 1 — साइट और फ़ाइल चुनें',
+  h2_backup:'बैकअप और रीस्टोर', h2_newclientpay:'नई क्लाइंट पेमेंट', h2_clientbalance:'साइट-वार क्लाइंट बैलेंस',
+  h2_newinvestor:'नई निवेशक एंट्री', h2_allinvestors:'सभी निवेशक एंट्रीज़', h2_newoffice:'नया ऑफिस खर्च',
+  h2_sitepnl:'साइट-वार लाभ और हानि', h2_investorsummary:'निवेशक फंडिंग सारांश',
+  h2_inviteteam:'नए सदस्य को आमंत्रित करें', h2_teammembers:'टीम के सदस्य',
+  btn_addsite:'साइट जोड़ें', btn_addexpense:'खर्च जोड़ें', btn_addudhar:'उधार एंट्री जोड़ें', btn_addagreement:'कार्य समझौता जोड़ें',
+  btn_backup:'पूरा बैकअप डाउनलोड करें', btn_addpayment:'पेमेंट जोड़ें', btn_addinvestor:'निवेशक एंट्री जोड़ें',
+  btn_addoffice:'ऑफिस खर्च जोड़ें', btn_sendinvite:'आमंत्रण भेजें', btn_downloadexcel:'Excel डाउनलोड करें', btn_downloadpdf:'PDF डाउनलोड करें',
+  btn_signup:'नया खाता बनाएं', btn_forgot:'पासवर्ड भूल गए?', btn_login:'लॉगिन', btn_logout:'लॉगआउट',
+  btn_addexpense_fab:'खर्च जोड़ें', btn_google:'Google से लॉगिन करें',
+  th_site:'साइट', th_date:'तारीख', th_note:'नोट', th_amount:'राशि', th_name:'नाम', th_category:'श्रेणी',
+  th_type:'प्रकार', th_status:'स्थिति', th_mode:'तरीका', th_actions:'कार्रवाई', th_entries:'एंट्रीज़', th_location:'स्थान', th_total:'कुल',
+  lbl_site:'साइट', lbl_note_opt:'नोट (वैकल्पिक)', lbl_date:'तारीख', lbl_amount:'राशि (₹)', lbl_status:'स्थिति',
+  lbl_paymode:'भुगतान का तरीका', lbl_note:'नोट', lbl_category:'श्रेणी', lbl_email:'ईमेल', lbl_sitename:'साइट का नाम',
+  lbl_location_opt:'स्थान (वैकल्पिक)', lbl_contractvalue:'अनुबंध राशि (₹) — वैकल्पिक', lbl_expensetype:'खर्च का प्रकार',
+  lbl_labourcat:'लेबर श्रेणी', lbl_contractorname:'ठेकेदार का नाम', lbl_suppliername:'सप्लायर का नाम',
+  lbl_materialname:'सामान का नाम', lbl_qty:'मात्रा', lbl_unit:'इकाई', lbl_workcat:'कार्य श्रेणी',
+  lbl_fixedamount:'तय कार्य राशि (₹)', lbl_clientname:'क्लाइंट का नाम', lbl_amountreceived:'प्राप्त राशि (₹)',
+  lbl_investorname:'निवेशक का नाम', lbl_datetaken:'लिए जाने की तारीख', lbl_amounttaken:'ली गई राशि (₹)',
+  lbl_totalreturn:'कुल वापसी राशि (₹)', lbl_expdate:'अपेक्षित वापसी तारीख', lbl_paidto:'किसे भुगतान / कर्मचारी का नाम',
+  lbl_paidby:'भुगतान का तरीका', lbl_empname:'कर्मचारी का नाम', lbl_emailaddr:'ईमेल पता', lbl_password:'पासवर्ड',
+  lbl_reporttype:'रिपोर्ट का प्रकार', lbl_fromdate:'दिनांक से', lbl_todate:'दिनांक तक'
+},
+mr: {
+  dashboard:'डॅशबोर्ड', sites:'साइट्स', expense:'खर्च जोडा', udhar:'उधार साहित्य', contractwork:'कंत्राटदाराचे काम',
+  import:'डेटा इम्पोर्ट करा', clientpay:'क्लायंट पेमेंट', investor:'गुंतवणूकदार निधी', office:'ऑफिस आणि कर्मचारी खर्च',
+  office_nav:'ऑफिस खर्च', pnl:'नफा आणि तोटा', team:'टीम लॉगिन', reports:'रिपोर्ट्स',
+  sub_dashboard:'सर्व साइट्सचा एकूण खर्च सारांश.',
+  sub_sites:'प्रत्येक बांधकाम साइट इथे जोडा, मग तिचा खर्च ट्रॅक करा.',
+  sub_expense:'लेबर, साहित्य किंवा इतर कोणताही खर्च इथून जोडा.',
+  sub_udhar:'एखाद्या पुरवठादाराकडून उधार घेतलेले साहित्य इथे जोडा.',
+  sub_contractwork:'प्रत्येक कंत्राटदाराचे साइटवरील काम किती ठरले आहे, आतापर्यंत किती दिले आहे, आणि किती बाकी आहे — सर्व इथे दिसेल.',
+  sub_import:'तुमच्या साइटची Excel/CSV फाइल अपलोड करा — डेटा थेट त्या साइटच्या खर्च नोंदींमध्ये जोडला जाईल.',
+  sub_clientpay:'क्लायंटकडून साइटसाठी मिळालेली कोणतीही पेमेंट इथे जोडा.',
+  sub_investor:'गुंतवणूकदाराकडून साइटसाठी घेतलेले उधार पैसे, आणि नंतर किती परत करायचे आहेत — इथे ट्रॅक करा.',
+  sub_office:'साइटच्या बाहेरचा ऑफिस/कंपनी खर्च — स्टाफ पगार, भाडे, बिले वगैरे इथे जोडा.',
+  sub_pnl:'क्लायंटकडून आलेले पैसे, साइटचा खर्च, आणि ऑफिसचा खर्च — सर्व मिळून एकूण नफा किंवा तोटा.',
+  sub_team:'तुमच्या स्टाफसाठी लॉगिन तयार करा. त्यांना फक्त साइट्स, खर्च, उधार आणि कंत्राटदाराचे काम दिसेल.',
+  sub_reports:'रिपोर्ट प्रकार आणि फिल्टर निवडा, मग Excel मध्ये डाउनलोड करा.',
+  stat_total:'एकूण खर्च', stat_labour:'लेबर', stat_material:'साहित्य', stat_udhar:'उधार बाकी',
+  stat_clientpending:'क्लायंटकडून बाकी', stat_investorpending:'गुंतवणूकदाराला परत करणे बाकी', stat_contractorbal:'कंत्राटदाराला देणे बाकी',
+  pnl_income:'क्लायंटकडून एकूण मिळाले', pnl_sitecost:'एकूण साइट खर्च', pnl_office:'ऑफिस खर्च', pnl_interest:'गुंतवणूकदार व्याज खर्च',
+  h2_performance:'कंपनीची कामगिरी', h2_sitesplit:'साइट-निहाय खर्च विभागणी', h2_typesplit:'खर्च प्रकाराची विभागणी',
+  h2_trend:'महिन्या-निहाय कल', h2_sitesummary:'साइट-निहाय सारांश', h2_recent:'अलीकडील नोंदी',
+  h2_addsite:'नवीन साइट जोडा', h2_allsites:'सर्व साइट्स', h2_newexpense:'नवीन खर्च नोंद', h2_newudhar:'नवीन उधार नोंद',
+  h2_newagreement:'नवीन कार्य करार (निश्चित रक्कम)', h2_importstep1:'पायरी 1 — साइट आणि फाइल निवडा',
+  h2_backup:'बॅकअप आणि रिस्टोर', h2_newclientpay:'नवीन क्लायंट पेमेंट', h2_clientbalance:'साइट-निहाय क्लायंट बॅलन्स',
+  h2_newinvestor:'नवीन गुंतवणूकदार नोंद', h2_allinvestors:'सर्व गुंतवणूकदार नोंदी', h2_newoffice:'नवीन ऑफिस खर्च',
+  h2_sitepnl:'साइट-निहाय नफा आणि तोटा', h2_investorsummary:'गुंतवणूकदार निधी सारांश',
+  h2_inviteteam:'नवीन सदस्याला आमंत्रण द्या', h2_teammembers:'टीम सदस्य',
+  btn_addsite:'साइट जोडा', btn_addexpense:'खर्च जोडा', btn_addudhar:'उधार नोंद जोडा', btn_addagreement:'कार्य करार जोडा',
+  btn_backup:'पूर्ण बॅकअप डाउनलोड करा', btn_addpayment:'पेमेंट जोडा', btn_addinvestor:'गुंतवणूकदार नोंद जोडा',
+  btn_addoffice:'ऑफिस खर्च जोडा', btn_sendinvite:'आमंत्रण पाठवा', btn_downloadexcel:'Excel डाउनलोड करा', btn_downloadpdf:'PDF डाउनलोड करा',
+  btn_signup:'नवीन खाते तयार करा', btn_forgot:'पासवर्ड विसरलात?', btn_login:'लॉगिन', btn_logout:'लॉगआउट',
+  btn_addexpense_fab:'खर्च जोडा', btn_google:'Google ने लॉगिन करा',
+  th_site:'साइट', th_date:'तारीख', th_note:'नोट', th_amount:'रक्कम', th_name:'नाव', th_category:'प्रकार',
+  th_type:'प्रकार', th_status:'स्थिती', th_mode:'पद्धत', th_actions:'क्रिया', th_entries:'नोंदी', th_location:'ठिकाण', th_total:'एकूण',
+  lbl_site:'साइट', lbl_note_opt:'नोट (ऐच्छिक)', lbl_date:'तारीख', lbl_amount:'रक्कम (₹)', lbl_status:'स्थिती',
+  lbl_paymode:'पेमेंट पद्धत', lbl_note:'नोट', lbl_category:'प्रकार', lbl_email:'ईमेल', lbl_sitename:'साइटचे नाव',
+  lbl_location_opt:'ठिकाण (ऐच्छिक)', lbl_contractvalue:'करार रक्कम (₹) — ऐच्छिक', lbl_expensetype:'खर्चाचा प्रकार',
+  lbl_labourcat:'लेबर प्रकार', lbl_contractorname:'कंत्राटदाराचे नाव', lbl_suppliername:'पुरवठादाराचे नाव',
+  lbl_materialname:'साहित्याचे नाव', lbl_qty:'प्रमाण', lbl_unit:'एकक', lbl_workcat:'कामाचा प्रकार',
+  lbl_fixedamount:'निश्चित कार्य रक्कम (₹)', lbl_clientname:'क्लायंटचे नाव', lbl_amountreceived:'मिळालेली रक्कम (₹)',
+  lbl_investorname:'गुंतवणूकदाराचे नाव', lbl_datetaken:'घेतल्याची तारीख', lbl_amounttaken:'घेतलेली रक्कम (₹)',
+  lbl_totalreturn:'एकूण परतावा रक्कम (₹)', lbl_expdate:'अपेक्षित परतावा तारीख', lbl_paidto:'कोणाला दिले / कर्मचाऱ्याचे नाव',
+  lbl_paidby:'पेमेंट पद्धत', lbl_empname:'कर्मचाऱ्याचे नाव', lbl_emailaddr:'ईमेल पत्ता', lbl_password:'पासवर्ड',
+  lbl_reporttype:'रिपोर्ट प्रकार', lbl_fromdate:'तारखेपासून', lbl_todate:'तारखेपर्यंत'
+}
+};
+
+let currentLang = 'hinglish';
+
+function applyLanguage(lang){
+  if(!I18N[lang]) lang = 'hinglish';
+  currentLang = lang;
+  const dict = I18N[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(dict[key] !== undefined) el.textContent = dict[key];
+  });
+  document.querySelectorAll('#langSwitchLogin button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  const appSel = document.getElementById('langSwitchApp');
+  if(appSel) appSel.value = lang;
+  try{ localStorage.setItem('firstbrix-lang', lang); }catch(e){}
+}
+
+document.getElementById('langSwitchLogin').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-lang]');
+  if(btn) applyLanguage(btn.dataset.lang);
+});
+document.getElementById('langSwitchApp').addEventListener('change', (e)=>{
+  applyLanguage(e.target.value);
+});
+
+(function initLanguage(){
+  let saved = null;
+  try{ saved = localStorage.getItem('firstbrix-lang'); }catch(e){}
+  applyLanguage(saved || 'hinglish');
+})();
+
+document.getElementById('pwToggle').addEventListener('click', ()=>{
+  const inp = document.getElementById('loginPw');
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  document.getElementById('pwToggle').textContent = show ? '🙈' : '👁';
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+  if(!await uiConfirm('Logout karna hai?', 'Logout')) return;
+  detachListeners();
+  await auth.signOut();
+});
+
+function detachListeners(){ unsubs.forEach(fn=>{ try{ fn(); }catch(_){} }); unsubs = []; }
+
+/* --- who is this user? --- */
+async function resolveProfile(user){
+  const ref = db.collection('users').doc(user.uid);
+  const snap = await ref.get();
+  if(snap.exists) return Object.assign({uid:user.uid, email:user.email}, snap.data());
+
+  // First time this account signs in. The configured owner email becomes the
+  // owner; anyone else must be invited by the owner from the Team tab.
+  const isOwner = (user.email||'').toLowerCase() === String(OWNER_EMAIL).toLowerCase();
+  let role = isOwner ? 'owner' : null;
+  if(!role){
+    const invite = await db.collection('invites').doc((user.email||'').toLowerCase()).get().catch(()=>null);
+    if(invite && invite.exists) role = 'staff';
+  }
+  if(!role) return null;
+  const profile = { name: user.displayName || (user.email||'').split('@')[0], email: user.email, role, joined: todayStr() };
+  await ref.set(profile);
+  return Object.assign({uid:user.uid}, profile);
+}
+
+/* --- session --- */
+function hideBootLoader(){
+  clearBootTimeout();
+  const el = document.getElementById('bootLoader');
+  if(el) el.remove();
+}
+
+function startAuthWatch(){
+  auth.onAuthStateChanged(async (user)=>{
+    if(!user){
+      detachListeners();
+      currentRole = null; currentUser = null;
+      document.getElementById('appRoot').style.display = 'none';
+      document.getElementById('quickAddFab').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('loginPw').value = '';
+      hideBootLoader();
+      return;
+    }
+    try{
+      const profile = await resolveProfile(user);
+      if(!profile){
+        await auth.signOut();
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('loginError').textContent =
+          'Is email ko abhi access nahi mila. Owner se kaho ki Team Logins mein aapka email add kare.';
+        hideBootLoader();
+        return;
+      }
+      currentUser = profile;
+      currentRole = profile.role;
+      await unlockApp();
+      hideBootLoader();
+    }catch(e){ showAuthError(e); document.getElementById('loginScreen').style.display='flex'; hideBootLoader(); }
+  });
+}
+
+function applyRoleUI(){
+  document.body.classList.toggle('role-employee', currentRole !== 'owner');
+  document.getElementById('whoLabel').textContent =
+    (currentUser.name || currentUser.email) + (currentRole==='owner' ? ' (Owner)' : ' (Staff)');
+  if(currentRole !== 'owner'){
+    const repType = document.getElementById('repType');
+    repType.querySelectorAll('.owner-only-opt').forEach(o=>o.remove());
+    const activeBtn = document.querySelector('#navTabs button.active');
+    if(activeBtn && activeBtn.classList.contains('owner-only')){
+      document.querySelector('#navTabs button[data-tab="expense"]').click();
+    }
+  }
+}
+
+async function unlockApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'flex';
+  document.getElementById('quickAddFab').style.display = 'flex';
+  applyRoleUI();
+  await init();
+}
+
+/* ---------------- Data ---------------- */
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [] };
+
+function rerenderAll(){
+  refreshSuggestions();
+  renderSiteSelects();
+  renderSitesTable();
+  renderExpenseTable();
+  renderUdharTable();
+  renderAgreementsTable();
+  renderDashboard();
+  if(currentRole === 'owner'){
+    renderClientBalanceTable(); renderClientPayTable();
+    renderInvestorTable(); renderOfficeTable();
+  }
+}
+
+/* Live listeners: every device sees changes as they happen. */
+function attachListeners(){
+  detachListeners();
+  serverState = {};
+
+  const listen = (key, path) => {
+    unsubs.push(db.collection(path).onSnapshot(snap=>{
+      DATA[key] = snap.docs.map(d=>Object.assign({id:d.id}, d.data()));
+      serverState[key] = {};
+      snap.docs.forEach(d=>{ serverState[key][d.id] = JSON.stringify(d.data()); });
+      if(key === 'sites') applySiteFinance();
+      rerenderAll();
+    }, err=>console.warn('listen ' + path, err.code)));
+  };
+
+  Object.entries(PUBLIC_COLS).forEach(([k,p])=>listen(k,p));
+
+  if(currentRole === 'owner'){
+    Object.entries(PRIVATE_COLS).forEach(([k,p])=>listen(k,p));
+    unsubs.push(db.collection('siteFinance').onSnapshot(snap=>{
+      SITE_FINANCE = {};
+      serverState.siteFinance = {};
+      snap.docs.forEach(d=>{
+        SITE_FINANCE[d.id] = d.data().contractValue || 0;
+        serverState.siteFinance[d.id] = JSON.stringify(d.data());
+      });
+      applySiteFinance();
+      rerenderAll();
+    }, err=>console.warn('listen siteFinance', err.code)));
+  }
+}
+
+let SITE_FINANCE = {};
+function applySiteFinance(){
+  DATA.sites.forEach(s=>{ s.contractValue = SITE_FINANCE[s.id] || 0; });
+}
+
+async function loadData(){ attachListeners(); }
+
+/* Writes only what changed, one document at a time. */
+async function saveData(){
+  if(!db) return;
+  try{
+    const batch = db.batch();
+    let writes = 0;
+
+    const sync = (key, path, transform) => {
+      const prev = serverState[key] || {};
+      const seen = new Set();
+      (DATA[key]||[]).forEach(item=>{
+        const {id, ...rest} = item;
+        const body = transform ? transform(rest) : rest;
+        Object.keys(body).forEach(k=>{ if(body[k]===undefined) delete body[k]; });
+        seen.add(id);
+        if(prev[id] !== JSON.stringify(body)){
+          batch.set(db.collection(path).doc(id), body);
+          writes++;
+        }
+      });
+      Object.keys(prev).forEach(id=>{
+        if(!seen.has(id)){ batch.delete(db.collection(path).doc(id)); writes++; }
+      });
+    };
+
+    sync('sites', 'sites', body => { const b={...body}; delete b.contractValue; return b; });
+    sync('expenses', 'expenses');
+    sync('udhar', 'udhar');
+    sync('workAgreements', 'agreements');
+
+    if(currentRole === 'owner'){
+      sync('clientPayments', 'clientPayments');
+      sync('investorLoans', 'investorLoans');
+      sync('officeExpenses', 'officeExpenses');
+      const prevFin = serverState.siteFinance || {};
+      const seenFin = new Set();
+      DATA.sites.forEach(s=>{
+        const body = { contractValue: Number(s.contractValue)||0 };
+        seenFin.add(s.id);
+        if(prevFin[s.id] !== JSON.stringify(body)){
+          batch.set(db.collection('siteFinance').doc(s.id), body); writes++;
+        }
+      });
+      Object.keys(prevFin).forEach(id=>{
+        if(!seenFin.has(id)){ batch.delete(db.collection('siteFinance').doc(id)); writes++; }
+      });
+    }
+
+    if(writes) await batch.commit();
+  }catch(e){
+    showToast(e.code === 'permission-denied' ? 'Iski permission nahi hai' : 'Save error — dobara try karo');
+    console.error('save', e);
+  }
+  refreshSuggestions();
+}
+
+function showStorageMode(){
+  const el = document.getElementById('storageModeNote');
+  if(el) el.innerHTML = '☁️ <strong>Cloud sync on.</strong> Har device pe data turant update hota hai.';
+}
+
+function escapeAttr(v){ return String(v).replace(/"/g,'&quot;'); }
+function setDatalist(id, values){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = values.filter(Boolean).map(v=>`<option value="${escapeAttr(v)}">`).join('');
+}
+function uniqueVals(arr, key){
+  return [...new Set(arr.map(x=>x[key]).filter(v=>v && String(v).trim()))].sort();
+}
+function refreshSuggestions(){
+  setDatalist('dl-labour-names', uniqueVals(DATA.expenses.filter(e=>e.type==='labour'), 'contractor'));
+  setDatalist('dl-material-names', uniqueVals(DATA.expenses.filter(e=>e.type==='material'), 'contractor'));
+  setDatalist('dl-other-names', uniqueVals(DATA.expenses.filter(e=>e.type==='other'), 'contractor'));
+  setDatalist('dl-materials', uniqueVals(DATA.udhar, 'material'));
+  setDatalist('dl-suppliers', uniqueVals(DATA.udhar, 'supplier'));
+  const commonUnits = ['bags','kg','ton','cft','sqft','pieces','ltr','brass'];
+  setDatalist('dl-units', [...new Set([...commonUnits, ...uniqueVals(DATA.udhar,'unit')])]);
+  setDatalist('dl-clients', uniqueVals(DATA.clientPayments, 'clientName'));
+  setDatalist('dl-investors', uniqueVals(DATA.investorLoans, 'investorName'));
+  setDatalist('dl-employees', uniqueVals(DATA.officeExpenses, 'paidTo'));
+  setDatalist('dl-sites-location', uniqueVals(DATA.sites, 'location'));
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function inr(n){ return '₹' + (Number(n)||0).toLocaleString('en-IN'); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function siteName(id){ const s = DATA.sites.find(s=>s.id===id); return s ? s.name : '—'; }
+
+/* ---------------- Tabs ---------------- */
+document.getElementById('navTabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#navTabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('main > section').forEach(s=>s.style.display='none');
+  document.getElementById('tab-'+btn.dataset.tab).style.display='block';
+  document.getElementById('navTabs').classList.remove('open');
+  window.scrollTo({top:0});
+  if(btn.dataset.tab==='dashboard') renderDashboard();
+  if(btn.dataset.tab==='reports') renderSiteSelects();
+  if(btn.dataset.tab==='clientpay'){ renderClientBalanceTable(); renderClientPayTable(); }
+  if(btn.dataset.tab==='investor') renderInvestorTable();
+  if(btn.dataset.tab==='office') renderOfficeTable();
+  if(btn.dataset.tab==='pnl') renderPnL();
+  if(btn.dataset.tab==='contractwork') renderAgreementsTable();
+  if(btn.dataset.tab==='team') loadTeam();
+});
+
+/* ---------------- Site selects population ---------------- */
+function siteCost(siteId){
+  const exp = DATA.expenses.filter(e=>e.siteId===siteId).reduce((a,e)=>a+Number(e.amount),0);
+  const ud = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
+  return exp + ud;
+}
+function siteReceived(siteId){
+  return DATA.clientPayments.filter(p=>p.siteId===siteId).reduce((a,p)=>a+Number(p.amount),0);
+}
+
+function renderSiteSelects(){
+  const selects = ['expSite','udSite','cpSite','agSite','qSite'];
+  selects.forEach(id=>{
+    const el = document.getElementById(id);
+    const cur = el.value;
+    el.innerHTML = DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('') ||
+      '<option value="">Pehle site add karo</option>';
+    if(cur) el.value = cur;
+  });
+  const invEl = document.getElementById('invSite');
+  const invCur = invEl.value;
+  invEl.innerHTML = '<option value="general">General (koi specific site nahi)</option>' + DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  if(invCur) invEl.value = invCur;
+
+  const filterSelects = ['dashSiteFilter','expListSiteFilter','udListSiteFilter','repSite','cpListSiteFilter','agListSiteFilter','impSite'];
+  filterSelects.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const cur = el.value;
+    const allLabel = id==='dashSiteFilter' ? 'All Sites (Overall)' : (id==='impSite' ? 'Select site' : 'All Sites');
+    const prefix = id==='impSite' ? '' : `<option value="all">${allLabel}</option>`;
+    el.innerHTML = prefix + DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    if(cur) el.value = cur;
+  });
+}
+
+/* ---------------- Sites tab ---------------- */
+document.getElementById('addSiteBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('newSiteName').value.trim();
+  const loc = document.getElementById('newSiteLocation').value.trim();
+  const contractValue = Number(document.getElementById('newSiteContract').value) || 0;
+  if(!name){ showToast('Site ka naam daalo'); return; }
+  DATA.sites.push({ id: uid(), name, location: loc, contractValue, createdAt: todayStr() });
+  document.getElementById('newSiteName').value='';
+  document.getElementById('newSiteLocation').value='';
+  document.getElementById('newSiteContract').value='';
+  await saveData();
+  renderSiteSelects(); renderSitesTable();
+  showToast('Site add ho gayi ✓');
+});
+
+function renderSitesTable(){
+  const tbody = document.querySelector('#sitesTable tbody');
+  if(DATA.sites.length===0){
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Abhi koi site nahi hai. Upar se ek site add karo.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = DATA.sites.map(s=>{
+    const exp = DATA.expenses.filter(e=>e.siteId===s.id);
+    const ud = DATA.udhar.filter(u=>u.siteId===s.id);
+    const cost = siteCost(s.id);
+    const received = siteReceived(s.id);
+    const contract = Number(s.contractValue)||0;
+    const pending = contract - received;
+    const count = exp.length + ud.length;
+    return `<tr>
+      <td><strong>${s.name}</strong></td>
+      <td>${s.location||'—'}</td>
+      <td class="amt owner-only">${contract ? inr(contract) : '—'}</td>
+      <td class="amt owner-only">${inr(received)}</td>
+      <td class="amt owner-only">${contract ? inr(pending) : '—'}</td>
+      <td class="amt">${inr(cost)}</td>
+      <td>${count}</td>
+      <td><button class="btn-danger-text owner-only" onclick="deleteSite('${s.id}')">Delete</button></td>
+    </tr>`;
+  }).join('');
+}
+async function deleteSite(id){
+  if(!await uiConfirm('Ye site delete karoge? Isse jude sabhi expense/udhar/payment entries bhi delete ho jayenge.', 'Haan, delete karo')) return;
+  try{
+    const batch = db.batch();
+    batch.delete(db.collection('sites').doc(id));
+    batch.delete(db.collection('siteFinance').doc(id));
+
+    const cascadeCols = ['expenses','udhar','agreements'];
+    if(currentRole === 'owner') cascadeCols.push('clientPayments','investorLoans');
+
+    for(const col of cascadeCols){
+      const snap = await db.collection(col).where('siteId','==',id).get();
+      snap.docs.forEach(d => batch.delete(d.ref));
+    }
+    await batch.commit();
+    showToast('Site delete ho gayi');
+  }catch(e){
+    showToast('Delete nahi hua — dobara try karo');
+    console.error('deleteSite', e);
+  }
+}
+
+/* ---------------- Add Expense tab ---------------- */
+document.getElementById('expType').addEventListener('change', (e)=>{
+  const isLabour = e.target.value==='labour';
+  document.getElementById('expCategoryWrap').style.display = isLabour ? 'block' : 'none';
+  document.getElementById('expNameLabel').textContent = isLabour ? 'Contractor Name' : (e.target.value==='material' ? 'Vendor / Shop Name' : 'Paid To');
+  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names' };
+  document.getElementById('expName').setAttribute('list', listMap[e.target.value]);
+});
+document.getElementById('expDate').value = todayStr();
+
+let editingExpenseId = null;
+
+document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
+  const siteId = document.getElementById('expSite').value;
+  const type = document.getElementById('expType').value;
+  const category = type==='labour' ? document.getElementById('expCategory').value : '';
+  const contractor = document.getElementById('expName').value.trim();
+  const date = document.getElementById('expDate').value || todayStr();
+  const amount = Number(document.getElementById('expAmount').value);
+  const mode = document.getElementById('expMode').value;
+  const note = document.getElementById('expNote').value.trim();
+
+  if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
+  if(!contractor){ showToast('Naam daalo'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+
+  if(editingExpenseId){
+    const item = DATA.expenses.find(e=>e.id===editingExpenseId);
+    if(item) Object.assign(item, { siteId, type, category, contractor, date, amount, mode, note });
+    cancelExpenseEdit(true);
+    showToast('Entry update ho gayi ✓');
+  } else {
+    DATA.expenses.push({ id: uid(), siteId, type, category, contractor, date, amount, mode, note });
+    showToast('Expense add ho gaya ✓');
+  }
+  document.getElementById('expName').value='';
+  document.getElementById('expAmount').value='';
+  document.getElementById('expNote').value='';
+  await saveData();
+  renderExpenseTable(); renderDashboard(); renderSitesTable();
+});
+
+function editExpense(id){
+  const r = DATA.expenses.find(e=>e.id===id);
+  if(!r) return;
+  editingExpenseId = id;
+  document.getElementById('expSite').value = r.siteId;
+  document.getElementById('expType').value = r.type;
+  document.getElementById('expType').dispatchEvent(new Event('change'));
+  if(r.type==='labour' && r.category) document.getElementById('expCategory').value = r.category;
+  document.getElementById('expName').value = r.contractor||'';
+  document.getElementById('expDate').value = r.date;
+  document.getElementById('expAmount').value = r.amount;
+  document.getElementById('expMode').value = r.mode||'Cash';
+  document.getElementById('expNote').value = r.note||'';
+  document.getElementById('addExpenseBtn').textContent = '✓ Update Entry';
+  document.getElementById('cancelEditBtn').style.display = 'inline-flex';
+  document.getElementById('expEditNote').textContent = 'Editing an existing entry — change karke Update dabao.';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function cancelExpenseEdit(silent){
+  editingExpenseId = null;
+  document.getElementById('addExpenseBtn').textContent = '+ Add Expense';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('expEditNote').textContent = '';
+  if(!silent){
+    document.getElementById('expName').value='';
+    document.getElementById('expAmount').value='';
+    document.getElementById('expNote').value='';
+  }
+}
+document.getElementById('cancelEditBtn').addEventListener('click', ()=>cancelExpenseEdit(false));
+
+function renderExpenseTable(){
+  const siteFilter = document.getElementById('expListSiteFilter').value;
+  const typeFilter = document.getElementById('expListTypeFilter').value;
+  const q = (document.getElementById('expSearch').value||'').trim().toLowerCase();
+  let rows = [...DATA.expenses].sort((a,b)=> b.date.localeCompare(a.date));
+  if(siteFilter && siteFilter!=='all') rows = rows.filter(r=>r.siteId===siteFilter);
+  if(typeFilter && typeFilter!=='all') rows = rows.filter(r=>r.type===typeFilter);
+  if(q) rows = rows.filter(r=>
+    (r.contractor||'').toLowerCase().includes(q) ||
+    (r.category||'').toLowerCase().includes(q) ||
+    (r.note||'').toLowerCase().includes(q)
+  );
+  const tbody = document.querySelector('#expenseTable tbody');
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="9" class="empty">Koi expense entry nahi mili.</td></tr>`;
+    document.getElementById('expTotalLine').textContent = '';
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.date}</td>
+    <td>${siteName(r.siteId)}</td>
+    <td><span class="tag ${r.type}">${r.type}</span></td>
+    <td>${r.category||'—'}</td>
+    <td>${r.contractor}</td>
+    <td>${r.mode||'—'}</td>
+    <td>${r.note||'—'}</td>
+    <td class="amt">${inr(r.amount)}</td>
+    <td>
+      <button class="btn-danger-text" style="color:var(--steel)" onclick="editExpense('${r.id}')">Edit</button>
+      &nbsp;·&nbsp;
+      <button class="btn-danger-text" onclick="deleteExpense('${r.id}')">Delete</button>
+    </td>
+  </tr>`).join('');
+  const total = rows.reduce((a,r)=>a+Number(r.amount),0);
+  document.getElementById('expTotalLine').textContent = `Showing ${rows.length} entries · Total: ${inr(total)}`;
+}
+async function deleteExpense(id){
+  if(!await uiConfirm('Ye entry delete karni hai?', 'Haan, delete karo')) return;
+  if(editingExpenseId===id) cancelExpenseEdit(false);
+  try{
+    await db.collection('expenses').doc(id).delete();
+    showToast('Entry delete ho gayi');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+document.getElementById('expListSiteFilter').addEventListener('change', renderExpenseTable);
+document.getElementById('expListTypeFilter').addEventListener('change', renderExpenseTable);
+document.getElementById('expSearch').addEventListener('input', renderExpenseTable);
+
+/* ---------------- Udhar tab ---------------- */
+document.getElementById('udDate').value = todayStr();
+document.getElementById('addUdharBtn').addEventListener('click', async ()=>{
+  const siteId = document.getElementById('udSite').value;
+  const supplier = document.getElementById('udSupplier').value.trim();
+  const material = document.getElementById('udMaterial').value.trim();
+  const qty = document.getElementById('udQty').value;
+  const unit = document.getElementById('udUnit').value.trim();
+  const date = document.getElementById('udDate').value || todayStr();
+  const amount = Number(document.getElementById('udAmount').value);
+  const status = document.getElementById('udStatus').value;
+  const note = document.getElementById('udNote').value.trim();
+
+  if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
+  if(!supplier || !material){ showToast('Supplier aur material ka naam daalo'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+
+  DATA.udhar.push({ id: uid(), siteId, supplier, material, qty, unit, date, amount, status, note });
+  document.getElementById('udSupplier').value='';
+  document.getElementById('udMaterial').value='';
+  document.getElementById('udQty').value='';
+  document.getElementById('udUnit').value='';
+  document.getElementById('udAmount').value='';
+  document.getElementById('udNote').value='';
+  await saveData();
+  renderUdharTable(); renderDashboard(); renderSitesTable();
+  showToast('Udhar entry add ho gayi ✓');
+});
+
+function renderUdharTable(){
+  const siteFilter = document.getElementById('udListSiteFilter').value;
+  const statusFilter = document.getElementById('udListStatusFilter').value;
+  let rows = [...DATA.udhar].sort((a,b)=> b.date.localeCompare(a.date));
+  if(siteFilter && siteFilter!=='all') rows = rows.filter(r=>r.siteId===siteFilter);
+  if(statusFilter && statusFilter!=='all') rows = rows.filter(r=>r.status===statusFilter);
+  const tbody = document.querySelector('#udharTable tbody');
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="9" class="empty">Koi udhar entry nahi mili.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.date}</td>
+    <td>${siteName(r.siteId)}</td>
+    <td>${r.supplier}</td>
+    <td>${r.material}${r.qty?(' ('+r.qty+' '+(r.unit||'')+')'):''}</td>
+    <td>${r.qty||'—'} ${r.unit||''}</td>
+    <td class="amt">${inr(r.amount)}</td>
+    <td><span class="tag ${r.status}">${r.status}</span></td>
+    <td>${r.note||'—'}</td>
+    <td>
+      <button class="btn-danger-text" onclick="toggleUdhar('${r.id}')">${r.status==='paid'?'Mark Pending':'Mark Paid'}</button>
+      &nbsp;·&nbsp;
+      <button class="btn-danger-text" onclick="deleteUdhar('${r.id}')">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+async function toggleUdhar(id){
+  const item = DATA.udhar.find(u=>u.id===id);
+  if(!item) return;
+  const next = item.status==='paid' ? 'pending' : 'paid';
+  try{
+    await db.collection('udhar').doc(id).update({status: next});
+  }catch(e){ showToast('Update nahi hua — dobara try karo'); }
+}
+async function deleteUdhar(id){
+  try{
+    await db.collection('udhar').doc(id).delete();
+    showToast('Udhar entry delete ho gayi');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+document.getElementById('udListSiteFilter').addEventListener('change', renderUdharTable);
+document.getElementById('udListStatusFilter').addEventListener('change', renderUdharTable);
+
+/* ---------------- Contractor Work Agreement tab ---------------- */
+function computePaidForAgreement(ag){
+  return DATA.expenses.filter(e=>{
+    if(e.type!=='labour') return false;
+    if(e.siteId!==ag.siteId) return false;
+    if((e.contractor||'').trim().toLowerCase() !== (ag.contractor||'').trim().toLowerCase()) return false;
+    if(ag.category!=='All' && e.category!==ag.category) return false;
+    return true;
+  }).reduce((a,e)=>a+Number(e.amount),0);
+}
+
+document.getElementById('addAgreementBtn').addEventListener('click', async ()=>{
+  const siteId = document.getElementById('agSite').value;
+  const contractor = document.getElementById('agContractor').value.trim();
+  const category = document.getElementById('agCategory').value;
+  const amount = Number(document.getElementById('agAmount').value);
+  const note = document.getElementById('agNote').value.trim();
+
+  if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
+  if(!contractor){ showToast('Contractor ka naam daalo'); return; }
+  if(!amount || amount<=0){ showToast('Sahi fixed amount daalo'); return; }
+
+  DATA.workAgreements.push({ id: uid(), siteId, contractor, category, fixedAmount: amount, note });
+  document.getElementById('agContractor').value='';
+  document.getElementById('agAmount').value='';
+  document.getElementById('agNote').value='';
+  await saveData();
+  renderAgreementsTable(); renderDashboard();
+  showToast('Work agreement add ho gaya ✓');
+});
+
+function renderAgreementsTable(){
+  const siteFilter = document.getElementById('agListSiteFilter').value;
+  let rows = [...DATA.workAgreements];
+  if(siteFilter && siteFilter!=='all') rows = rows.filter(r=>r.siteId===siteFilter);
+  const tbody = document.querySelector('#agreementsTable tbody');
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Koi work agreement nahi mila. Upar se ek agreement add karo.</td></tr>`;
+    document.getElementById('agTotalLine').textContent = '';
+    return;
+  }
+  let totalFixed=0, totalPaid=0, totalBalance=0;
+  tbody.innerHTML = rows.map(r=>{
+    const paid = computePaidForAgreement(r);
+    const balance = Number(r.fixedAmount) - paid;
+    totalFixed += Number(r.fixedAmount); totalPaid += paid; totalBalance += balance;
+    return `<tr>
+      <td>${siteName(r.siteId)}</td>
+      <td>${r.contractor}</td>
+      <td>${r.category}</td>
+      <td class="amt">${inr(r.fixedAmount)}</td>
+      <td class="amt">${inr(paid)}</td>
+      <td class="amt" style="color:${balance>0?'var(--bad)':'var(--good)'}">${balance<0?'Extra Paid ':''}${inr(Math.abs(balance))}</td>
+      <td>${r.note||'—'}</td>
+      <td><button class="btn-danger-text" onclick="deleteAgreement('${r.id}')">Delete</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('agTotalLine').textContent = `Total Fixed: ${inr(totalFixed)} · Total Paid: ${inr(totalPaid)} · Total Balance Due: ${inr(totalBalance)}`;
+}
+async function deleteAgreement(id){
+  try{
+    await db.collection('agreements').doc(id).delete();
+    showToast('Work agreement delete ho gaya');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+document.getElementById('agListSiteFilter').addEventListener('change', renderAgreementsTable);
+
+/* ---------------- Import Data tab ---------------- */
+let importRows = []; // {date,type,category,name,amount,mode,note,include}
+
+function normHeader(h){ return String(h||'').trim().toLowerCase(); }
+function findVal(rowObj, candidates){
+  const keys = Object.keys(rowObj);
+  for(const cand of candidates){
+    const k = keys.find(k=>normHeader(k)===cand);
+    if(k!==undefined && rowObj[k]!==undefined && rowObj[k]!=='') return rowObj[k];
+  }
+  return null;
+}
+function toDateStr(val){
+  if(!val) return todayStr();
+  if(val instanceof Date && !isNaN(val)) return val.toISOString().slice(0,10);
+  const s = String(val).trim();
+  // try dd/mm/yyyy or dd-mm-yyyy
+  let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){
+    let [_, d, mo, y] = m;
+    if(y.length===2) y = '20'+y;
+    return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  const d = new Date(s);
+  if(!isNaN(d)) return d.toISOString().slice(0,10);
+  return todayStr();
+}
+function toAmount(val){
+  if(val===null || val===undefined) return 0;
+  const n = Number(String(val).replace(/[₹,\s]/g,''));
+  return isNaN(n) ? 0 : n;
+}
+
+document.getElementById('impParseBtn').addEventListener('click', async ()=>{
+  const fileEl = document.getElementById('impFile');
+  const statusEl = document.getElementById('impStatus');
+  const defaultType = document.getElementById('impDefaultType').value;
+  const defaultCategory = document.getElementById('impDefaultCategory').value;
+  if(!fileEl.files || fileEl.files.length===0){ showToast('Pehle ek file select karo'); return; }
+  const file = fileEl.files[0];
+  const ext = file.name.split('.').pop().toLowerCase();
+  statusEl.textContent = 'File parse ho rahi hai…';
+  importRows = [];
+
+  try{
+    if(ext==='xlsx' || ext==='xls' || ext==='csv'){
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array', cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, {defval:''});
+      json.forEach(row=>{
+        const dateVal = findVal(row, ['date']);
+        const typeVal = findVal(row, ['type','expense type']);
+        const catVal = findVal(row, ['category','work category','labour category']);
+        const nameVal = findVal(row, ['name','contractor','contractor name','vendor','vendor name','paid to','supplier']);
+        const amtVal = findVal(row, ['amount','amt','value','total']);
+        const modeVal = findVal(row, ['mode','payment mode','payment']);
+        const noteVal = findVal(row, ['note','notes','remark','remarks','description']);
+        const amount = toAmount(amtVal);
+        if(!nameVal && !amount) return; // skip fully blank rows
+        importRows.push({
+          date: toDateStr(dateVal),
+          type: (typeVal && ['labour','material','other'].includes(String(typeVal).toLowerCase())) ? String(typeVal).toLowerCase() : defaultType,
+          category: catVal ? String(catVal) : defaultCategory,
+          name: nameVal ? String(nameVal) : '(no name)',
+          amount: amount,
+          mode: modeVal ? String(modeVal) : 'Cash',
+          note: noteVal ? String(noteVal) : '',
+          include: true
+        });
+      });
+    } else if(ext==='pdf'){
+      statusEl.textContent = 'PDF se text nikala ja raha hai (best-effort)…';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+      let lines = [];
+      for(let p=1; p<=pdf.numPages; p++){
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(it=>it.str).join(' ');
+        lines = lines.concat(pageText.split(/\n|(?=\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/));
+      }
+      lines.forEach(line=>{
+        const dateMatch = line.match(/(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})/);
+        const amtMatch = line.match(/(?:₹|rs\.?|inr)?\s*([\d,]+(?:\.\d{1,2})?)\s*$/i);
+        if(dateMatch && amtMatch){
+          const amount = toAmount(amtMatch[1]);
+          if(amount<=0) return;
+          let name = line.replace(dateMatch[0],'').replace(amtMatch[0],'').replace(/[-–:,]+/g,' ').trim();
+          if(!name) name = '(from PDF)';
+          importRows.push({
+            date: toDateStr(dateMatch[0]),
+            type: defaultType,
+            category: defaultCategory,
+            name: name.slice(0,60),
+            amount,
+            mode: 'Cash',
+            note: 'Imported from PDF (verify before relying on this)',
+            include: true
+          });
+        }
+      });
+    } else {
+      showToast('Ye file type supported nahi hai. Excel, CSV, ya PDF use karo.');
+      statusEl.textContent = '';
+      return;
+    }
+  }catch(err){
+    statusEl.textContent = 'File parse karne mein error aayi. File format check karo.';
+    showToast('Parse error — file format sahi hai ya check karo');
+    return;
+  }
+
+  if(importRows.length===0){
+    statusEl.textContent = 'Is file mein koi valid entry nahi mili.';
+    document.getElementById('impPreviewCard').style.display = 'none';
+    return;
+  }
+  statusEl.textContent = `${importRows.length} entries mili. Neeche preview karke confirm karo.`;
+  renderImportPreview();
+});
+
+function renderImportPreview(){
+  document.getElementById('impPreviewCard').style.display = 'block';
+  document.getElementById('impPreviewCount').textContent = `(${importRows.length} rows found)`;
+  const tbody = document.querySelector('#impPreviewTable tbody');
+  tbody.innerHTML = importRows.map((r,i)=>`<tr>
+    <td><input type="checkbox" ${r.include?'checked':''} onchange="importRows[${i}].include=this.checked"></td>
+    <td><input type="date" value="${r.date}" onchange="importRows[${i}].date=this.value"></td>
+    <td><select onchange="importRows[${i}].type=this.value">
+      <option value="labour" ${r.type==='labour'?'selected':''}>Labour</option>
+      <option value="material" ${r.type==='material'?'selected':''}>Material</option>
+      <option value="other" ${r.type==='other'?'selected':''}>Other</option>
+    </select></td>
+    <td><input type="text" value="${escapeAttr(r.category)}" onchange="importRows[${i}].category=this.value"></td>
+    <td><input type="text" value="${escapeAttr(r.name)}" onchange="importRows[${i}].name=this.value"></td>
+    <td><input type="number" value="${r.amount}" onchange="importRows[${i}].amount=Number(this.value)"></td>
+    <td><input type="text" value="${escapeAttr(r.mode)}" onchange="importRows[${i}].mode=this.value"></td>
+    <td><input type="text" value="${escapeAttr(r.note)}" onchange="importRows[${i}].note=this.value"></td>
+  </tr>`).join('');
+}
+document.getElementById('impSelectAllBtn').addEventListener('click', ()=>{
+  importRows.forEach(r=>r.include=true); renderImportPreview();
+});
+document.getElementById('impSelectNoneBtn').addEventListener('click', ()=>{
+  importRows.forEach(r=>r.include=false); renderImportPreview();
+});
+
+document.getElementById('impConfirmBtn').addEventListener('click', async ()=>{
+  const siteId = document.getElementById('impSite').value;
+  if(!siteId){ showToast('Pehle site select karo'); return; }
+  const selected = importRows.filter(r=>r.include && r.amount>0);
+  if(selected.length===0){ showToast('Import karne ke liye koi row select nahi hai'); return; }
+  selected.forEach(r=>{
+    DATA.expenses.push({
+      id: uid(), siteId, type: r.type,
+      category: r.type==='labour' ? (r.category||'Other') : '',
+      contractor: r.name, date: r.date, amount: r.amount, mode: r.mode, note: r.note
+    });
+  });
+  await saveData();
+  renderExpenseTable(); renderDashboard(); renderSitesTable();
+  showToast(`${selected.length} entries "${siteName(siteId)}" mein add ho gayi ✓`);
+  importRows = [];
+  document.getElementById('impPreviewCard').style.display = 'none';
+  document.getElementById('impFile').value = '';
+  document.getElementById('impStatus').textContent = '';
+});
+
+/* ---------------- Team Logins (owner only) ----------------
+   The owner invites a person by email. That email is written to invites/,
+   which the Firestore rules treat as permission to create a staff profile
+   on first sign-in. Staff choose their own password (or use Google), so
+   no password ever passes through this app. */
+let TEAM = [];
+
+async function loadTeam(){
+  if(currentRole !== 'owner') return;
+  try{
+    const [invSnap, userSnap] = await Promise.all([
+      db.collection('invites').get(),
+      db.collection('users').get()
+    ]);
+    const users = {};
+    userSnap.docs.forEach(d=>{ users[(d.data().email||'').toLowerCase()] = Object.assign({uid:d.id}, d.data()); });
+    TEAM = invSnap.docs.map(d=>{
+      const email = d.id;
+      const u = users[email];
+      return {
+        email,
+        name: (u && u.name) || d.data().name || email.split('@')[0],
+        joined: u ? (u.joined || '') : '',
+        status: u ? 'Joined' : 'Invited',
+        disabled: d.data().disabled === true,
+        uid: u ? u.uid : null
+      };
+    }).sort((a,b)=>a.email.localeCompare(b.email));
+    renderTeamTable();
+  }catch(e){
+    showToast('Team load nahi hui — rules check karo');
+    console.error(e);
+  }
+}
+
+document.getElementById('tmAddBtn').addEventListener('click', async ()=>{
+  const err   = document.getElementById('tmErr');
+  const name  = document.getElementById('tmName').value.trim();
+  const email = document.getElementById('tmUser').value.trim().toLowerCase();
+  err.textContent = '';
+
+  if(!name){ err.textContent = 'Employee ka naam likho.'; return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = 'Sahi email daalo.'; return; }
+  if(email === String(OWNER_EMAIL).toLowerCase()){ err.textContent = 'Ye to owner ka email hai.'; return; }
+  if(TEAM.some(u=>u.email===email)){ err.textContent = 'Ye email pehle se invited hai.'; return; }
+
+  try{
+    await db.collection('invites').doc(email).set({ name, invitedOn: todayStr(), disabled:false });
+    document.getElementById('tmName').value = '';
+    document.getElementById('tmUser').value = '';
+    await loadTeam();
+    showInviteDetails(name, email);
+  }catch(e){
+    err.textContent = e.code === 'permission-denied' ? 'Permission nahi hai — rules check karo.' : ('Error: ' + e.message);
+  }
+});
+
+function showInviteDetails(name, email){
+  const link = location.href.split('#')[0];
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal">
+    <h3>Invite ban gaya</h3>
+    <p>${name} ko ye bhej do. Wo khud apna password banayega — aapko password banane ki zaroorat nahi.</p>
+    <div class="modal-cred">
+      <div class="role">${name}</div>
+      <div class="cred-row"><span class="cred-label">Email</span><span class="cred-val">${email}</span></div>
+    </div>
+    <p style="font-size:12.5px">App link kholkar <strong>"Naya account banao"</strong> dabaye, isi email se password set kare — ya <strong>Google se login</strong> kare agar ye Gmail hai.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" data-copy style="flex:1;justify-content:center">Message copy karo</button>
+      <button class="btn btn-primary" data-ok style="flex:1;justify-content:center">Done</button>
+    </div></div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('[data-ok]').onclick = ()=>bg.remove();
+  bg.querySelector('[data-copy]').onclick = async (e)=>{
+    const msg = `FirstBrix Infratech - Expense App\n\nLink: ${link}\nAapka email: ${email}\n\n"Naya account banao" dabakar apna password set karo, ya Google se login karo.`;
+    try{ await navigator.clipboard.writeText(msg); e.target.textContent = 'Copied ✓'; }
+    catch(_){ e.target.textContent = 'Copy nahi hua'; }
+  };
+}
+
+function renderTeamTable(){
+  const tbody = document.querySelector('#teamTable tbody');
+  if(!tbody) return;
+  if(TEAM.length===0){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Abhi koi team member nahi hai. Upar se pehla invite bhejo.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = TEAM.map(u=>`<tr>
+    <td><strong>${u.name}</strong></td>
+    <td class="amt">${u.email}</td>
+    <td>${u.joined||'—'}</td>
+    <td><span class="tag ${u.disabled ? 'pending' : (u.status==='Joined'?'paid':'other')}">${u.disabled?'Disabled':u.status}</span></td>
+    <td>
+      <button class="btn-danger-text" style="color:var(--ink-soft)" onclick="toggleTeam('${u.email}')">${u.disabled?'Enable':'Disable'}</button>
+      &nbsp;·&nbsp;
+      <button class="btn-danger-text" onclick="removeTeam('${u.email}')">Remove</button>
+    </td>
+  </tr>`).join('');
+}
+
+async function toggleTeam(email){
+  const u = TEAM.find(x=>x.email===email);
+  if(!u) return;
+  try{
+    await db.collection('invites').doc(email).update({ disabled: !u.disabled });
+    if(u.uid) await db.collection('users').doc(u.uid).update({ disabled: !u.disabled });
+    await loadTeam();
+    showToast(!u.disabled ? 'Access band kar diya' : 'Access chalu kar diya');
+  }catch(e){ showToast('Nahi ho paya — rules check karo'); }
+}
+
+async function removeTeam(email){
+  const u = TEAM.find(x=>x.email===email);
+  if(!u) return;
+  if(!await uiConfirm(`"${u.name}" ko hata dein? Wo phir login nahi kar payega.`, 'Haan, hatao')) return;
+  try{
+    await db.collection('invites').doc(email).delete();
+    if(u.uid) await db.collection('users').doc(u.uid).delete();
+    await loadTeam();
+    showToast('Team member hata diya');
+  }catch(e){ showToast('Nahi ho paya — rules check karo'); }
+}
+
+/* ---------------- Quick add (floating button) ---------------- */
+const qModal = document.getElementById('quickModal');
+
+document.getElementById('qType').addEventListener('change', e=>{
+  const isLabour = e.target.value==='labour';
+  document.getElementById('qCategoryWrap').style.display = isLabour ? 'block' : 'none';
+  document.getElementById('qNameLabel').textContent =
+    isLabour ? 'Contractor name' : (e.target.value==='material' ? 'Vendor / shop name' : 'Paid to');
+  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names' };
+  document.getElementById('qName').setAttribute('list', listMap[e.target.value]);
+});
+
+function openQuickAdd(){
+  if(DATA.sites.length===0){
+    showToast('Pehle ek site add karo');
+    document.querySelector('#navTabs button[data-tab="sites"]').click();
+    return;
+  }
+  renderSiteSelects();
+  document.getElementById('qDate').value = document.getElementById('qDate').value || todayStr();
+  document.getElementById('qErr').textContent = '';
+  document.getElementById('qSavedHint').textContent = '';
+  qModal.style.display = 'flex';
+  setTimeout(()=>document.getElementById('qName').focus(), 60);
+}
+function closeQuickAdd(){ qModal.style.display = 'none'; }
+
+document.getElementById('quickAddFab').addEventListener('click', openQuickAdd);
+document.getElementById('qCancel').addEventListener('click', closeQuickAdd);
+qModal.addEventListener('click', e=>{ if(e.target===qModal) closeQuickAdd(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && qModal.style.display==='flex') closeQuickAdd(); });
+
+document.getElementById('qSave').addEventListener('click', async ()=>{
+  const err = document.getElementById('qErr');
+  const siteId = document.getElementById('qSite').value;
+  const type = document.getElementById('qType').value;
+  const name = document.getElementById('qName').value.trim();
+  const amount = Number(document.getElementById('qAmount').value);
+  const date = document.getElementById('qDate').value || todayStr();
+
+  if(!siteId){ err.textContent = 'Site chuno.'; return; }
+  if(!name){ err.textContent = 'Naam likho.'; return; }
+  if(!amount || amount<=0){ err.textContent = 'Amount daalo.'; return; }
+  err.textContent = '';
+
+  DATA.expenses.push({
+    id: uid(), siteId, type,
+    category: type==='labour' ? document.getElementById('qCategory').value : '',
+    contractor: name, date, amount,
+    mode: document.getElementById('qMode').value,
+    note: document.getElementById('qNote').value.trim()
+  });
+  await saveData();
+  renderExpenseTable(); renderDashboard(); renderSitesTable(); renderAgreementsTable();
+
+  // Keep the modal open so several entries can be logged in a row.
+  document.getElementById('qSavedHint').textContent = `Saved: ${name} — ${inr(amount)} (${siteName(siteId)})`;
+  document.getElementById('qName').value = '';
+  document.getElementById('qAmount').value = '';
+  document.getElementById('qNote').value = '';
+  document.getElementById('qName').focus();
+  showToast('Expense saved ✓');
+});
+
+/* ---------------- Backup & Restore ---------------- */
+document.getElementById('backupBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], {type:'application/json'});
+  saveBlob(blob, `FirstBrix_Backup_${todayStr()}.json`);
+  showToast('Backup taiyar ✓');
+});
+
+document.getElementById('restoreFile').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!await uiConfirm('Restore karne par abhi ka saara data replace ho jayega.\n\nPehle current data ka backup le liya hai?', 'Haan, restore karo')){
+    e.target.value=''; return;
+  }
+  try{
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if(!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.sites)){
+      showToast('Ye valid backup file nahi lag rahi'); e.target.value=''; return;
+    }
+    ['sites','expenses','udhar','clientPayments','investorLoans','officeExpenses','workAgreements']
+      .forEach(k=>{ DATA[k] = Array.isArray(parsed[k]) ? parsed[k] : []; });
+    await saveData();
+    renderSiteSelects(); renderSitesTable(); renderExpenseTable(); renderUdharTable();
+    renderAgreementsTable(); renderClientBalanceTable(); renderClientPayTable();
+    renderInvestorTable(); renderOfficeTable(); renderDashboard();
+    showToast('Data restore ho gaya ✓');
+  }catch(err){
+    showToast('Restore fail hua — file corrupt ho sakti hai');
+  }
+  e.target.value='';
+});
+
+function showStorageMode(){
+  const el = document.getElementById('storageModeNote');
+  if(!el) return;
+  el.innerHTML = HAS_CLAUDE_STORAGE
+    ? '✅ <strong>Cloud mode:</strong> Data online save ho raha hai — har device pe same data dikhega.'
+    : '⚠️ <strong>Local mode:</strong> Ye app khud host ki gayi hai, isliye data sirf <strong>isi browser</strong> mein save hota hai. Doosre PC pe data le jaane ke liye upar se Backup download karke wahan Restore karo.';
+}
+
+/* ---------------- Client Payments tab ---------------- */
+document.getElementById('cpDate').value = todayStr();
+document.getElementById('addClientPayBtn').addEventListener('click', async ()=>{
+  const siteId = document.getElementById('cpSite').value;
+  const clientName = document.getElementById('cpClient').value.trim();
+  const date = document.getElementById('cpDate').value || todayStr();
+  const amount = Number(document.getElementById('cpAmount').value);
+  const mode = document.getElementById('cpMode').value;
+  const note = document.getElementById('cpNote').value.trim();
+
+  if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+
+  DATA.clientPayments.push({ id: uid(), siteId, clientName, date, amount, mode, note });
+  document.getElementById('cpClient').value='';
+  document.getElementById('cpAmount').value='';
+  document.getElementById('cpNote').value='';
+  await saveData();
+  renderClientBalanceTable(); renderClientPayTable(); renderSitesTable(); renderDashboard();
+  showToast('Client payment add ho gayi ✓');
+});
+
+function renderClientBalanceTable(){
+  const tbody = document.querySelector('#clientBalanceTable tbody');
+  if(DATA.sites.length===0){
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">Koi site nahi hai.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = DATA.sites.map(s=>{
+    const received = siteReceived(s.id);
+    const contract = Number(s.contractValue)||0;
+    const pending = contract - received;
+    return `<tr><td><strong>${s.name}</strong></td><td class="amt">${contract?inr(contract):'—'}</td><td class="amt">${inr(received)}</td><td class="amt">${contract?inr(pending):'—'}</td></tr>`;
+  }).join('');
+}
+function renderClientPayTable(){
+  const siteFilter = document.getElementById('cpListSiteFilter').value;
+  let rows = [...DATA.clientPayments].sort((a,b)=>b.date.localeCompare(a.date));
+  if(siteFilter && siteFilter!=='all') rows = rows.filter(r=>r.siteId===siteFilter);
+  const tbody = document.querySelector('#clientPayTable tbody');
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Koi client payment entry nahi mili.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.date}</td><td>${siteName(r.siteId)}</td><td>${r.clientName||'—'}</td><td>${r.mode||'—'}</td><td>${r.note||'—'}</td>
+    <td class="amt">${inr(r.amount)}</td>
+    <td><button class="btn-danger-text" onclick="deleteClientPay('${r.id}')">Delete</button></td>
+  </tr>`).join('');
+}
+async function deleteClientPay(id){
+  try{ await db.collection('clientPayments').doc(id).delete(); }
+  catch(e){ showToast('Delete nahi hua — dobara try karo'); return; }
+  showToast('Payment entry delete ho gayi');
+}
+document.getElementById('cpListSiteFilter').addEventListener('change', renderClientPayTable);
+
+/* ---------------- Investor Funding tab ---------------- */
+document.getElementById('invDate').value = todayStr();
+document.getElementById('addInvestorBtn').addEventListener('click', async ()=>{
+  const siteId = document.getElementById('invSite').value;
+  const investorName = document.getElementById('invName').value.trim();
+  const date = document.getElementById('invDate').value || todayStr();
+  const taken = Number(document.getElementById('invTaken').value);
+  let returnAmt = Number(document.getElementById('invReturn').value);
+  const expDate = document.getElementById('invExpDate').value;
+  const status = document.getElementById('invStatus').value;
+  const note = document.getElementById('invNote').value.trim();
+
+  if(!investorName){ showToast('Investor ka naam daalo'); return; }
+  if(!taken || taken<=0){ showToast('Sahi amount daalo jo liya hai'); return; }
+  if(!returnAmt || returnAmt<=0) returnAmt = taken;
+
+  DATA.investorLoans.push({ id: uid(), siteId, investorName, date, taken, returnAmt, expDate, status, note });
+  document.getElementById('invName').value='';
+  document.getElementById('invTaken').value='';
+  document.getElementById('invReturn').value='';
+  document.getElementById('invExpDate').value='';
+  document.getElementById('invNote').value='';
+  await saveData();
+  renderInvestorTable(); renderDashboard();
+  showToast('Investor entry add ho gayi ✓');
+});
+
+function renderInvestorTable(){
+  const rows = [...DATA.investorLoans].sort((a,b)=>b.date.localeCompare(a.date));
+  const tbody = document.querySelector('#investorTable tbody');
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="9" class="empty">Koi investor entry nahi mili.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>{
+    const extra = Number(r.returnAmt) - Number(r.taken);
+    const site = r.siteId==='general' || !r.siteId ? 'General' : siteName(r.siteId);
+    return `<tr>
+      <td>${r.date}</td><td>${site}</td><td>${r.investorName}</td>
+      <td class="amt">${inr(r.taken)}</td><td class="amt">${inr(r.returnAmt)}</td>
+      <td class="amt">${extra>0?inr(extra):'—'}</td>
+      <td>${r.expDate||'—'}</td>
+      <td><span class="tag ${r.status==='returned'?'paid':'pending'}">${r.status}</span></td>
+      <td>
+        <button class="btn-danger-text" onclick="toggleInvestor('${r.id}')">${r.status==='returned'?'Mark Pending':'Mark Returned'}</button>
+        &nbsp;·&nbsp;
+        <button class="btn-danger-text" onclick="deleteInvestor('${r.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function toggleInvestor(id){
+  const item = DATA.investorLoans.find(i=>i.id===id);
+  if(!item) return;
+  const next = item.status==='returned' ? 'pending' : 'returned';
+  try{ await db.collection('investorLoans').doc(id).update({status: next}); }
+  catch(e){ showToast('Update nahi hua — dobara try karo'); }
+}
+async function deleteInvestor(id){
+  try{
+    await db.collection('investorLoans').doc(id).delete();
+    showToast('Investor entry delete ho gayi');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
+/* ---------------- Office & Employee Expense tab ---------------- */
+document.getElementById('ofDate').value = todayStr();
+document.getElementById('addOfficeBtn').addEventListener('click', async ()=>{
+  const category = document.getElementById('ofCategory').value;
+  const paidTo = document.getElementById('ofName').value.trim();
+  const date = document.getElementById('ofDate').value || todayStr();
+  const amount = Number(document.getElementById('ofAmount').value);
+  const note = document.getElementById('ofNote').value.trim();
+
+  if(!paidTo){ showToast('Naam daalo'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+
+  DATA.officeExpenses.push({ id: uid(), category, paidTo, date, amount, note });
+  document.getElementById('ofName').value='';
+  document.getElementById('ofAmount').value='';
+  document.getElementById('ofNote').value='';
+  await saveData();
+  renderOfficeTable(); renderDashboard();
+  showToast('Office expense add ho gaya ✓');
+});
+
+function renderOfficeTable(){
+  const catFilter = document.getElementById('ofListCategoryFilter').value;
+  const catSelect = document.getElementById('ofListCategoryFilter');
+  if(catSelect.options.length<=1){
+    const cats = ['Employee Salary','Office Rent','Utility Bill','Stationery / Supplies','Travel / Conveyance','Other'];
+    catSelect.innerHTML = '<option value="all">All Categories</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  }
+  let rows = [...DATA.officeExpenses].sort((a,b)=>b.date.localeCompare(a.date));
+  if(catFilter && catFilter!=='all') rows = rows.filter(r=>r.category===catFilter);
+  const tbody = document.querySelector('#officeTable tbody');
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Koi office expense entry nahi mili.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.date}</td><td>${r.category}</td><td>${r.paidTo}</td><td>${r.note||'—'}</td>
+    <td class="amt">${inr(r.amount)}</td>
+    <td><button class="btn-danger-text" onclick="deleteOffice('${r.id}')">Delete</button></td>
+  </tr>`).join('');
+}
+async function deleteOffice(id){
+  try{ await db.collection('officeExpenses').doc(id).delete(); }
+  catch(e){ showToast('Delete nahi hua — dobara try karo'); return; }
+  renderOfficeTable(); renderDashboard();
+  showToast('Office expense entry delete ho gayi');
+}
+document.getElementById('ofListCategoryFilter').addEventListener('change', renderOfficeTable);
+
+/* ---------------- Profit & Loss tab ---------------- */
+function renderPnL(){
+  const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const totalSiteCost = DATA.sites.reduce((a,s)=>a+siteCost(s.id),0);
+  const totalOffice = DATA.officeExpenses.reduce((a,r)=>a+Number(r.amount),0);
+  const totalInterest = DATA.investorLoans.reduce((a,i)=>{
+    const extra = Number(i.returnAmt) - Number(i.taken);
+    return a + (extra>0?extra:0);
+  },0);
+  const net = totalReceived - totalSiteCost - totalOffice - totalInterest;
+
+  document.getElementById('pnlIncome').textContent = inr(totalReceived);
+  document.getElementById('pnlSiteCost').textContent = inr(totalSiteCost);
+  document.getElementById('pnlOfficeCost').textContent = inr(totalOffice);
+  document.getElementById('pnlInterestCost').textContent = inr(totalInterest);
+  const netEl = document.getElementById('pnlNet');
+  netEl.textContent = (net<0?'- ':'') + inr(Math.abs(net));
+  netEl.style.color = net>=0 ? 'var(--good)' : 'var(--bad)';
+
+  const tbody = document.querySelector('#pnlTable tbody');
+  if(DATA.sites.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Koi site nahi hai.</td></tr>`;
+  } else {
+    tbody.innerHTML = DATA.sites.map(s=>{
+      const received = siteReceived(s.id);
+      const contract = Number(s.contractValue)||0;
+      const pending = contract - received;
+      const cost = siteCost(s.id);
+      const pl = received - cost;
+      return `<tr>
+        <td><strong>${s.name}</strong></td>
+        <td class="amt">${contract?inr(contract):'—'}</td>
+        <td class="amt">${inr(received)}</td>
+        <td class="amt">${contract?inr(pending):'—'}</td>
+        <td class="amt">${inr(cost)}</td>
+        <td class="amt" style="color:${pl>=0?'var(--good)':'var(--bad)'}">${pl<0?'- ':''}${inr(Math.abs(pl))}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const totalTaken = DATA.investorLoans.reduce((a,i)=>a+Number(i.taken),0);
+  const totalReturnDue = DATA.investorLoans.reduce((a,i)=>a+Number(i.returnAmt),0);
+  const alreadyReturned = DATA.investorLoans.filter(i=>i.status==='returned').reduce((a,i)=>a+Number(i.returnAmt),0);
+  const pendingReturn = totalReturnDue - alreadyReturned;
+  document.querySelector('#investorSummaryTable tbody').innerHTML = `<tr>
+    <td class="amt">${inr(totalTaken)}</td><td class="amt">${inr(totalReturnDue)}</td>
+    <td class="amt">${inr(alreadyReturned)}</td><td class="amt">${inr(pendingReturn)}</td>
+  </tr>`;
+}
+
+/* ---------------- Dashboard ---------------- */
+document.getElementById('dashSiteFilter').addEventListener('change', renderDashboard);
+function renderDashboard(){
+  const filter = document.getElementById('dashSiteFilter').value;
+  const exp = filter==='all' ? DATA.expenses : DATA.expenses.filter(e=>e.siteId===filter);
+  const ud = filter==='all' ? DATA.udhar : DATA.udhar.filter(u=>u.siteId===filter);
+
+  const labourTotal = exp.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
+  const materialTotal = exp.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
+  const otherTotal = exp.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
+  const udharPending = ud.filter(u=>u.status==='pending').reduce((a,u)=>a+Number(u.amount),0);
+  const grandTotal = labourTotal + materialTotal + otherTotal;
+
+  document.getElementById('statTotal').textContent = inr(grandTotal);
+  document.getElementById('statLabour').textContent = inr(labourTotal);
+  document.getElementById('statMaterial').textContent = inr(materialTotal);
+  document.getElementById('statUdhar').textContent = inr(udharPending);
+
+  const clientPendingTotal = DATA.sites.reduce((a,s)=>{
+    const contract = Number(s.contractValue)||0;
+    if(!contract) return a;
+    const received = siteReceived(s.id);
+    return a + Math.max(contract - received, 0);
+  },0);
+  const investorPendingTotal = DATA.investorLoans.filter(i=>i.status!=='returned').reduce((a,i)=>a+Number(i.returnAmt),0);
+  document.getElementById('statClientPending').textContent = inr(clientPendingTotal);
+  document.getElementById('statInvestorPending').textContent = inr(investorPendingTotal);
+  const contractorBalanceTotal = DATA.workAgreements.reduce((a,ag)=>{
+    const paid = computePaidForAgreement(ag);
+    const bal = Number(ag.fixedAmount) - paid;
+    return a + (bal>0?bal:0);
+  },0);
+  document.getElementById('statContractorBalance').textContent = inr(contractorBalanceTotal);
+
+  const tbody = document.querySelector('#siteSummaryTable tbody');
+  if(DATA.sites.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Koi site nahi hai. "Sites" tab se ek site add karo.</td></tr>`;
+  } else {
+    tbody.innerHTML = DATA.sites.map(s=>{
+      const se = DATA.expenses.filter(e=>e.siteId===s.id);
+      const su = DATA.udhar.filter(u=>u.siteId===s.id);
+      const l = se.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
+      const m = se.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
+      const o = se.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
+      const up = su.filter(u=>u.status==='pending').reduce((a,u)=>a+Number(u.amount),0);
+      return `<tr><td><strong>${s.name}</strong></td><td class="amt">${inr(l)}</td><td class="amt">${inr(m)}</td><td class="amt">${inr(o)}</td><td class="amt">${inr(up)}</td><td class="amt">${inr(l+m+o)}</td></tr>`;
+    }).join('');
+  }
+
+  const recentTbody = document.querySelector('#recentTable tbody');
+  const recentRows = [
+    ...exp.map(e=>({date:e.date, site:siteName(e.siteId), type:e.type, cat: e.category||(e.type==='material'?'Material':'Other'), name:e.contractor, amount:e.amount})),
+    ...ud.map(u=>({date:u.date, site:siteName(u.siteId), type:'udhar', cat:u.material, name:u.supplier, amount:u.amount}))
+  ].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12);
+  if(recentRows.length===0){
+    recentTbody.innerHTML = `<tr><td colspan="6" class="empty">Abhi koi entry nahi hai.</td></tr>`;
+  } else {
+    recentTbody.innerHTML = recentRows.map(r=>`<tr>
+      <td>${r.date}</td><td>${r.site}</td>
+      <td><span class="tag ${r.type==='udhar'?'other':r.type}">${r.type}</span></td>
+      <td>${r.cat}</td><td>${r.name}</td><td class="amt">${inr(r.amount)}</td>
+    </tr>`).join('');
+  }
+
+  renderCharts(exp, ud);
+  renderInsights();
+}
+
+/* ---------------- Charts ---------------- */
+let charts = {};
+function chartDefaults(){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ labels:{ font:{ family:"'IBM Plex Sans',sans-serif", size:11 } } } }
+  };
+}
+function killChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
+
+function renderCharts(exp, ud){
+  if(typeof Chart === 'undefined') return; // library failed to load — dashboard still works without charts
+
+  const palette = ['#1B4F8C','#5C6B7E','#E8940C','#0F7355','#B3372C','#6B4A8A','#3A7CA5','#8A5D17'];
+
+  // 1) Site-wise stacked bar: labour / material / other
+  const siteLabels = DATA.sites.map(s=>s.name);
+  const byType = t => DATA.sites.map(s => DATA.expenses.filter(e=>e.siteId===s.id && e.type===t).reduce((a,e)=>a+Number(e.amount),0));
+  killChart('site');
+  const barEl = document.getElementById('chartSiteBar');
+  if(barEl && siteLabels.length){
+    charts.site = new Chart(barEl, {
+      type:'bar',
+      data:{ labels:siteLabels, datasets:[
+        { label:'Labour',   data:byType('labour'),   backgroundColor:'#1B4F8C' },
+        { label:'Material', data:byType('material'), backgroundColor:'#5C6B7E' },
+        { label:'Other',    data:byType('other'),     backgroundColor:'#E8940C' },
+      ]},
+      options: Object.assign(chartDefaults(), {
+        scales:{ x:{ stacked:true, grid:{display:false} }, y:{ stacked:true, ticks:{ callback:v=>inr(v) } } }
+      })
+    });
+  }
+
+  // 2) Expense type donut (whatever the current dashboard site-filter is)
+  const labourTotal   = exp.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
+  const materialTotal = exp.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
+  const otherTotal     = exp.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
+  killChart('donut');
+  const donutEl = document.getElementById('chartTypeDonut');
+  if(donutEl && (labourTotal+materialTotal+otherTotal) > 0){
+    charts.donut = new Chart(donutEl, {
+      type:'doughnut',
+      data:{ labels:['Labour','Material','Other'], datasets:[{
+        data:[labourTotal, materialTotal, otherTotal],
+        backgroundColor:['#1B4F8C','#5C6B7E','#E8940C']
+      }]},
+      options: Object.assign(chartDefaults(), { cutout:'62%' })
+    });
+  }
+
+  // 3) Monthly trend across all expenses (last 6 months with data)
+  const byMonth = {};
+  DATA.expenses.forEach(e=>{
+    const m = (e.date||'').slice(0,7); // YYYY-MM
+    if(!m) return;
+    byMonth[m] = (byMonth[m]||0) + Number(e.amount);
+  });
+  const months = Object.keys(byMonth).sort().slice(-6);
+  killChart('trend');
+  const trendEl = document.getElementById('chartTrend');
+  if(trendEl && months.length){
+    charts.trend = new Chart(trendEl, {
+      type:'line',
+      data:{ labels:months, datasets:[{
+        label:'Total Expense', data: months.map(m=>byMonth[m]),
+        borderColor:'#1B4F8C', backgroundColor:'rgba(27,79,140,0.12)', fill:true, tension:0.3
+      }]},
+      options: Object.assign(chartDefaults(), {
+        plugins:{ legend:{ display:false } },
+        scales:{ y:{ ticks:{ callback:v=>inr(v) } } }
+      })
+    });
+  }
+}
+
+/* ---------------- Performance insights ----------------
+   Computed observations from the numbers already on screen — not a
+   financial recommendation, just patterns worth a second look. */
+function renderInsights(){
+  const list = document.getElementById('insightsList');
+  if(!list) return;
+  const notes = [];
+
+  if(DATA.sites.length === 0){
+    list.innerHTML = '<li>Koi site nahi hai abhi — site add karke data daalna shuru karo, insights yahan dikhne lagenge.</li>';
+    return;
+  }
+
+  const siteStats = DATA.sites.map(s=>{
+    const cost = siteCost(s.id);
+    const received = siteReceived(s.id);
+    const contract = Number(s.contractValue)||0;
+    return { name:s.name, cost, received, contract, margin: received - cost };
+  });
+
+  if(currentRole === 'owner'){
+    const totalReceived = siteStats.reduce((a,s)=>a+s.received,0);
+    const totalCost = siteStats.reduce((a,s)=>a+s.cost,0);
+    const totalOffice = DATA.officeExpenses.reduce((a,r)=>a+Number(r.amount),0);
+    const net = totalReceived - totalCost - totalOffice;
+    const marginPct = totalReceived > 0 ? ((net/totalReceived)*100).toFixed(1) : null;
+
+    if(marginPct !== null){
+      notes.push(`Overall margin abhi <strong>${marginPct}%</strong> hai (client se received ${inr(totalReceived)} mein se ${inr(Math.abs(net))} ${net>=0?'profit':'loss'}).`);
+    } else {
+      notes.push('Abhi client payments record nahi hui, isliye profit margin calculate nahi ho pa raha.');
+    }
+
+    const withContract = siteStats.filter(s=>s.contract>0);
+    if(withContract.length){
+      const worst = withContract.reduce((a,b)=> (a.margin < b.margin ? a : b));
+      if(worst.margin < 0) notes.push(`<strong>${worst.name}</strong> abhi loss mein hai — cost, client receipt se ${inr(Math.abs(worst.margin))} zyada hai.`);
+      const best = withContract.reduce((a,b)=> (a.margin > b.margin ? a : b));
+      if(best.margin > 0) notes.push(`<strong>${best.name}</strong> sabse zyada profitable site hai (${inr(best.margin)}).`);
+    }
+
+    const pendingClient = siteStats.filter(s=>s.contract>0 && (s.contract-s.received)>0);
+    if(pendingClient.length){
+      const totalPending = pendingClient.reduce((a,s)=>a+(s.contract-s.received),0);
+      notes.push(`${pendingClient.length} site${pendingClient.length>1?'s':''} mein client se total <strong>${inr(totalPending)}</strong> abhi aana baki hai.`);
+    }
+
+    const investorPending = DATA.investorLoans.filter(i=>i.status!=='returned').reduce((a,i)=>a+Number(i.returnAmt),0);
+    if(investorPending > 0) notes.push(`Investors ko total <strong>${inr(investorPending)}</strong> return karna abhi baki hai.`);
+  }
+
+  const contractorPending = DATA.workAgreements.reduce((a,ag)=>{
+    const bal = Number(ag.fixedAmount) - computePaidForAgreement(ag);
+    return a + (bal>0?bal:0);
+  },0);
+  if(contractorPending > 0) notes.push(`Contractors ko total <strong>${inr(contractorPending)}</strong> dena abhi baki hai.`);
+
+  const udharPendingAll = DATA.udhar.filter(u=>u.status==='pending').reduce((a,u)=>a+Number(u.amount),0);
+  if(udharPendingAll > 0) notes.push(`Suppliers ka udhar <strong>${inr(udharPendingAll)}</strong> abhi pending hai.`);
+
+  const thisMonth = todayStr().slice(0,7);
+  const lastMonthDate = new Date(); lastMonthDate.setMonth(lastMonthDate.getMonth()-1);
+  const lastMonth = lastMonthDate.toISOString().slice(0,7);
+  const sum = m => DATA.expenses.filter(e=>(e.date||'').startsWith(m)).reduce((a,e)=>a+Number(e.amount),0);
+  const thisM = sum(thisMonth), lastM = sum(lastMonth);
+  if(lastM > 0){
+    const diff = (((thisM-lastM)/lastM)*100).toFixed(0);
+    if(Math.abs(diff) >= 10) notes.push(`Is mahine ka kharcha pichle mahine se <strong>${Math.abs(diff)}% ${diff>0?'zyada':'kam'}</strong> hai.`);
+  }
+
+  if(notes.length===0) notes.push('Abhi itna data nahi hai ki koi pattern nikal sake — jaise-jaise entries badhengi, insights yahan aayenge.');
+  list.innerHTML = notes.map(n=>`<li>${n}</li>`).join('');
+}
+
+/* ---------------- Reports ---------------- */
+let currentReportRows = [];
+let currentReportCols = [];
+let currentReportType = 'overall';
+
+document.getElementById('genReportBtn').addEventListener('click', generateReport);
+
+function computeReportData(type, site='all', from='', to=''){
+  const inRange = (d)=> (!from || d>=from) && (!to || d<=to);
+  let rows = [], cols = [], title = '';
+
+  if(type==='udhar'){
+    const raw = DATA.udhar.filter(u => (site==='all'||u.siteId===site) && inRange(u.date));
+    cols = ['Date','Site','Supplier','Material','Qty','Unit','Amount','Status','Note'];
+    title = 'Udhar Material Report';
+    rows = raw.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>({Date:r.date, Site:siteName(r.siteId), Supplier:r.supplier, Material:r.material, Qty:r.qty||'', Unit:r.unit||'', Amount:Number(r.amount), Status:r.status, Note:r.note||''}));
+  } else if(type==='agreements'){
+    let raw = site==='all' ? DATA.workAgreements : DATA.workAgreements.filter(a=>a.siteId===site);
+    cols = ['Site','Contractor','Category','Fixed Amount','Paid Till Date','Balance Due','Note'];
+    title = 'Contractor Balance Report';
+    rows = raw.map(r=>{
+      const paid = computePaidForAgreement(r);
+      const balance = Number(r.fixedAmount) - paid;
+      return {Site:siteName(r.siteId), Contractor:r.contractor, Category:r.category, 'Fixed Amount':Number(r.fixedAmount), 'Paid Till Date':paid, 'Balance Due':balance, Note:r.note||'', Amount:balance};
+    });
+  } else if(type==='clientpay'){
+    const raw = DATA.clientPayments.filter(p => (site==='all'||p.siteId===site) && inRange(p.date));
+    cols = ['Date','Site','Client','Mode','Note','Amount'];
+    title = 'Client Payment Report';
+    rows = raw.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>({Date:r.date, Site:siteName(r.siteId), Client:r.clientName||'—', Mode:r.mode||'—', Note:r.note||'', Amount:Number(r.amount)}));
+  } else if(type==='investor'){
+    let raw = DATA.investorLoans.filter(i => inRange(i.date));
+    if(site!=='all') raw = raw.filter(i=> i.siteId===site);
+    cols = ['Date','Site','Investor','Amount Taken','Return Due','Extra (Interest)','Expected Date','Status','Note'];
+    title = 'Investor Funding Report';
+    rows = raw.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>{
+      const extra = Number(r.returnAmt) - Number(r.taken);
+      return {Date:r.date, Site:(r.siteId==='general'||!r.siteId)?'General':siteName(r.siteId), Investor:r.investorName, 'Amount Taken':Number(r.taken), 'Return Due':Number(r.returnAmt), 'Extra (Interest)':extra>0?extra:0, 'Expected Date':r.expDate||'—', Status:r.status, Note:r.note||'', Amount:Number(r.returnAmt)};
+    });
+  } else if(type==='office'){
+    const raw = DATA.officeExpenses.filter(r=> inRange(r.date));
+    cols = ['Date','Category','Paid To','Note','Amount'];
+    title = 'Office & Employee Expense Report';
+    rows = raw.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>({Date:r.date, Category:r.category, 'Paid To':r.paidTo, Note:r.note||'', Amount:Number(r.amount)}));
+  } else if(type==='pnl'){
+    cols = ['Site','Contract Value','Client Received','Client Pending','Site Cost','Profit / Loss'];
+    title = 'Profit & Loss Summary Report';
+    let sites = site==='all' ? DATA.sites : DATA.sites.filter(s=>s.id===site);
+    rows = sites.map(s=>{
+      const received = siteReceived(s.id);
+      const contract = Number(s.contractValue)||0;
+      const cost = siteCost(s.id);
+      return {Site:s.name, 'Contract Value':contract, 'Client Received':received, 'Client Pending':contract?(contract-received):0, 'Site Cost':cost, 'Profit / Loss':received-cost, Amount:received-cost};
+    });
+  } else {
+    let exp = DATA.expenses.filter(e => (site==='all'||e.siteId===site) && inRange(e.date));
+    if(type!=='overall') exp = exp.filter(e=>e.type===type);
+    cols = ['Date','Site','Type','Category','Name','Payment Mode','Note','Amount'];
+    title = type==='overall' ? 'Overall Expense Report' : (type==='labour' ? 'Labour Expense Report' : type==='material' ? 'Material Expense Report' : 'Other Expense Report');
+    rows = exp.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>({Date:r.date, Site:siteName(r.siteId), Type:r.type, Category:r.category||'—', Name:r.contractor, 'Payment Mode':r.mode||'—', Note:r.note||'', Amount:Number(r.amount)}));
+  }
+  return {rows, cols, title};
+}
+
+const MONEY_COLS = new Set(['Amount','Contract Value','Client Received','Client Pending','Site Cost','Profit / Loss','Amount Taken','Return Due','Extra (Interest)','Fixed Amount','Paid Till Date','Balance Due']);
+
+function generateReport(){
+  const type = document.getElementById('repType').value;
+  const site = document.getElementById('repSite').value;
+  const from = document.getElementById('repFrom').value;
+  const to = document.getElementById('repTo').value;
+  currentReportType = type;
+
+  const {rows, cols, title} = computeReportData(type, site, from, to);
+  currentReportRows = rows;
+  currentReportCols = cols;
+
+  document.getElementById('repTitle').innerHTML = `${title} <small>${currentReportRows.length} entries found</small>`;
+  const thead = document.querySelector('#reportTable thead');
+  const tbody = document.querySelector('#reportTable tbody');
+  thead.innerHTML = '<tr>' + cols.map(c=>`<th>${c}</th>`).join('') + '</tr>';
+
+  if(currentReportRows.length===0){
+    tbody.innerHTML = `<tr><td colspan="${cols.length}" class="empty">Is filter ke liye koi entry nahi mili.</td></tr>`;
+    document.getElementById('repTotalLine').textContent = '';
+    return;
+  }
+  tbody.innerHTML = currentReportRows.map(r=>'<tr>' + cols.map(c=>{
+    if(MONEY_COLS.has(c)) return `<td class="amt">${inr(r[c])}</td>`;
+    if(c==='Type') return `<td><span class="tag ${r[c]}">${r[c]}</span></td>`;
+    if(c==='Status') return `<td><span class="tag ${r[c]==='returned'?'paid':r[c]}">${r[c]}</span></td>`;
+    return `<td>${r[c]!==undefined && r[c]!=='' ? r[c] : '—'}</td>`;
+  }).join('') + '</tr>').join('');
+
+  const total = currentReportRows.reduce((a,r)=>a+Number(r.Amount),0);
+  document.getElementById('repTotalLine').textContent = `Total Amount: ${inr(total)}  (${currentReportRows.length} entries)`;
+}
+
+document.getElementById('downloadExcelBtn').addEventListener('click', ()=>{
+  const site = document.getElementById('repSite').value;
+  const from = document.getElementById('repFrom').value;
+  const to   = document.getElementById('repTo').value;
+  const {wb, any} = buildSiteWorkbook(site, from, to);
+  if(!any){ showToast('Is filter ke liye koi entry nahi hai'); return; }
+  const label = site==='all' ? 'AllSites' : siteName(site).replace(/[^a-zA-Z0-9]/g,'_');
+  const out = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  saveBlob(new Blob([out], {type:'application/octet-stream'}), `FirstBrix_${label}_${todayStr()}.xlsx`);
+  showToast('Multi-sheet Excel taiyar ✓');
+});
+
+/* Standard PDF fonts have no glyph for the rupee sign or em dash, which is why
+   they came out as stray characters. Use plain ASCII inside PDFs instead. */
+function pdfMoney(n){
+  const v = Number(n)||0;
+  return (v<0?'-':'') + 'Rs. ' + Math.abs(v).toLocaleString('en-IN');
+}
+function pdfSafe(s){
+  return String(s).replace(/₹/g,'Rs. ').replace(/[—–]/g,'-').replace(/[^\x20-\x7E]/g,'');
+}
+
+function buildPdfDoc(sections){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape'});
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(16);
+  doc.text('FirstBrix Infratech - Expense Report', 14, 16);
+  doc.setFontSize(10);
+  doc.setFont('helvetica','normal');
+  doc.text('Generated on: ' + todayStr(), 14, 22);
+  let y = 28;
+  sections.forEach((sec)=>{
+    if(y > 180){ doc.addPage('landscape'); y = 16; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.text(pdfSafe(sec.title) + ' (' + sec.rows.length + ' entries, Total: ' + pdfMoney(sec.total) + ')', 14, y);
+    y += 4;
+    if(sec.rows.length===0){
+      doc.autoTable({ startY: y, head:[['No entries found']], body:[], margin:{left:14,right:14}, styles:{fontSize:8} });
+    } else {
+      doc.autoTable({
+        startY: y,
+        head: [sec.cols.map(pdfSafe)],
+        body: sec.rows.map(r=> sec.cols.map(c=> MONEY_COLS.has(c) ? pdfMoney(r[c]) : (r[c]!==undefined && r[c]!=='' ? pdfSafe(r[c]) : '-'))),
+        margin:{left:14,right:14},
+        styles:{fontSize:8, cellPadding:2},
+        headStyles:{fillColor:[168,68,44]}
+      });
+    }
+    y = doc.lastAutoTable.finalY + 10;
+  });
+  return doc;
+}
+
+/* Sandboxed frames sometimes block automatic downloads. Try the normal way,
+   then fall back to showing a link the user can click themselves. */
+function saveBlob(blob, filename){
+  try{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ document.body.removeChild(a); }, 2000);
+    showManualLink(url, filename);
+    return true;
+  }catch(e){
+    showToast('Download block ho gaya — neeche wale link se try karo');
+    return false;
+  }
+}
+function showManualLink(url, filename){
+  let box = document.getElementById('dlFallback');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'dlFallback';
+    box.style.cssText = 'position:fixed;bottom:22px;left:22px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 16px;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,0.2);max-width:320px;font-size:12.5px';
+    document.body.appendChild(box);
+  }
+  box.innerHTML = `<div style="margin-bottom:6px;color:var(--ink-soft)">Agar file apne aap download na ho to yahan click karo:</div>
+    <a href="${url}" download="${filename}" style="color:var(--brick);font-weight:600;word-break:break-all">⬇ ${filename}</a>
+    <div style="margin-top:8px"><button onclick="document.getElementById('dlFallback').remove()" style="background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:11.5px;text-decoration:underline;padding:0">band karo</button></div>`;
+}
+
+/* Build a multi-sheet workbook: one sheet per report type, for the chosen site */
+function buildSiteWorkbook(site, from, to){
+  const types = [
+    {key:'overall', label:'Overall'},
+    {key:'labour', label:'Labour'},
+    {key:'material', label:'Material'},
+    {key:'other', label:'Other'},
+    {key:'udhar', label:'Udhar Material'},
+    {key:'agreements', label:'Contractor Balance'}
+  ];
+  if(currentRole === 'owner'){
+    types.push({key:'clientpay', label:'Client Payments'});
+    types.push({key:'investor', label:'Investor Funding'});
+    types.push({key:'office', label:'Office Expense'});
+    types.push({key:'pnl', label:'Profit and Loss'});
+  }
+  const wb = XLSX.utils.book_new();
+  let any = false;
+  types.forEach(t=>{
+    const {rows, cols} = computeReportData(t.key, site, from, to);
+    const ws = XLSX.utils.json_to_sheet(rows, {header: cols});
+    ws['!cols'] = cols.map(c=>({wch: Math.max(12, c.length+2)}));
+    XLSX.utils.book_append_sheet(wb, ws, t.label.slice(0,31));
+    if(rows.length) any = true;
+  });
+  return {wb, any};
+}
+
+document.getElementById('downloadPdfBtn').addEventListener('click', ()=>{
+  if(currentReportRows.length===0) generateReport();
+  if(currentReportRows.length===0){ showToast('Download karne ke liye koi entry nahi hai'); return; }
+  const total = currentReportRows.reduce((a,r)=>a+Number(r.Amount||0),0);
+  const doc = buildPdfDoc([{ title: document.getElementById('repTitle').textContent.split('(')[0].trim(), cols: currentReportCols, rows: currentReportRows, total }]);
+  saveBlob(doc.output('blob'), `FirstBrix_${currentReportType}_report_${todayStr()}.pdf`);
+  showToast('PDF taiyar ✓');
+});
+
+/* ---------------- 15-day Automatic Report ---------------- */
+const AUTO_REPORT_DAYS = 15;
+
+function addDays(dateStr, days){
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0,10);
+}
+
+async function getLastAutoReportDate(){
+  try{
+    const d = await db.collection('meta').doc('autoReport').get();
+    if(d.exists) return d.data().date;
+  }catch(e){}
+  return null;
+}
+async function setLastAutoReportDate(dateStr){
+  try{ await db.collection('meta').doc('autoReport').set({date: dateStr}); }catch(e){}
+}
+
+function updateAutoStatusUI(lastDate){
+  const el = document.getElementById('autoStatus');
+  if(!lastDate){
+    el.innerHTML = `Auto report: <strong>pehli report is session mein banegi</strong>`;
+  } else {
+    const nextDue = addDays(lastDate, AUTO_REPORT_DAYS);
+    el.innerHTML = `Last auto report: <strong>${lastDate}</strong> · Next due: <strong>${nextDue}</strong>`;
+  }
+}
+
+function generateAllReportsWorkbookAndPdf(){
+  const types = [
+    {key:'overall', label:'Overall'},
+    {key:'labour', label:'Labour'},
+    {key:'material', label:'Material'},
+    {key:'other', label:'Other'},
+    {key:'udhar', label:'Udhar Material'},
+    {key:'agreements', label:'Contractor Balance'},
+    {key:'clientpay', label:'Client Payments'},
+    {key:'investor', label:'Investor Funding'},
+    {key:'office', label:'Office Expense'},
+    {key:'pnl', label:'Profit and Loss'}
+  ];
+  // Excel: one workbook, one sheet per report type
+  const wb = XLSX.utils.book_new();
+  const pdfSections = [];
+  types.forEach(t=>{
+    const {rows, cols, title} = computeReportData(t.key, 'all', '', '');
+    const ws = XLSX.utils.json_to_sheet(rows, {header: cols});
+    XLSX.utils.book_append_sheet(wb, ws, t.label.slice(0,31));
+    const total = rows.reduce((a,r)=>a+Number(r.Amount||0),0);
+    pdfSections.push({title, cols, rows, total});
+  });
+  const out = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  saveBlob(new Blob([out], {type:'application/octet-stream'}), `FirstBrix_AllReports_${todayStr()}.xlsx`);
+  const doc = buildPdfDoc(pdfSections);
+  saveBlob(doc.output('blob'), `FirstBrix_AllReports_${todayStr()}.pdf`);
+}
+
+async function maybeRunAutoReport(force=false){
+  const last = await getLastAutoReportDate();
+  // First ever run: just set the baseline date, don't download.
+  // Otherwise a report fires every time someone logs in on a new device.
+  if(!last && !force){
+    await setLastAutoReportDate(todayStr());
+    updateAutoStatusUI(todayStr());
+    return;
+  }
+  let due = force;
+  if(!due && last){
+    const diffDays = (new Date(todayStr()) - new Date(last)) / (1000*60*60*24);
+    if(diffDays >= AUTO_REPORT_DAYS) due = true;
+  }
+  if(due){
+    generateAllReportsWorkbookAndPdf();
+    await setLastAutoReportDate(todayStr());
+    updateAutoStatusUI(todayStr());
+    showToast('15-din ki automatic Excel + PDF report ban gayi aur download ho gayi ✓');
+  } else {
+    updateAutoStatusUI(last);
+  }
+}
+
+document.getElementById('manualAutoReportBtn').addEventListener('click', ()=> maybeRunAutoReport(true));
+
+/* ---------------- Init ---------------- */
+async function init(){
+  await loadData();
+  refreshSuggestions();
+  renderSiteSelects();
+  renderSitesTable();
+  renderExpenseTable();
+  renderUdharTable();
+  renderDashboard();
+  generateReport();
+  showStorageMode();
+  if(currentRole==='owner') await loadTeam();
+  await maybeRunAutoReport(false);
+}
+
+function showBootTimeoutError(){
+  const el = document.getElementById('bootLoader');
+  if(!el) return; // already got past boot, nothing to do
+  el.innerHTML = `<div style="text-align:center;color:#fff;max-width:340px;padding:0 20px">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;text-transform:uppercase">
+      First<span style="color:var(--hivis)">Brix</span> Infratech
+    </div>
+    <div style="margin-top:18px;font-size:13.5px;color:#C7CFDA;line-height:1.6">
+      Server se connect nahi ho pa raha. Agar aap Claude ke andar preview kar rahe ho,
+      to ye normal hai — is app ko live link (jaise workers.dev / pages.dev) pe khol kar dekho.
+      Agar live link pe bhi aisa ho raha hai, to internet connection check karo.
+    </div>
+    <button onclick="location.reload()" style="margin-top:16px;background:var(--hivis);border:none;color:#1C2430;
+      font-weight:600;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:13px">Dobara try karo</button>
+  </div>`;
+}
+const bootTimeoutId = setTimeout(showBootTimeoutError, 9000);
+function clearBootTimeout(){ clearTimeout(bootTimeoutId); }
+
+async function boot(){
+  try{
+    const ok = await initFirebase();
+    if(!ok){ clearBootTimeout(); return; }
+    await completeRedirectSignIn();
+    startAuthWatch();
+  }catch(e){
+    console.error('boot failed', e);
+    showBootTimeoutError();
+  }
+}
+boot();
+</script>
+</body>
+</html>
