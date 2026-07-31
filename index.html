@@ -2348,14 +2348,6 @@ document.getElementById('restoreFile').addEventListener('change', async (e)=>{
   e.target.value='';
 });
 
-function showStorageMode(){
-  const el = document.getElementById('storageModeNote');
-  if(!el) return;
-  el.innerHTML = HAS_CLAUDE_STORAGE
-    ? '✅ <strong>Cloud mode:</strong> Data online save ho raha hai — har device pe same data dikhega.'
-    : '⚠️ <strong>Local mode:</strong> Ye app khud host ki gayi hai, isliye data sirf <strong>isi browser</strong> mein save hota hai. Doosre PC pe data le jaane ke liye upar se Backup download karke wahan Restore karo.';
-}
-
 /* ---------------- Client Payments tab ---------------- */
 document.getElementById('cpDate').value = todayStr();
 document.getElementById('addClientPayBtn').addEventListener('click', async ()=>{
