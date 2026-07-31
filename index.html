@@ -13,7 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.4.3/chart.umd.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
    YAHAN APNA FIREBASE CONFIG PASTE KARO
@@ -861,9 +861,16 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label data-i18n="lbl_empname">Employee ka naam</label><input id="tmName" placeholder="e.g. Suresh Patil"></div>
           <div class="field"><label data-i18n="lbl_emailaddr">Email address</label><input id="tmUser" type="email" placeholder="suresh@gmail.com" autocapitalize="off"></div>
         </div>
+        <div class="field">
+          <label>Password (aap khud set karo)</label>
+          <div style="display:flex;gap:7px">
+            <input id="tmPw" placeholder="Password (min 6 characters)" style="flex:1">
+            <button class="btn btn-ghost" id="tmGenBtn" type="button" style="padding:9px 13px;font-size:12.5px;white-space:nowrap">Generate</button>
+          </div>
+        </div>
         <div class="login-error" id="tmErr"></div>
         <button class="btn btn-primary" id="tmAddBtn">+ <span data-i18n="btn_sendinvite">Send invite</span></button>
-        <div class="hint">Employee apna password khud banayega — aap sirf email add karo. Gmail hai to wo Google se seedha login kar sakta hai.</div>
+        <div class="hint">Login turant ban jayega — employee ko sirf ye email + password dena hai, use kuch bhi khud banane ki zaroorat nahi. (Agar Gmail hai to wo chahe to seedha "Google se login karo" bhi use kar sakta hai — dono tareeke chalenge.)</div>
       </div>
 
       <div class="card">
@@ -2162,40 +2169,88 @@ async function loadTeam(){
   }
 }
 
+/* A second, independent Firebase app instance. Creating a user through the
+   normal auth object would switch the browser's active session to that new
+   user — this secondary instance lets the owner create staff accounts
+   without ever being logged out themselves. */
+let secondaryAuth = null;
+function getSecondaryAuth(){
+  if(!secondaryAuth){
+    const name = 'staffCreator';
+    const existing = firebase.apps.find(a=>a.name===name);
+    const secApp = existing || firebase.initializeApp(FIREBASE_CONFIG, name);
+    secondaryAuth = secApp.auth();
+  }
+  return secondaryAuth;
+}
+
+function genEmployeePassword(){
+  const words = ['Site','Brick','Steel','Slab','Beam','Tile','Plan','Grid'];
+  const w = words[Math.floor(Math.random()*words.length)];
+  const n = Math.floor(1000 + Math.random()*9000);
+  const sym = '@#$%'[Math.floor(Math.random()*4)];
+  return w + sym + n;
+}
+document.getElementById('tmGenBtn').addEventListener('click', ()=>{
+  document.getElementById('tmPw').value = genEmployeePassword();
+});
+
 document.getElementById('tmAddBtn').addEventListener('click', async ()=>{
   const err   = document.getElementById('tmErr');
   const name  = document.getElementById('tmName').value.trim();
   const email = document.getElementById('tmUser').value.trim().toLowerCase();
+  const pw    = document.getElementById('tmPw').value;
   err.textContent = '';
 
   if(!name){ err.textContent = 'Employee ka naam likho.'; return; }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = 'Sahi email daalo.'; return; }
   if(email === String(OWNER_EMAIL).toLowerCase()){ err.textContent = 'Ye to owner ka email hai.'; return; }
   if(TEAM.some(u=>u.email===email)){ err.textContent = 'Ye email pehle se invited hai.'; return; }
+  if(!pw || pw.length < 6){ err.textContent = 'Password kam se kam 6 characters ka rakho (ya Generate dabao).'; return; }
 
   try{
+    // Always record the invite first — this is what lets the account (however
+    // it later signs in, including via Google) become 'staff' instead of being refused.
     await db.collection('invites').doc(email).set({ name, invitedOn: todayStr(), disabled:false });
+
+    const sAuth = getSecondaryAuth();
+    try{
+      const cred = await sAuth.createUserWithEmailAndPassword(email, pw);
+      // Activate the profile immediately — no self-signup step needed.
+      await db.collection('users').doc(cred.user.uid).set({ name, email, role:'staff', joined: todayStr() });
+      await sAuth.signOut();
+    }catch(createErr){
+      if(createErr.code === 'auth/email-already-in-use'){
+        // Account already exists (they signed up earlier themselves). The
+        // invite above is enough to grant them access on their next login.
+      } else {
+        throw createErr;
+      }
+    }
+
     document.getElementById('tmName').value = '';
     document.getElementById('tmUser').value = '';
+    document.getElementById('tmPw').value = '';
     await loadTeam();
-    showInviteDetails(name, email);
+    showInviteDetails(name, email, pw);
   }catch(e){
     err.textContent = e.code === 'permission-denied' ? 'Permission nahi hai — rules check karo.' : ('Error: ' + e.message);
   }
 });
 
-function showInviteDetails(name, email){
+function showInviteDetails(name, email, password){
   const link = location.href.split('#')[0];
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.innerHTML = `<div class="modal">
-    <h3>Invite ban gaya</h3>
-    <p>${name} ko ye bhej do. Wo khud apna password banayega — aapko password banane ki zaroorat nahi.</p>
+    <h3>Login taiyar hai</h3>
+    <p>${name} ka login turant ban gaya hai — inhe bas ye email aur password bhej do, wo seedha login kar sakte hain.</p>
     <div class="modal-cred">
       <div class="role">${name}</div>
       <div class="cred-row"><span class="cred-label">Email</span><span class="cred-val">${email}</span></div>
+      <div class="cred-row"><span class="cred-label">Password</span><span class="cred-val">${password}</span></div>
     </div>
-    <p style="font-size:12.5px">App link kholkar <strong>"Naya account banao"</strong> dabaye, isi email se password set kare — ya <strong>Google se login</strong> kare agar ye Gmail hai.</p>
+    <p style="font-size:12.5px">App link kholkar seedha isi email + password se <strong>Login</strong> dabana hai. Chahein to Gmail hone par <strong>Google se login karo</strong> bhi kaam karega.</p>
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" data-copy style="flex:1;justify-content:center">Message copy karo</button>
       <button class="btn btn-primary" data-ok style="flex:1;justify-content:center">Done</button>
@@ -2203,7 +2258,7 @@ function showInviteDetails(name, email){
   document.body.appendChild(bg);
   bg.querySelector('[data-ok]').onclick = ()=>bg.remove();
   bg.querySelector('[data-copy]').onclick = async (e)=>{
-    const msg = `FirstBrix Infratech - Expense App\n\nLink: ${link}\nAapka email: ${email}\n\n"Naya account banao" dabakar apna password set karo, ya Google se login karo.`;
+    const msg = `FirstBrix Infratech - Expense App\n\nLink: ${link}\nEmail: ${email}\nPassword: ${password}\n\nIsi email aur password se seedha Login karo.`;
     try{ await navigator.clipboard.writeText(msg); e.target.textContent = 'Copied ✓'; }
     catch(_){ e.target.textContent = 'Copy nahi hua'; }
   };
@@ -2222,11 +2277,27 @@ function renderTeamTable(){
     <td>${u.joined||'—'}</td>
     <td><span class="tag ${u.disabled ? 'pending' : (u.status==='Joined'?'paid':'other')}">${u.disabled?'Disabled':u.status}</span></td>
     <td>
+      <button class="btn-danger-text" style="color:var(--blue)" onclick="resetTeamPw('${u.email}')">Reset Password</button>
+      &nbsp;·&nbsp;
       <button class="btn-danger-text" style="color:var(--ink-soft)" onclick="toggleTeam('${u.email}')">${u.disabled?'Enable':'Disable'}</button>
       &nbsp;·&nbsp;
       <button class="btn-danger-text" onclick="removeTeam('${u.email}')">Remove</button>
     </td>
   </tr>`).join('');
+}
+
+async function resetTeamPw(email){
+  const pw = genEmployeePassword();
+  try{
+    const sAuth = getSecondaryAuth();
+    // Sign in as the employee on the secondary (isolated) auth instance using
+    // their current password isn't possible without it, so instead we email
+    // them a reset link — the safest way to change a password we don't hold.
+    await sAuth.sendPasswordResetEmail(email);
+    await uiAlert('Password reset link ' + email + ' pe bhej diya hai. Employee ko wo email check karke naya password set karne ko bolo.', 'Reset link bhej diya');
+  }catch(e){
+    showToast('Reset link bhejne mein error aayi');
+  }
 }
 
 async function toggleTeam(email){
@@ -2648,7 +2719,14 @@ function chartDefaults(){
 function killChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
 
 function renderCharts(exp, ud){
-  if(typeof Chart === 'undefined') return; // library failed to load — dashboard still works without charts
+  if(typeof Chart === 'undefined'){
+    ['chartSiteBar','chartTypeDonut','chartTrend'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el && el.parentElement) el.parentElement.innerHTML =
+        '<div class="empty">Chart library load nahi hui — internet check karke page refresh karo.</div>';
+    });
+    return;
+  }
 
   const palette = ['#1B4F8C','#5C6B7E','#E8940C','#0F7355','#B3372C','#6B4A8A','#3A7CA5','#8A5D17'];
 
