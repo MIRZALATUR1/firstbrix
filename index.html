@@ -13,7 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.4.3/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
    YAHAN APNA FIREBASE CONFIG PASTE KARO
@@ -179,6 +179,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
   .fab:active{transform:translateY(1px);}
   .fab .plus{font-size:19px;line-height:1;font-weight:400;}
   .quick-modal{width:440px;}
+  .site-detail-modal{width:820px;max-width:96vw;max-height:92vh;}
   .quick-modal .modal-head{
     margin:-26px -28px 18px;padding:16px 28px;background:var(--steel-900);
     border-radius:12px 12px 0 0;color:#fff;
@@ -1668,7 +1669,7 @@ function renderSitesTable(){
     const pending = contract - received;
     const count = exp.length + ud.length;
     return `<tr>
-      <td><strong>${s.name}</strong></td>
+      <td><a href="javascript:void(0)" onclick="openSiteDetail('${s.id}')" style="color:var(--blue);font-weight:600;text-decoration:none">${s.name} →</a></td>
       <td>${s.location||'—'}</td>
       <td class="amt owner-only">${contract ? inr(contract) : '—'}</td>
       <td class="amt owner-only">${inr(received)}</td>
@@ -1894,6 +1895,140 @@ async function deleteUdhar(id){
 }
 document.getElementById('udListSiteFilter').addEventListener('change', renderUdharTable);
 document.getElementById('udListStatusFilter').addEventListener('change', renderUdharTable);
+
+/* ---------------- Site Detail (drill-down view) ---------------- */
+let siteDetailChart = null;
+
+function buildSiteLedger(siteId){
+  const rows = [];
+  DATA.expenses.filter(e=>e.siteId===siteId).forEach(e=>rows.push({
+    date:e.date, kind:'expense', tag:e.type, label:e.category||(e.type==='material'?'Material':'Other'),
+    name:e.contractor, amount:Number(e.amount), id:e.id, inOut:'out'
+  }));
+  DATA.udhar.filter(u=>u.siteId===siteId).forEach(u=>rows.push({
+    date:u.date, kind:'udhar', tag:u.status, label:u.material, name:u.supplier,
+    amount:Number(u.amount), id:u.id, inOut:'out'
+  }));
+  if(currentRole === 'owner'){
+    DATA.clientPayments.filter(p=>p.siteId===siteId).forEach(p=>rows.push({
+      date:p.date, kind:'clientpay', tag:'income', label:'Client Payment', name:p.clientName||'—',
+      amount:Number(p.amount), id:p.id, inOut:'in'
+    }));
+  }
+  return rows.sort((a,b)=> b.date.localeCompare(a.date));
+}
+
+function deleteSiteLedgerRow(kind, id){
+  if(kind==='expense') return deleteExpense(id);
+  if(kind==='udhar') return deleteUdhar(id);
+  if(kind==='clientpay') return deleteClientPay(id);
+}
+
+function openSiteDetail(siteId){
+  const site = DATA.sites.find(s=>s.id===siteId);
+  if(!site) return;
+
+  const cost = siteCost(siteId);
+  const received = currentRole==='owner' ? siteReceived(siteId) : 0;
+  const net = received - cost;
+  const isOwner = currentRole === 'owner';
+
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.id = 'siteDetailBg';
+  bg.innerHTML = `<div class="modal site-detail-modal" style="display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <div class="modal-head" style="margin:0;border-radius:0;display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <div>
+        <h3 style="margin:0">${site.name}</h3>
+        <p style="margin:2px 0 0">${site.location||'Location not set'}</p>
+      </div>
+      <button onclick="document.getElementById('siteDetailBg').remove()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px">&times;</button>
+    </div>
+    <div style="padding:20px 24px;overflow-y:auto;flex:1">
+      <div class="stat-row" style="margin-bottom:16px">
+        ${isOwner ? `<div class="stat good"><div class="lbl">Income (Received)</div><div class="val">${inr(received)}</div></div>` : ''}
+        <div class="stat bad"><div class="lbl">Outcome (Total Cost)</div><div class="val">${inr(cost)}</div></div>
+        ${isOwner ? `<div class="stat ${net>=0?'good':'bad'}"><div class="lbl">Net</div><div class="val">${net<0?'- ':''}${inr(Math.abs(net))}</div></div>` : ''}
+      </div>
+      <div style="position:relative;height:220px;margin-bottom:18px">
+        <canvas id="siteDetailChart"></canvas>
+      </div>
+      <div class="toolbar">
+        <h2 style="margin:0;border:none;padding:0;font-size:16px">Date-wise Entries</h2>
+        <button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px" onclick="openQuickAddForSite('${siteId}')">+ Add Entry</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>Date</th><th>Type</th><th>Item / Category</th><th>Name</th><th>Amount</th><th></th>
+      </tr></thead><tbody id="siteDetailLedgerBody"></tbody></table></div>
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  bg.addEventListener('click', e=>{ if(e.target===bg) bg.remove(); });
+
+  renderSiteDetailLedger(siteId);
+  renderSiteDetailChart(siteId, received, cost);
+}
+
+function renderSiteDetailLedger(siteId){
+  const tbody = document.getElementById('siteDetailLedgerBody');
+  if(!tbody) return;
+  const rows = buildSiteLedger(siteId);
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Is site ki abhi koi entry nahi hai.</td></tr>`;
+    return;
+  }
+  const kindTag = r => r.kind==='clientpay' ? 'paid' : (r.kind==='udhar' ? (r.tag==='paid'?'paid':'pending') : r.tag);
+  const kindLabel = r => r.kind==='clientpay' ? 'Client Payment' : (r.kind==='udhar' ? 'Udhar' : r.tag);
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.date}</td>
+    <td><span class="tag ${kindTag(r)}">${kindLabel(r)}</span></td>
+    <td>${r.label||'—'}</td>
+    <td>${r.name||'—'}</td>
+    <td class="amt" style="color:${r.inOut==='in'?'var(--good)':'var(--ink)'}">${r.inOut==='in'?'+ ':''}${inr(r.amount)}</td>
+    <td><button class="btn-danger-text" onclick="deleteSiteLedgerRow('${r.kind}','${r.id}').then(()=>{renderSiteDetailLedger('${siteId}');})">Delete</button></td>
+  </tr>`).join('');
+}
+
+function renderSiteDetailChart(siteId, received, cost){
+  const canvas = document.getElementById('siteDetailChart');
+  if(!canvas) return;
+  if(typeof Chart === 'undefined'){
+    canvas.parentElement.innerHTML = '<div class="empty">Chart library load nahi hui.</div>';
+    return;
+  }
+  if(siteDetailChart){ siteDetailChart.destroy(); siteDetailChart = null; }
+
+  const exp = DATA.expenses.filter(e=>e.siteId===siteId);
+  const labour = exp.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
+  const material = exp.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
+  const other = exp.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
+  const udharAmt = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
+
+  const labels = ['Labour','Material','Other','Udhar'];
+  const values = [labour, material, other, udharAmt];
+  if(currentRole === 'owner'){ labels.unshift('Income'); values.unshift(received); }
+
+  siteDetailChart = new Chart(canvas, {
+    type:'bar',
+    data:{ labels, datasets:[{
+      data: values,
+      backgroundColor: currentRole==='owner'
+        ? ['#0F7355','#1B4F8C','#5C6B7E','#E8940C','#B3372C']
+        : ['#1B4F8C','#5C6B7E','#E8940C','#B3372C']
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ ticks:{ callback:v=>inr(v) } } }
+    }
+  });
+}
+
+/* Opens the existing quick-add modal pre-locked to a specific site (used from Site Detail) */
+function openQuickAddForSite(siteId){
+  openQuickAdd();
+  setTimeout(()=>{ document.getElementById('qSite').value = siteId; }, 50);
+}
 
 /* ---------------- Contractor Work Agreement tab ---------------- */
 function computePaidForAgreement(ag){
@@ -2377,6 +2512,10 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
   });
   await saveData();
   renderExpenseTable(); renderDashboard(); renderSitesTable(); renderAgreementsTable();
+  if(document.getElementById('siteDetailBg')){
+    renderSiteDetailLedger(siteId);
+    renderSiteDetailChart(siteId, currentRole==='owner'?siteReceived(siteId):0, siteCost(siteId));
+  }
 
   // Keep the modal open so several entries can be logged in a row.
   document.getElementById('qSavedHint').textContent = `Saved: ${name} — ${inr(amount)} (${siteName(siteId)})`;
@@ -2685,7 +2824,7 @@ function renderDashboard(){
       const m = se.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
       const o = se.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
       const up = su.filter(u=>u.status==='pending').reduce((a,u)=>a+Number(u.amount),0);
-      return `<tr><td><strong>${s.name}</strong></td><td class="amt">${inr(l)}</td><td class="amt">${inr(m)}</td><td class="amt">${inr(o)}</td><td class="amt">${inr(up)}</td><td class="amt">${inr(l+m+o)}</td></tr>`;
+      return `<tr><td><a href="javascript:void(0)" onclick="openSiteDetail('${s.id}')" style="color:var(--blue);font-weight:600;text-decoration:none">${s.name} →</a></td><td class="amt">${inr(l)}</td><td class="amt">${inr(m)}</td><td class="amt">${inr(o)}</td><td class="amt">${inr(up)}</td><td class="amt">${inr(l+m+o)}</td></tr>`;
     }).join('');
   }
 
