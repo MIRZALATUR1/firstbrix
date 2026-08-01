@@ -1048,8 +1048,38 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label>Client / Home Owner Name</label><input id="slClientName" list="dl-clients" placeholder="e.g. Mr. Sharma"></div>
           <div class="field"><label>Contractor Name</label><input id="slContractorName" placeholder="e.g. FirstBrix Infratech"></div>
         </div>
+
+        <div class="grid cols-3">
+          <div class="field"><label>Type of Work</label>
+            <select id="slWorkType">
+              <option value="manual">Manual / Custom (auto stages nahi)</option>
+              <option value="turnkey">Turnkey (Lock &amp; Key) — Advance se Final Finishing tak</option>
+              <option value="rcc_with_material">RCC, Brickwork &amp; Plaster (With Material) — Sirf Structural</option>
+              <option value="rcc_labour_only">RCC, Brickwork &amp; Plaster (Labour Only) — Sirf Structural</option>
+            </select>
+          </div>
+          <div class="field" id="slConstructionSubTypeWrap" style="display:none"><label>Type of Construction</label>
+            <select id="slConstructionSubType">
+              <option value="new">New Construction</option>
+              <option value="add_floor">Addition of Floor</option>
+              <option value="add_room">Addition of Rooms</option>
+            </select>
+          </div>
+          <div class="field" id="slNumFloorsWrap" style="display:none"><label>Number of Floors</label>
+            <select id="slNumFloors">
+              <option value="0">Ground Floor Only</option><option value="1">G + 1</option><option value="2">G + 2</option>
+              <option value="3">G + 3</option><option value="4">G + 4</option><option value="5">G + 5</option>
+              <option value="6">G + 6</option><option value="7">G + 7</option>
+            </select>
+          </div>
+          <div class="field" id="slNewFloorsWrap" style="display:none"><label>Number of New Floors</label>
+            <select id="slNewFloors">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+            </select>
+          </div>
+        </div>
         <button class="btn btn-primary" id="slNewBtn">+ Start New Slab</button>
-        <div class="hint">Naya slab shuru karte hi ek default template aayega — pehli 2 rows "Before Start" (advance) hoti hain, aakhri row "On Completion". Beech mein jitni chahe rows add/remove/edit karo.</div>
+        <div class="hint">"Manual / Custom" chuno to simple 3-row template milega (2 Before Start + 1 Completion), jise khud banao. Ya "Turnkey"/"RCC" wala Type of Work chuno to floors ke hisaab se **poora auto payment schedule** ban jayega (advance → foundation → har floor ki slab/brickwork/plaster → finishing tak, ya sirf structural tak agar RCC wala chuna). Dono case mein baad mein har row edit/add/remove kar sakte ho.</div>
       </div>
 
       <div class="card" id="slEditorCard" style="display:none">
@@ -3487,6 +3517,80 @@ function defaultSlabStages(){
   ];
 }
 
+document.getElementById('slWorkType').addEventListener('change', e=>{
+  const isConstruction = e.target.value !== 'manual';
+  document.getElementById('slConstructionSubTypeWrap').style.display = isConstruction ? 'block' : 'none';
+  if(isConstruction) document.getElementById('slConstructionSubType').dispatchEvent(new Event('change'));
+  else { document.getElementById('slNumFloorsWrap').style.display='none'; document.getElementById('slNewFloorsWrap').style.display='none'; }
+});
+document.getElementById('slConstructionSubType').addEventListener('change', e=>{
+  const v = e.target.value;
+  document.getElementById('slNumFloorsWrap').style.display = v==='new' ? 'block' : 'none';
+  document.getElementById('slNewFloorsWrap').style.display = v==='add_floor' ? 'block' : 'none';
+});
+
+/* Ported from the original Payment Slab Generator: given the type of work,
+   type of construction, and floor count, builds the full advance-to-finish
+   (or advance-to-structural) stage breakdown, evenly split across floors. */
+function generateAutoSlabStages(workType, subType, floorCount){
+  const floorNames = ['Ground','First','Second','Third','Fourth','Fifth','Sixth','Seventh'];
+  const newFloorName = i => `New Floor ${i+1}`;
+  let stages = [];
+
+  if(subType === 'add_room'){
+    stages = [
+      { stage:'Booking Amount / Advance (Before Start)', percentage:0.10 },
+      { stage:'On Commencement of Demolition & Civil Work', percentage:0.30 },
+      { stage:'On Completion of Electrical & Plumbing Rough-in', percentage:0.20 },
+      { stage:'On Completion of Tiling & Flooring', percentage:0.20 },
+      { stage:'On Completion of Painting & Finishing', percentage:0.15 },
+      { stage:'On Final Handover (Completion)', percentage:0.05 }
+    ];
+  } else {
+    const isNew = subType === 'new';
+    const loopCount = isNew ? floorCount + 1 : floorCount;
+    const getFloorName = i => isNew ? floorNames[i] : newFloorName(i);
+
+    if(workType === 'turnkey'){
+      stages.push({ stage:'Booking Amount / Advance (Before Start)', percentage:0.05 });
+      if(isNew) stages.push({ stage:'On Completion of Foundation & Plinth', percentage:0.10 });
+      const remaining = isNew ? 0.85 : 0.95;
+      const slabPct = 0.30*remaining, masonryPct = 0.30*remaining, plasterPct = 0.20*remaining, finishPct = 0.20*remaining;
+      for(let i=0;i<loopCount;i++) stages.push({ stage:`On Casting of ${getFloorName(i)} Floor Slab`, percentage: slabPct/loopCount });
+      for(let i=0;i<loopCount;i++) stages.push({ stage:`On Completion of ${getFloorName(i)} Floor Masonry`, percentage: masonryPct/loopCount });
+      for(let i=0;i<loopCount;i++) stages.push({ stage:`On Completion of ${getFloorName(i)} Floor Plastering`, percentage: plasterPct/loopCount });
+      const sub = finishPct/5;
+      stages.push({ stage:'On Completion of Flooring & Tiling', percentage:sub });
+      stages.push({ stage:'On Completion of Final Electrical Wiring & Fixtures', percentage:sub });
+      stages.push({ stage:'On Completion of Painting Works', percentage:sub });
+      stages.push({ stage:'On Completion of Doors & Windows Installation', percentage:sub });
+      stages.push({ stage:'On Final Cleaning & Handover (Completion)', percentage:sub });
+    } else if(workType === 'rcc_with_material'){
+      stages.push({ stage:'Booking Amount / Advance (Before Start)', percentage:0.10 });
+      if(isNew) stages.push({ stage:'On Completion of Foundation', percentage:0.15 });
+      const remaining = isNew ? 0.75 : 0.90;
+      const slabPct = (0.35*remaining)/loopCount, brickPct = (0.35*remaining)/loopCount, plasterPct = (0.25*remaining)/loopCount;
+      for(let i=0;i<loopCount;i++) stages.push({ stage:`On Casting of ${getFloorName(i)} Floor Slab`, percentage: slabPct });
+      for(let i=0;i<loopCount;i++) stages.push({ stage:`On Completion of ${getFloorName(i)} Floor Brickwork`, percentage: brickPct });
+      for(let i=0;i<loopCount;i++) stages.push({ stage:`On Completion of ${getFloorName(i)} Floor Plaster`, percentage: plasterPct });
+      stages.push({ stage:'On Final Handover (Completion)', percentage:0.05 });
+    } else if(workType === 'rcc_labour_only'){
+      stages.push({ stage:'Booking Amount / Advance (Before Start)', percentage:0.10 });
+      if(isNew) stages.push({ stage:'On Completion of Foundation', percentage:0.10 });
+      const remaining = isNew ? 0.80 : 0.90;
+      const slabPct = (0.35*remaining)/loopCount, brickPct = (0.35*remaining)/loopCount, plasterPct = (0.25*remaining)/loopCount;
+      for(let i=0;i<loopCount;i++) stages.push({ stage:`On Casting of ${getFloorName(i)} Floor Slab`, percentage: slabPct });
+      for(let i=0;i<loopCount;i++) stages.push({ stage:`On Completion of ${getFloorName(i)} Floor Brickwork`, percentage: brickPct });
+      for(let i=0;i<loopCount;i++) stages.push({ stage:`On Completion of ${getFloorName(i)} Floor Plaster`, percentage: plasterPct });
+      stages.push({ stage:'On Final Handover (Completion)', percentage:0.05 });
+    }
+  }
+
+  // Normalize to exactly 100% and round to one decimal, same as the original tool
+  const totalPct = stages.reduce((a,s)=>a+s.percentage,0);
+  return stages.map(s=>({ stage:s.stage, percent: Math.round((s.percentage/totalPct)*1000)/10 }));
+}
+
 document.getElementById('slLinkType').addEventListener('change', e=>{
   const type = e.target.value;
   const wrap = document.getElementById('slLinkPickerWrap');
@@ -3528,13 +3632,25 @@ document.getElementById('slNewBtn').addEventListener('click', ()=>{
   const linkType = document.getElementById('slLinkType').value;
   const linkId = linkType==='custom' ? '' : document.getElementById('slLinkPicker').value;
 
+  const workType = document.getElementById('slWorkType').value;
+  let stages;
+  if(workType === 'manual'){
+    stages = defaultSlabStages();
+  } else {
+    const subType = document.getElementById('slConstructionSubType').value;
+    const floorCount = subType==='new'
+      ? parseInt(document.getElementById('slNumFloors').value, 10)
+      : (subType==='add_floor' ? parseInt(document.getElementById('slNewFloors').value, 10) : 0);
+    stages = generateAutoSlabStages(workType, subType, floorCount);
+  }
+
   editingSlab = {
     id: null,
     title, linkType, linkId, totalAmount,
     clientName: document.getElementById('slClientName').value.trim(),
     contractorName: document.getElementById('slContractorName').value.trim(),
     date: todayStr(),
-    stages: defaultSlabStages()
+    stages
   };
   document.getElementById('slEditorCard').style.display = 'block';
   renderSlabEditor();
