@@ -455,6 +455,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="stat steel"><div class="lbl" data-i18n="stat_material">Material</div><div class="val" id="statMaterial">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_other">Other Expense</div><div class="val" id="statOther">₹0</div></div>
         <div class="stat amber"><div class="lbl" data-i18n="stat_udhar">Udhar Pending</div><div class="val" id="statUdhar">₹0</div></div>
+        <div class="stat good owner-only"><div class="lbl">Received</div><div class="val" id="statReceived">₹0</div></div>
         <div class="stat good owner-only"><div class="lbl" data-i18n="stat_clientpending">Client Pending</div><div class="val" id="statClientPending">₹0</div></div>
         <div class="stat bad owner-only"><div class="lbl" data-i18n="stat_investorpending">Investor Pending Return</div><div class="val" id="statInvestorPending">₹0</div></div>
         <div class="stat purple"><div class="lbl" data-i18n="stat_contractorbal">Contractor Balance Due</div><div class="val" id="statContractorBalance">₹0</div></div>
@@ -534,7 +535,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="card">
         <h2><span data-i18n="h2_allsites">All Sites</span></h2>
         <div class="table-wrap"><table id="sitesTable"><thead><tr>
-          <th data-i18n="th_site">Site</th><th data-i18n="th_location">Location</th><th class="owner-only">Contract Value</th><th class="owner-only">Received</th><th class="owner-only">Client Pending</th><th>Site Cost</th><th data-i18n="th_entries">Entries</th><th></th>
+          <th data-i18n="th_site">Site</th><th data-i18n="th_location">Location</th><th>Status</th><th class="owner-only">Contract Value</th><th class="owner-only">Received</th><th class="owner-only">Client Pending</th><th>Site Cost</th><th data-i18n="th_entries">Entries</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
     </section>
@@ -1930,6 +1931,13 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
 });
 
 /* ---------------- Site selects population ---------------- */
+/* A completed site is locked for everyone except the owner — this stops
+   staff from adding new spend against work that's already finished. */
+function isSiteLockedForMe(siteId){
+  if(currentRole === 'owner') return false;
+  const s = DATA.sites.find(x=>x.id===siteId);
+  return !!(s && s.status === 'completed');
+}
 function siteCost(siteId){
   const exp = DATA.expenses.filter(e=>e.siteId===siteId).reduce((a,e)=>a+Number(e.amount),0);
   const ud = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
@@ -2005,17 +2013,36 @@ function renderSitesTable(){
     const contract = Number(s.contractValue)||0;
     const pending = contract - received;
     const count = exp.length + ud.length;
+    const isCompleted = s.status === 'completed';
     return `<tr>
       <td><a href="javascript:void(0)" onclick="openSiteDetail('${s.id}')" style="color:var(--blue);font-weight:600;text-decoration:none">${s.name} →</a></td>
       <td>${s.location||'—'}</td>
+      <td><span class="tag ${isCompleted?'paid':'pending'}">${isCompleted?'Completed':'Running'}</span></td>
       <td class="amt owner-only">${contract ? inr(contract) : '—'}</td>
       <td class="amt owner-only">${inr(received)}</td>
       <td class="amt owner-only">${contract ? inr(pending) : '—'}</td>
       <td class="amt">${inr(cost)}</td>
       <td>${count}</td>
-      <td><button class="btn-danger-text owner-only" onclick="deleteSite('${s.id}')">Delete</button></td>
+      <td>
+        <button class="btn-danger-text owner-only" style="color:var(--good)" onclick="toggleSiteStatus('${s.id}')">${isCompleted?'Reopen':'Mark Complete'}</button>
+        &nbsp;·&nbsp;
+        <button class="btn-danger-text owner-only" onclick="deleteSite('${s.id}')">Delete</button>
+      </td>
     </tr>`;
   }).join('');
+}
+async function toggleSiteStatus(id){
+  const s = DATA.sites.find(x=>x.id===id);
+  if(!s) return;
+  const next = s.status==='completed' ? 'running' : 'completed';
+  const msg = next==='completed'
+    ? 'Ye site "Completed" mark karoge? Iske baad employee is site pe naya expense/udhar/agreement add nahi kar payenge — sirf owner add kar payega.'
+    : 'Ye site wapas "Running" karoge? Employee dobara isme entries add kar payenge.';
+  if(!await uiConfirm(msg, next==='completed' ? 'Haan, complete karo' : 'Haan, reopen karo')) return;
+  try{
+    await db.collection('sites').doc(id).update({ status: next });
+    showToast(next==='completed' ? 'Site complete mark ho gayi' : 'Site reopen ho gayi');
+  }catch(e){ showToast('Update nahi hua — dobara try karo'); }
 }
 async function deleteSite(id){
   if(!await uiConfirm('Ye site delete karoge? Isse jude sabhi expense/udhar/payment entries bhi delete ho jayenge.', 'Haan, delete karo')) return;
@@ -2062,6 +2089,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   const note = document.getElementById('expNote').value.trim();
 
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
+  if(isSiteLockedForMe(siteId)){ showToast('Ye site complete ho chuki hai — sirf owner isme naya expense add kar sakta hai'); return; }
   if(!contractor){ showToast('Naam daalo'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
 
@@ -2177,6 +2205,7 @@ document.getElementById('addUdharBtn').addEventListener('click', async ()=>{
   const note = document.getElementById('udNote').value.trim();
 
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
+  if(isSiteLockedForMe(siteId)){ showToast('Ye site complete ho chuki hai — sirf owner isme naya udhar add kar sakta hai'); return; }
   if(!supplier || !material){ showToast('Supplier aur material ka naam daalo'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
 
@@ -2288,6 +2317,20 @@ function openSiteDetail(siteId){
   const received = currentRole==='owner' ? siteReceived(siteId) : 0;
   const net = received - cost;
   const isOwner = currentRole === 'owner';
+  const isCompleted = site.status === 'completed';
+  const locked = isSiteLockedForMe(siteId);
+
+  const exp = DATA.expenses.filter(e=>e.siteId===siteId);
+  const labourCost = exp.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
+  const materialCost = exp.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
+  const otherCost = exp.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
+  const udharCost = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
+  const contractorPending = DATA.workAgreements.filter(ag=>ag.siteId===siteId).reduce((a,ag)=>{
+    const bal = Number(ag.fixedAmount) - computePaidForAgreement(ag);
+    return a + (bal>0?bal:0);
+  },0);
+  const contractValue = Number(site.contractValue)||0;
+  const clientPending = contractValue ? Math.max(contractValue-received,0) : 0;
 
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
@@ -2295,23 +2338,41 @@ function openSiteDetail(siteId){
   bg.innerHTML = `<div class="modal site-detail-modal" style="display:flex;flex-direction:column;padding:0;overflow:hidden">
     <div class="modal-head" style="margin:0;border-radius:0;display:flex;justify-content:space-between;align-items:center;gap:10px">
       <div>
-        <h3 style="margin:0">${site.name}</h3>
+        <h3 style="margin:0">${site.name} <span class="tag ${isCompleted?'paid':'pending'}" style="vertical-align:middle;margin-left:6px">${isCompleted?'Completed':'Running'}</span></h3>
         <p style="margin:2px 0 0">${site.location||'Location not set'}</p>
       </div>
       <button onclick="document.getElementById('siteDetailBg').remove()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px">&times;</button>
     </div>
     <div style="padding:20px 24px;overflow-y:auto;flex:1">
+      ${locked ? `<div style="background:var(--hivis-soft);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:#8A5A05">
+        🔒 Ye site <strong>Completed</strong> mark ki gayi hai — naya expense/udhar/agreement add nahi kiya ja sakta. Zaroorat ho to owner se kehna.
+      </div>` : ''}
+
       <div class="stat-row" style="margin-bottom:16px">
         ${isOwner ? `<div class="stat good"><div class="lbl">Income (Received)</div><div class="val">${inr(received)}</div></div>` : ''}
         <div class="stat bad"><div class="lbl">Outcome (Total Cost)</div><div class="val">${inr(cost)}</div></div>
         ${isOwner ? `<div class="stat ${net>=0?'good':'bad'}"><div class="lbl">Net</div><div class="val">${net<0?'- ':''}${inr(Math.abs(net))}</div></div>` : ''}
+        ${isOwner && contractValue ? `<div class="stat amber"><div class="lbl">Client Pending (To Reach Nil)</div><div class="val">${inr(clientPending)}</div></div>` : ''}
       </div>
+
+      <div class="card" style="margin-bottom:16px;padding:16px 18px">
+        <h2 style="margin:0 0 10px;font-size:14px;border:none;padding:0">Performance Breakdown <small style="display:block;font-weight:400;color:var(--ink-soft);margin-top:2px">Kahan kitna gaya</small></h2>
+        <div class="table-wrap"><table style="font-size:12.5px"><tbody>
+          <tr><td>Labour</td><td class="amt">${inr(labourCost)}</td></tr>
+          <tr><td>Material</td><td class="amt">${inr(materialCost)}</td></tr>
+          <tr><td>Other</td><td class="amt">${inr(otherCost)}</td></tr>
+          <tr><td>Udhar Material</td><td class="amt">${inr(udharCost)}</td></tr>
+          <tr><td>Contractor Balance Still Due</td><td class="amt" style="color:${contractorPending>0?'var(--bad)':'inherit'}">${inr(contractorPending)}</td></tr>
+          <tr style="background:var(--surface-2);font-weight:700"><td>Total Cost (Outcome)</td><td class="amt">${inr(cost)}</td></tr>
+        </tbody></table></div>
+      </div>
+
       <div style="position:relative;height:220px;margin-bottom:18px">
         <canvas id="siteDetailChart"></canvas>
       </div>
       <div class="toolbar">
         <h2 style="margin:0;border:none;padding:0;font-size:16px">Date-wise Entries</h2>
-        <button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px" onclick="openQuickAddForSite('${siteId}')">+ Add Entry</button>
+        ${!locked ? `<button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px" onclick="openQuickAddForSite('${siteId}')">+ Add Entry</button>` : ''}
       </div>
       <div class="table-wrap"><table><thead><tr>
         <th>Date</th><th>Type</th><th>Item / Category</th><th>Name</th><th>Amount</th><th></th>
@@ -2414,6 +2475,7 @@ document.getElementById('addAgreementBtn').addEventListener('click', async ()=>{
   const note = document.getElementById('agNote').value.trim();
 
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
+  if(isSiteLockedForMe(siteId)){ showToast('Ye site complete ho chuki hai — sirf owner isme naya work agreement add kar sakta hai'); return; }
   if(!contractor){ showToast('Contractor ka naam daalo'); return; }
   if(!amount || amount<=0){ showToast('Sahi fixed amount daalo'); return; }
 
@@ -2876,6 +2938,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
   const date = document.getElementById('qDate').value || todayStr();
 
   if(!siteId){ err.textContent = 'Site chuno.'; return; }
+  if(isSiteLockedForMe(siteId)){ err.textContent = 'Ye site complete ho chuki hai — sirf owner isme naya expense add kar sakta hai.'; return; }
   if(!name){ err.textContent = 'Naam likho.'; return; }
   if(!amount || amount<=0){ err.textContent = 'Amount daalo.'; return; }
   err.textContent = '';
@@ -4144,6 +4207,8 @@ function renderDashboard(){
   }
 
   const filteredSites = filter==='all' ? DATA.sites : DATA.sites.filter(s=>s.id===filter);
+  const receivedTotal = filteredSites.reduce((a,s)=>a+siteReceived(s.id),0);
+  document.getElementById('statReceived').textContent = inr(receivedTotal);
   const clientPendingTotal = filteredSites.reduce((a,s)=>{
     const contract = Number(s.contractValue)||0;
     if(!contract) return a;
