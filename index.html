@@ -409,6 +409,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <button data-tab="investor" class="owner-only"><span class="tab-ico">⇧</span> <span data-i18n="investor">Investor Funding</span></button>
       <button data-tab="office" class="owner-only"><span class="tab-ico">⌂</span> <span data-i18n="office_nav">Office Expense</span></button>
       <button data-tab="pnl" class="owner-only"><span class="tab-ico">±</span> <span data-i18n="pnl">Profit &amp; Loss</span></button>
+      <button data-tab="personal" class="owner-only"><span class="tab-ico">💰</span> Personal Finance</button>
       <button data-tab="team" class="owner-only"><span class="tab-ico">👥</span> <span data-i18n="team">Team Logins</span></button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
     </nav>
@@ -446,10 +447,13 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="stat brick"><div class="lbl" data-i18n="stat_total">Total Expense</div><div class="val" id="statTotal">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_labour">Labour</div><div class="val" id="statLabour">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_material">Material</div><div class="val" id="statMaterial">₹0</div></div>
+        <div class="stat steel"><div class="lbl" data-i18n="stat_other">Other Expense</div><div class="val" id="statOther">₹0</div></div>
         <div class="stat amber"><div class="lbl" data-i18n="stat_udhar">Udhar Pending</div><div class="val" id="statUdhar">₹0</div></div>
         <div class="stat good owner-only"><div class="lbl" data-i18n="stat_clientpending">Client Pending</div><div class="val" id="statClientPending">₹0</div></div>
         <div class="stat bad owner-only"><div class="lbl" data-i18n="stat_investorpending">Investor Pending Return</div><div class="val" id="statInvestorPending">₹0</div></div>
         <div class="stat purple"><div class="lbl" data-i18n="stat_contractorbal">Contractor Balance Due</div><div class="val" id="statContractorBalance">₹0</div></div>
+        <div class="stat owner-only" style="border-left-color:#0F7355"><div class="lbl">Personal Investments</div><div class="val" id="statPersonalInvest" style="color:#0F7355">₹0</div></div>
+        <div class="stat owner-only" style="border-left-color:#B3372C"><div class="lbl">Personal Lending Pending</div><div class="val" id="statPersonalLoan" style="color:#B3372C">₹0</div></div>
       </div>
 
       <div class="card" id="insightsCard">
@@ -851,6 +855,69 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
     </section>
 
+    <!-- PERSONAL FINANCE -->
+    <section id="tab-personal" style="display:none">
+      <h1 class="page-title">Personal Finance</h1>
+      <p class="page-sub">Ye aapka personal paisa hai — company ke sites se alag. Plot, row house, apartment project, stocks, insurance mein kiya gaya investment, aur kisi ko personally diya gaya udhar — sab yahan track karo. Ye employee ko kabhi nahi dikhega.</p>
+
+      <div class="stat-row">
+        <div class="stat" style="border-left-color:#0F7355"><div class="lbl">Total Invested</div><div class="val" id="piStatInvested" style="color:#0F7355">₹0</div></div>
+        <div class="stat" style="border-left-color:#1B4F8C"><div class="lbl">Current Value</div><div class="val" id="piStatCurrent" style="color:#1B4F8C">₹0</div></div>
+        <div class="stat" style="border-left-color:#B3372C"><div class="lbl">Personal Udhar Pending</div><div class="val" id="piStatLoanPending" style="color:#B3372C">₹0</div></div>
+      </div>
+
+      <div class="card">
+        <h2>New Personal Investment</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Investment Type</label>
+            <select id="piType">
+              <option>Plot / Land</option><option>Row House</option><option>Apartment Project</option>
+              <option>Stocks / Mutual Fund</option><option>Insurance</option><option>Gold</option><option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Name / Description</label><input id="piName" placeholder="e.g. Plot near Nashik Road, HDFC SIP"></div>
+          <div class="field"><label>Date</label><input id="piDate" type="date"></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Amount Invested (₹)</label><input id="piAmount" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Current Value (₹) — optional</label><input id="piCurrentValue" type="number" min="0" placeholder="Agar pata ho to"></div>
+          <div class="field"><label>Note (optional)</label><input id="piNote" placeholder="e.g. survey no. / agent naam"></div>
+        </div>
+        <button class="btn btn-primary" id="piAddBtn">+ Add Investment</button>
+      </div>
+
+      <div class="card">
+        <h2>All Personal Investments</h2>
+        <div class="table-wrap"><table id="piTable"><thead><tr>
+          <th>Date</th><th>Type</th><th>Name / Description</th><th>Invested</th><th>Current Value</th><th>Gain/Loss</th><th>Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>New Personal Lending (Udhar Diya)</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Person Name</label><input id="plName" placeholder="e.g. Rahul Sharma"></div>
+          <div class="field"><label>Date Given</label><input id="plDate" type="date"></div>
+          <div class="field"><label>Amount Given (₹)</label><input id="plAmount" type="number" min="0" placeholder="0"></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Expected Return Date</label><input id="plExpDate" type="date"></div>
+          <div class="field"><label>Status</label>
+            <select id="plStatus"><option value="pending">Pending</option><option value="returned">Returned</option></select>
+          </div>
+          <div class="field"><label>Note (optional)</label><input id="plNote" placeholder="e.g. reason / agreement"></div>
+        </div>
+        <button class="btn btn-primary" id="plAddBtn">+ Add Lending Entry</button>
+      </div>
+
+      <div class="card">
+        <h2>All Personal Lending</h2>
+        <div class="table-wrap"><table id="plTable"><thead><tr>
+          <th>Date</th><th>Person</th><th>Amount</th><th>Expected Return</th><th>Status</th><th>Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
     <!-- TEAM LOGINS -->
     <section id="tab-team" style="display:none">
       <h1 class="page-title" data-i18n="team">Team Logins</h1>
@@ -1025,7 +1092,7 @@ const CONFIG_OK = FIREBASE_CONFIG && !String(FIREBASE_CONFIG.apiKey).startsWith(
 
 /* Which Firestore collection each in-memory array maps to */
 const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements' };
-const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
 /* Snapshot of what the server currently holds, so saveData() can write only
@@ -1434,7 +1501,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -1447,6 +1514,7 @@ function rerenderAll(){
   if(currentRole === 'owner'){
     renderClientBalanceTable(); renderClientPayTable();
     renderInvestorTable(); renderOfficeTable();
+    renderPersonalInvestments(); renderPersonalLoans();
   }
 }
 
@@ -1523,6 +1591,8 @@ async function saveData(){
       sync('clientPayments', 'clientPayments');
       sync('investorLoans', 'investorLoans');
       sync('officeExpenses', 'officeExpenses');
+      sync('personalInvestments', 'personalInvestments');
+      sync('personalLoans', 'personalLoans');
       const prevFin = serverState.siteFinance || {};
       const seenFin = new Set();
       DATA.sites.forEach(s=>{
@@ -1601,6 +1671,7 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='pnl') renderPnL();
   if(btn.dataset.tab==='contractwork') renderAgreementsTable();
   if(btn.dataset.tab==='team') loadTeam();
+  if(btn.dataset.tab==='personal'){ renderPersonalInvestments(); renderPersonalLoans(); }
 });
 
 /* ---------------- Site selects population ---------------- */
@@ -2729,6 +2800,123 @@ async function deleteOffice(id){
 }
 document.getElementById('ofListCategoryFilter').addEventListener('change', renderOfficeTable);
 
+/* ---------------- Personal Finance tab (owner only) ---------------- */
+document.getElementById('piDate').value = todayStr();
+document.getElementById('piAddBtn').addEventListener('click', async ()=>{
+  const type = document.getElementById('piType').value;
+  const name = document.getElementById('piName').value.trim();
+  const date = document.getElementById('piDate').value || todayStr();
+  const amount = Number(document.getElementById('piAmount').value);
+  const currentValue = Number(document.getElementById('piCurrentValue').value) || 0;
+  const note = document.getElementById('piNote').value.trim();
+
+  if(!name){ showToast('Investment ka naam/description likho'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+
+  DATA.personalInvestments.push({ id: uid(), type, name, date, amount, currentValue, note });
+  document.getElementById('piName').value='';
+  document.getElementById('piAmount').value='';
+  document.getElementById('piCurrentValue').value='';
+  document.getElementById('piNote').value='';
+  await saveData();
+  renderPersonalInvestments(); renderDashboard();
+  showToast('Investment add ho gaya ✓');
+});
+
+function renderPersonalInvestments(){
+  const tbody = document.querySelector('#piTable tbody');
+  if(!tbody) return;
+  const rows = [...DATA.personalInvestments].sort((a,b)=>b.date.localeCompare(a.date));
+  let totalInvested = 0, totalCurrent = 0;
+  DATA.personalInvestments.forEach(r=>{ totalInvested += Number(r.amount); totalCurrent += Number(r.currentValue)||Number(r.amount); });
+  document.getElementById('piStatInvested').textContent = inr(totalInvested);
+  document.getElementById('piStatCurrent').textContent = inr(totalCurrent);
+
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Abhi koi personal investment entry nahi hai.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>{
+    const cv = Number(r.currentValue)||0;
+    const gain = cv>0 ? cv - Number(r.amount) : null;
+    return `<tr>
+      <td>${r.date}</td><td><span class="tag other">${r.type}</span></td><td>${r.name}</td>
+      <td class="amt">${inr(r.amount)}</td>
+      <td class="amt">${cv>0?inr(cv):'—'}</td>
+      <td class="amt" style="color:${gain===null?'var(--ink-soft)':(gain>=0?'var(--good)':'var(--bad)')}">${gain===null?'—':(gain<0?'- ':'')+inr(Math.abs(gain))}</td>
+      <td>${r.note||'—'}</td>
+      <td><button class="btn-danger-text" onclick="deletePersonalInvestment('${r.id}')">Delete</button></td>
+    </tr>`;
+  }).join('');
+}
+async function deletePersonalInvestment(id){
+  if(!await uiConfirm('Ye investment entry delete karni hai?', 'Haan, delete karo')) return;
+  try{
+    await db.collection('personalInvestments').doc(id).delete();
+    showToast('Investment entry delete ho gayi');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
+document.getElementById('plDate').value = todayStr();
+document.getElementById('plAddBtn').addEventListener('click', async ()=>{
+  const personName = document.getElementById('plName').value.trim();
+  const date = document.getElementById('plDate').value || todayStr();
+  const amount = Number(document.getElementById('plAmount').value);
+  const expDate = document.getElementById('plExpDate').value;
+  const status = document.getElementById('plStatus').value;
+  const note = document.getElementById('plNote').value.trim();
+
+  if(!personName){ showToast('Naam likho'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+
+  DATA.personalLoans.push({ id: uid(), personName, date, amount, expDate, status, note });
+  document.getElementById('plName').value='';
+  document.getElementById('plAmount').value='';
+  document.getElementById('plExpDate').value='';
+  document.getElementById('plNote').value='';
+  await saveData();
+  renderPersonalLoans(); renderDashboard();
+  showToast('Lending entry add ho gayi ✓');
+});
+
+function renderPersonalLoans(){
+  const tbody = document.querySelector('#plTable tbody');
+  if(!tbody) return;
+  const rows = [...DATA.personalLoans].sort((a,b)=>b.date.localeCompare(a.date));
+  const pending = DATA.personalLoans.filter(r=>r.status!=='returned').reduce((a,r)=>a+Number(r.amount),0);
+  document.getElementById('piStatLoanPending').textContent = inr(pending);
+
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Abhi koi personal lending entry nahi hai.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.date}</td><td>${r.personName}</td><td class="amt">${inr(r.amount)}</td>
+    <td>${r.expDate||'—'}</td>
+    <td><span class="tag ${r.status==='returned'?'paid':'pending'}">${r.status}</span></td>
+    <td>${r.note||'—'}</td>
+    <td>
+      <button class="btn-danger-text" style="color:var(--blue)" onclick="togglePersonalLoan('${r.id}')">${r.status==='returned'?'Mark Pending':'Mark Returned'}</button>
+      &nbsp;·&nbsp;
+      <button class="btn-danger-text" onclick="deletePersonalLoan('${r.id}')">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+async function togglePersonalLoan(id){
+  const item = DATA.personalLoans.find(r=>r.id===id);
+  if(!item) return;
+  const next = item.status==='returned' ? 'pending' : 'returned';
+  try{ await db.collection('personalLoans').doc(id).update({status: next}); }
+  catch(e){ showToast('Update nahi hua — dobara try karo'); }
+}
+async function deletePersonalLoan(id){
+  if(!await uiConfirm('Ye lending entry delete karni hai?', 'Haan, delete karo')) return;
+  try{
+    await db.collection('personalLoans').doc(id).delete();
+    showToast('Lending entry delete ho gayi');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
 /* ---------------- Profit & Loss tab ---------------- */
 function renderPnL(){
   const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
@@ -2795,7 +2983,17 @@ function renderDashboard(){
   document.getElementById('statTotal').textContent = inr(grandTotal);
   document.getElementById('statLabour').textContent = inr(labourTotal);
   document.getElementById('statMaterial').textContent = inr(materialTotal);
+  document.getElementById('statOther').textContent = inr(otherTotal);
   document.getElementById('statUdhar').textContent = inr(udharPending);
+
+  if(currentRole === 'owner'){
+    const investedTotal = DATA.personalInvestments.reduce((a,r)=>a+Number(r.amount),0);
+    const personalLoanPending = DATA.personalLoans.filter(r=>r.status!=='returned').reduce((a,r)=>a+Number(r.amount),0);
+    const piEl = document.getElementById('statPersonalInvest');
+    const plEl = document.getElementById('statPersonalLoan');
+    if(piEl) piEl.textContent = inr(investedTotal);
+    if(plEl) plEl.textContent = inr(personalLoanPending);
+  }
 
   const clientPendingTotal = DATA.sites.reduce((a,s)=>{
     const contract = Number(s.contractValue)||0;
@@ -3358,4 +3556,3 @@ boot();
 </script>
 </body>
 </html>
- 
