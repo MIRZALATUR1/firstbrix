@@ -412,6 +412,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <button data-tab="pnl" class="owner-only"><span class="tab-ico">±</span> <span data-i18n="pnl">Profit &amp; Loss</span></button>
       <button data-tab="personal" class="owner-only"><span class="tab-ico">💰</span> Personal Finance</button>
       <button data-tab="projects" class="owner-only"><span class="tab-ico">🏘️</span> Project Investments</button>
+      <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> Payment Slabs</button>
       <button data-tab="team" class="owner-only"><span class="tab-ico">👥</span> <span data-i18n="team">Team Logins</span></button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
     </nav>
@@ -988,7 +989,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label>Hamara Investment (₹)</label><input id="puOurAmount" type="number" min="0" placeholder="e.g. 25,00,000"></div>
           <div class="field"><label>Investor Investment (₹) — optional</label><input id="puInvAmount" type="number" min="0" placeholder="e.g. 15,00,000"></div>
         </div>
-        <div class="field"><label>Investor Name — optional</label><input id="puInvName" list="dl-investors" placeholder="Agar koi investor sath mein hai"></div>
+        <div class="grid cols-2">
+          <div class="field"><label>Investor Name — optional</label><input id="puInvName" list="dl-investors" placeholder="Agar koi investor sath mein hai"></div>
+          <div class="field"><label>Linked Site — optional</label><select id="puLinkedSite"><option value="">Koi nahi (sirf resell deal)</option></select></div>
+        </div>
+        <div class="hint" style="margin-top:-8px;margin-bottom:14px">Agar ye unit (jaise row house) aapki khud ki construction site bhi hai, to yahan wo site link karo — us site ke labour/material expenses is deal ke total cost mein automatic jud jayenge.</div>
         <div class="grid cols-3">
           <div class="field"><label>Status</label>
             <select id="puStatus"><option value="unsold">Unsold</option><option value="sold">Sold</option></select>
@@ -1007,7 +1012,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="toolbar-left"><select id="puListProjectFilter"><option value="all">All Projects</option></select></div>
         </div>
         <div class="table-wrap"><table id="puTable"><thead><tr>
-          <th>Project</th><th>Unit</th><th>Date</th><th>Hamara</th><th>Investor</th><th>Total Invested</th>
+          <th>Project</th><th>Unit</th><th>Date</th><th>Hamara</th><th>Investor</th><th>Site Cost</th><th>Total Invested</th>
           <th>Status</th><th>Sale Price</th><th>P/L</th><th>Hamara Share</th><th>Investor Share</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
@@ -1016,6 +1021,60 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <h2>Project-wise Summary</h2>
         <div class="table-wrap"><table id="puProjectSummaryTable"><thead><tr>
           <th>Project</th><th>Units (Sold/Total)</th><th>Total Invested</th><th>Total Sale Value</th><th>Total P/L</th><th>Hamara Share</th><th>Investor Share</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- PAYMENT SLABS -->
+    <section id="tab-slabs" style="display:none">
+      <h1 class="page-title">Payment Slab Generator</h1>
+      <p class="page-sub">Client ke saath payment schedule banao — kab kitna % milega. Poori tarah editable hai, apne hisab se stages aur percentages badlo, phir PDF/Word download karo.</p>
+
+      <div class="card">
+        <h2>New Payment Slab</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Link To</label>
+            <select id="slLinkType">
+              <option value="custom">Custom / Manual</option>
+              <option value="site">Site</option>
+              <option value="project">Project Investment Unit</option>
+            </select>
+          </div>
+          <div class="field" id="slLinkPickerWrap" style="display:none"><label>Choose</label><select id="slLinkPicker"></select></div>
+          <div class="field"><label>Title</label><input id="slTitle" placeholder="e.g. Sharma Row House"></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Total Project Amount (₹)</label><input id="slTotalAmount" type="number" min="0" placeholder="e.g. 4100000"></div>
+          <div class="field"><label>Client / Home Owner Name</label><input id="slClientName" list="dl-clients" placeholder="e.g. Mr. Sharma"></div>
+          <div class="field"><label>Contractor Name</label><input id="slContractorName" placeholder="e.g. FirstBrix Infratech"></div>
+        </div>
+        <button class="btn btn-primary" id="slNewBtn">+ Start New Slab</button>
+        <div class="hint">Naya slab shuru karte hi ek default template aayega — pehli 2 rows "Before Start" (advance) hoti hain, aakhri row "On Completion". Beech mein jitni chahe rows add/remove/edit karo.</div>
+      </div>
+
+      <div class="card" id="slEditorCard" style="display:none">
+        <div class="toolbar">
+          <h2 style="margin:0" id="slEditorTitle">Editing Slab</h2>
+          <div class="toolbar-left">
+            <button class="btn btn-ghost" id="slAddRowBtn" style="padding:7px 12px;font-size:12.5px">+ Add Stage</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="slStagesTable"><thead><tr>
+          <th style="width:34px">#</th><th>Stage / Milestone</th><th style="width:110px">Payment %</th><th style="width:150px">Amount (₹)</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+        <div class="footnote" id="slTotalLine" style="font-size:13px"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+          <button class="btn btn-primary" id="slSaveBtn">💾 Save Slab</button>
+          <button class="btn btn-steel" id="slPdfBtn">⬇ Download PDF</button>
+          <button class="btn btn-ghost" id="slWordBtn">⬇ Download Word</button>
+          <button class="btn btn-ghost" id="slCancelBtn">Cancel / Close</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Saved Payment Slabs</h2>
+        <div class="table-wrap"><table id="slSavedTable"><thead><tr>
+          <th>Title</th><th>Linked To</th><th>Total Amount</th><th>Stages</th><th>Date</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
     </section>
@@ -1240,7 +1299,7 @@ const CONFIG_OK = FIREBASE_CONFIG && !String(FIREBASE_CONFIG.apiKey).startsWith(
 
 /* Which Firestore collection each in-memory array maps to */
 const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements' };
-const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
 /* Snapshot of what the server currently holds, so saveData() can write only
@@ -1649,7 +1708,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -1663,7 +1722,7 @@ function rerenderAll(){
     renderClientBalanceTable(); renderClientPayTable();
     renderInvestorTable(); renderOfficeTable();
     renderPersonalInvestments(); renderPersonalLoans(); renderProjectUnits();
-    renderProjectUnits();
+    renderSavedSlabsList();
   }
 }
 
@@ -1743,6 +1802,7 @@ async function saveData(){
       sync('personalInvestments', 'personalInvestments');
       sync('personalLoans', 'personalLoans');
       sync('projectUnits', 'projectUnits');
+      sync('paymentSlabs', 'paymentSlabs');
       const prevFin = serverState.siteFinance || {};
       const seenFin = new Set();
       DATA.sites.forEach(s=>{
@@ -1836,7 +1896,7 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='team') loadTeam();
   if(btn.dataset.tab==='personal'){ renderPersonalInvestments(); renderPersonalLoans(); }
   if(btn.dataset.tab==='projects') renderProjectUnits();
-  if(btn.dataset.tab==='projects') renderProjectUnits();
+  if(btn.dataset.tab==='slabs') renderSavedSlabsList();
 });
 
 /* ---------------- Site selects population ---------------- */
@@ -1866,6 +1926,13 @@ function renderSiteSelects(){
     + (siteOpts ? `<optgroup label="Sites">${siteOpts}</optgroup>` : '')
     + (personalOpts ? `<optgroup label="Personal Investments">${personalOpts}</optgroup>` : '');
   if(invCur) invEl.value = invCur;
+
+  const puLinkEl = document.getElementById('puLinkedSite');
+  if(puLinkEl){
+    const puCur = puLinkEl.value;
+    puLinkEl.innerHTML = '<option value="">Koi nahi (sirf resell deal)</option>' + DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    if(puCur) puLinkEl.value = puCur;
+  }
 
   const filterSelects = ['dashSiteFilter','expListSiteFilter','udListSiteFilter','repSite','cpListSiteFilter','agListSiteFilter','impSite'];
   filterSelects.forEach(id=>{
@@ -3241,20 +3308,21 @@ async function deletePersonalLoan(id){
 function computeUnitPL(u){
   const our = Number(u.ourAmount)||0;
   const inv = Number(u.invAmount)||0;
-  const totalInvested = our + inv;
+  const siteExpense = u.linkedSiteId ? siteCost(u.linkedSiteId) : 0;
+  const totalInvested = our + inv + siteExpense;
   const sold = u.status === 'sold' && Number(u.salePrice) > 0;
   const salePrice = Number(u.salePrice)||0;
   const pl = sold ? (salePrice - totalInvested) : null;
   let ourShare = null, investorShare = null;
   if(pl !== null){
     if(totalInvested > 0){
-      ourShare = pl * (our / totalInvested);
+      ourShare = pl * ((our+siteExpense) / totalInvested);
       investorShare = pl * (inv / totalInvested);
     } else {
       ourShare = pl; investorShare = 0;
     }
   }
-  return { our, inv, totalInvested, sold, salePrice, pl, ourShare, investorShare };
+  return { our, inv, siteExpense, totalInvested, sold, salePrice, pl, ourShare, investorShare };
 }
 
 document.getElementById('puDate').value = todayStr();
@@ -3266,6 +3334,7 @@ document.getElementById('puAddBtn').addEventListener('click', async ()=>{
   const ourAmount = Number(document.getElementById('puOurAmount').value);
   const invAmount = Number(document.getElementById('puInvAmount').value) || 0;
   const investorName = document.getElementById('puInvName').value.trim();
+  const linkedSiteId = document.getElementById('puLinkedSite').value;
   const status = document.getElementById('puStatus').value;
   const salePrice = Number(document.getElementById('puSalePrice').value) || 0;
   const saleDate = document.getElementById('puSaleDate').value;
@@ -3276,7 +3345,7 @@ document.getElementById('puAddBtn').addEventListener('click', async ()=>{
   if(!ourAmount || ourAmount<=0){ showToast('Hamara investment amount daalo'); return; }
 
   DATA.projectUnits.push({
-    id: uid(), project, unit, date, unitValue, ourAmount, invAmount, investorName,
+    id: uid(), project, unit, date, unitValue, ourAmount, invAmount, investorName, linkedSiteId,
     status, salePrice, saleDate, note
   });
   document.getElementById('puUnit').value='';
@@ -3331,6 +3400,7 @@ function renderProjectUnits(){
         <td>${u.project}</td><td>${u.unit}</td><td>${u.date}</td>
         <td class="amt">${inr(u.ourAmount)}</td>
         <td class="amt">${u.invAmount?inr(u.invAmount)+(u.investorName?' ('+u.investorName+')':''):'—'}</td>
+        <td class="amt">${u.linkedSiteId?inr(c.siteExpense)+' ('+siteName(u.linkedSiteId)+')':'—'}</td>
         <td class="amt">${inr(c.totalInvested)}</td>
         <td><span class="tag ${u.status==='sold'?'paid':'pending'}">${u.status}</span></td>
         <td class="amt">${u.salePrice?inr(u.salePrice):'—'}</td>
@@ -3390,6 +3460,7 @@ function editProjectUnit(id){
     {key:'ourAmount', label:'Hamara Investment (₹)', value:r.ourAmount, type:'number'},
     {key:'invAmount', label:'Investor Investment (₹)', value:r.invAmount, type:'number'},
     {key:'investorName', label:'Investor Name', value:r.investorName},
+    {key:'linkedSiteId', label:'Linked Site', value:r.linkedSiteId||'', type:'select', options:[{value:'',label:'Koi nahi'}].concat(DATA.sites.map(s=>({value:s.id,label:s.name})))},
     {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'unsold',label:'Unsold'},{value:'sold',label:'Sold'}]},
     {key:'salePrice', label:'Sale Price (₹)', value:r.salePrice, type:'number'},
     {key:'saleDate', label:'Sale Date', value:r.saleDate, type:'date'},
@@ -3404,6 +3475,261 @@ async function deleteProjectUnit(id){
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 document.getElementById('puListProjectFilter').addEventListener('change', renderProjectUnits);
+
+/* ---------------- Payment Slab Generator ---------------- */
+let editingSlab = null; // { id, title, linkType, linkId, totalAmount, clientName, contractorName, date, stages:[{stage,percent}] }
+
+function defaultSlabStages(){
+  return [
+    { stage: 'Booking Advance (Before Start)', percent: 10 },
+    { stage: 'Advance Payment 2 (Before Start)', percent: 10 },
+    { stage: 'On Completion', percent: 80 }
+  ];
+}
+
+document.getElementById('slLinkType').addEventListener('change', e=>{
+  const type = e.target.value;
+  const wrap = document.getElementById('slLinkPickerWrap');
+  const picker = document.getElementById('slLinkPicker');
+  if(type === 'custom'){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  if(type === 'site'){
+    picker.innerHTML = '<option value="">Select site</option>' + DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  } else {
+    picker.innerHTML = '<option value="">Select unit</option>' + DATA.projectUnits.map(u=>`<option value="${u.id}">${u.project} — ${u.unit}</option>`).join('');
+  }
+});
+
+document.getElementById('slLinkPicker').addEventListener('change', e=>{
+  const type = document.getElementById('slLinkType').value;
+  const id = e.target.value;
+  if(!id) return;
+  if(type === 'site'){
+    const s = DATA.sites.find(x=>x.id===id);
+    if(s){
+      document.getElementById('slTitle').value = s.name;
+      if(s.contractValue) document.getElementById('slTotalAmount').value = s.contractValue;
+    }
+  } else {
+    const u = DATA.projectUnits.find(x=>x.id===id);
+    if(u){
+      document.getElementById('slTitle').value = `${u.project} — ${u.unit}`;
+      document.getElementById('slTotalAmount').value = u.unitValue || (Number(u.ourAmount)+Number(u.invAmount||0));
+    }
+  }
+});
+
+document.getElementById('slNewBtn').addEventListener('click', ()=>{
+  const title = document.getElementById('slTitle').value.trim();
+  const totalAmount = Number(document.getElementById('slTotalAmount').value);
+  if(!title){ showToast('Title likho'); return; }
+  if(!totalAmount || totalAmount<=0){ showToast('Sahi total amount daalo'); return; }
+
+  const linkType = document.getElementById('slLinkType').value;
+  const linkId = linkType==='custom' ? '' : document.getElementById('slLinkPicker').value;
+
+  editingSlab = {
+    id: null,
+    title, linkType, linkId, totalAmount,
+    clientName: document.getElementById('slClientName').value.trim(),
+    contractorName: document.getElementById('slContractorName').value.trim(),
+    date: todayStr(),
+    stages: defaultSlabStages()
+  };
+  document.getElementById('slEditorCard').style.display = 'block';
+  renderSlabEditor();
+  document.getElementById('slEditorCard').scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+function renderSlabEditor(){
+  if(!editingSlab) return;
+  document.getElementById('slEditorTitle').textContent = `Editing: ${editingSlab.title}`;
+  const tbody = document.querySelector('#slStagesTable tbody');
+  tbody.innerHTML = editingSlab.stages.map((s,i)=>{
+    const amount = editingSlab.totalAmount * (Number(s.percent)||0) / 100;
+    return `<tr>
+      <td>${i+1}</td>
+      <td><input type="text" value="${escapeAttr(s.stage)}" oninput="editingSlab.stages[${i}].stage=this.value"></td>
+      <td><input type="number" min="0" max="100" step="0.1" value="${s.percent}" oninput="editingSlab.stages[${i}].percent=Number(this.value)||0; renderSlabEditor();"></td>
+      <td class="amt">${inr(amount)}</td>
+      <td><button class="btn-danger-text" onclick="removeSlabStage(${i})">Remove</button></td>
+    </tr>`;
+  }).join('');
+
+  const totalPct = editingSlab.stages.reduce((a,s)=>a+(Number(s.percent)||0),0);
+  const totalLine = document.getElementById('slTotalLine');
+  const totalAmt = editingSlab.totalAmount * totalPct/100;
+  totalLine.innerHTML = `Total: <strong>${totalPct.toFixed(1)}%</strong> = ${inr(totalAmt)} ${
+    Math.abs(totalPct-100) > 0.05
+      ? `<span style="color:var(--bad);font-weight:600">⚠ 100% nahi hai, adjust karo</span>`
+      : `<span style="color:var(--good)">✓ 100% match ho gaya</span>`
+  }`;
+}
+function removeSlabStage(i){
+  if(editingSlab.stages.length <= 1){ showToast('Kam se kam ek stage rehna chahiye'); return; }
+  editingSlab.stages.splice(i,1);
+  renderSlabEditor();
+}
+document.getElementById('slAddRowBtn').addEventListener('click', ()=>{
+  if(!editingSlab) return;
+  editingSlab.stages.push({ stage:'New Stage', percent:0 });
+  renderSlabEditor();
+});
+
+document.getElementById('slSaveBtn').addEventListener('click', async ()=>{
+  if(!editingSlab) return;
+  const totalPct = editingSlab.stages.reduce((a,s)=>a+(Number(s.percent)||0),0);
+  if(Math.abs(totalPct-100) > 0.5){
+    if(!await uiConfirm(`Total ${totalPct.toFixed(1)}% hai, 100% nahi. Phir bhi save karein?`, 'Haan, save karo')) return;
+  }
+  if(editingSlab.id){
+    const idx = DATA.paymentSlabs.findIndex(s=>s.id===editingSlab.id);
+    if(idx>-1) DATA.paymentSlabs[idx] = {...editingSlab};
+  } else {
+    editingSlab.id = uid();
+    DATA.paymentSlabs.push({...editingSlab});
+  }
+  await saveData();
+  renderSavedSlabsList();
+  showToast('Slab save ho gaya ✓');
+});
+
+document.getElementById('slCancelBtn').addEventListener('click', ()=>{
+  editingSlab = null;
+  document.getElementById('slEditorCard').style.display = 'none';
+});
+
+function renderSavedSlabsList(){
+  const tbody = document.querySelector('#slSavedTable tbody');
+  if(!tbody) return;
+  const rows = [...DATA.paymentSlabs].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Abhi koi saved slab nahi hai.</td></tr>`;
+    return;
+  }
+  const linkLabel = s=>{
+    if(s.linkType==='site') return '🏗️ ' + siteName(s.linkId);
+    if(s.linkType==='project'){ const u = DATA.projectUnits.find(x=>x.id===s.linkId); return u ? '🏘️ '+u.project+' — '+u.unit : '🏘️ (deleted)'; }
+    return 'Custom';
+  };
+  tbody.innerHTML = rows.map(s=>`<tr>
+    <td><strong>${s.title}</strong></td>
+    <td>${linkLabel(s)}</td>
+    <td class="amt">${inr(s.totalAmount)}</td>
+    <td>${s.stages.length}</td>
+    <td>${s.date||'—'}</td>
+    <td>
+      <button class="btn-danger-text" style="color:var(--blue)" onclick="openSavedSlab('${s.id}')">Open</button>
+      &nbsp;·&nbsp;
+      <button class="btn-danger-text" onclick="deleteSlab('${s.id}')">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+function openSavedSlab(id){
+  const s = DATA.paymentSlabs.find(x=>x.id===id);
+  if(!s) return;
+  editingSlab = JSON.parse(JSON.stringify(s));
+  document.getElementById('slEditorCard').style.display = 'block';
+  renderSlabEditor();
+  document.getElementById('slEditorCard').scrollIntoView({behavior:'smooth', block:'start'});
+}
+async function deleteSlab(id){
+  if(!await uiConfirm('Ye payment slab delete karni hai?', 'Haan, delete karo')) return;
+  try{
+    await db.collection('paymentSlabs').doc(id).delete();
+    showToast('Slab delete ho gayi');
+    if(editingSlab && editingSlab.id===id){ editingSlab=null; document.getElementById('slEditorCard').style.display='none'; }
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
+/* --- PDF export, styled like a signable payment schedule --- */
+document.getElementById('slPdfBtn').addEventListener('click', ()=>{
+  if(!editingSlab) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const title = pdfSafe(editingSlab.title);
+  const subtitle = pdfSafe(`Total Project Value: ${pdfMoney(editingSlab.totalAmount)}`);
+
+  doc.setFontSize(16);
+  doc.text('FirstBrix Infratech - Payment Slab', 14, 16);
+  doc.setFontSize(12);
+  doc.text(title, 14, 24);
+  doc.setFontSize(9);
+  doc.setTextColor(100);
+  doc.text(subtitle, 14, 30);
+  doc.setTextColor(0);
+
+  const body = editingSlab.stages.map((s,i)=>[
+    String(i+1), pdfSafe(s.stage), s.percent.toFixed(1)+'%',
+    pdfMoney(editingSlab.totalAmount * s.percent/100), ''
+  ]);
+  const totalPct = editingSlab.stages.reduce((a,s)=>a+(Number(s.percent)||0),0);
+  body.push(['', 'TOTAL', totalPct.toFixed(1)+'%', pdfMoney(editingSlab.totalAmount*totalPct/100), '']);
+
+  doc.autoTable({
+    startY: 36,
+    head: [['#','Stage / Milestone','%','Amount','Sign & Date']],
+    body,
+    theme: 'grid',
+    headStyles: { fillColor: [27,79,140], fontSize: 8, halign: 'center' },
+    styles: { fontSize: 8, cellPadding: 2.5, valign:'middle' },
+    columnStyles: { 0:{cellWidth:8,halign:'center'}, 1:{cellWidth:65}, 2:{cellWidth:16,halign:'center'}, 3:{cellWidth:30,halign:'right'}, 4:{cellWidth:'auto', minCellHeight:14} }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 25;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 15, sigWidth = 75;
+  const contractorName = pdfSafe(editingSlab.contractorName || '(Contractor Name)');
+  const customerName = pdfSafe(editingSlab.clientName || '(Client Name)');
+
+  doc.line(margin, finalY, margin+sigWidth, finalY);
+  doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text(contractorName, margin, finalY+7);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100);
+  doc.text('Contractor Signature   Date: ______', margin, finalY+12);
+
+  const x2 = pageWidth - margin - sigWidth;
+  doc.setTextColor(0);
+  doc.line(x2, finalY, x2+sigWidth, finalY);
+  doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text(customerName, x2, finalY+7);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100);
+  doc.text('Client Signature   Date: ______', x2, finalY+12);
+
+  saveBlob(doc.output('blob'), `PaymentSlab_${editingSlab.title.replace(/[^a-zA-Z0-9]/g,'_')}.pdf`);
+  showToast('PDF taiyar ✓');
+});
+
+/* --- Word export (opens fine in MS Word) --- */
+document.getElementById('slWordBtn').addEventListener('click', ()=>{
+  if(!editingSlab) return;
+  const totalPct = editingSlab.stages.reduce((a,s)=>a+(Number(s.percent)||0),0);
+  const rowsHtml = editingSlab.stages.map((s,i)=>`<tr>
+    <td>${i+1}</td><td>${(s.stage||'').replace(/</g,'&lt;')}</td><td>${s.percent.toFixed(1)}%</td>
+    <td>Rs. ${(editingSlab.totalAmount*s.percent/100).toLocaleString('en-IN')}</td><td style="height:40px"></td>
+  </tr>`).join('');
+  const html = `<html><head><meta charset="utf-8"><title>${editingSlab.title}</title>
+    <style>table,th,td{border:1px solid #000;border-collapse:collapse;padding:6px;font-family:Arial,sans-serif;font-size:12px} th{background:#f2f2f2}</style>
+    </head><body>
+    <h2>FirstBrix Infratech - Payment Slab</h2>
+    <h3>${editingSlab.title}</h3>
+    <p>Total Project Value: Rs. ${editingSlab.totalAmount.toLocaleString('en-IN')}</p>
+    <table style="width:100%">
+      <tr><th>#</th><th>Stage / Milestone</th><th>%</th><th>Amount</th><th>Sign &amp; Date</th></tr>
+      ${rowsHtml}
+      <tr><td colspan="2"><strong>TOTAL</strong></td><td><strong>${totalPct.toFixed(1)}%</strong></td>
+      <td><strong>Rs. ${(editingSlab.totalAmount*totalPct/100).toLocaleString('en-IN')}</strong></td><td></td></tr>
+    </table>
+    <br><br>
+    <table style="width:100%;border:none"><tr style="border:none">
+      <td style="border:none;width:50%">_____________________<br>${(editingSlab.contractorName||'Contractor').replace(/</g,'&lt;')}<br>Contractor Signature</td>
+      <td style="border:none;width:50%">_____________________<br>${(editingSlab.clientName||'Client').replace(/</g,'&lt;')}<br>Client Signature</td>
+    </tr></table>
+    </body></html>`;
+  const blob = new Blob(['\ufeff', html], {type:'application/msword'});
+  saveBlob(blob, `PaymentSlab_${editingSlab.title.replace(/[^a-zA-Z0-9]/g,'_')}.doc`);
+  showToast('Word file taiyar ✓');
+});
 
 /* ---------------- Profit & Loss tab ---------------- */
 function renderPnL(){
@@ -3701,16 +4027,20 @@ function renderDashboard(){
     renderFiveYearProjection();
   }
 
-  const clientPendingTotal = DATA.sites.reduce((a,s)=>{
+  const filteredSites = filter==='all' ? DATA.sites : DATA.sites.filter(s=>s.id===filter);
+  const clientPendingTotal = filteredSites.reduce((a,s)=>{
     const contract = Number(s.contractValue)||0;
     if(!contract) return a;
     const received = siteReceived(s.id);
     return a + Math.max(contract - received, 0);
   },0);
-  const investorPendingTotal = DATA.investorLoans.filter(i=>i.status!=='returned').reduce((a,i)=>a+Number(i.returnAmt),0);
+  const investorPendingTotal = (filter==='all' ? DATA.investorLoans : DATA.investorLoans.filter(i=>i.siteId===filter))
+    .filter(i=>i.status!=='returned').reduce((a,i)=>a+Number(i.returnAmt),0);
   document.getElementById('statClientPending').textContent = inr(clientPendingTotal);
   document.getElementById('statInvestorPending').textContent = inr(investorPendingTotal);
-  const contractorBalanceTotal = DATA.workAgreements.reduce((a,ag)=>{
+
+  const contractorFiltered = filter==='all' ? DATA.workAgreements : DATA.workAgreements.filter(ag=>ag.siteId===filter);
+  const contractorBalanceTotal = contractorFiltered.reduce((a,ag)=>{
     const paid = computePaidForAgreement(ag);
     const bal = Number(ag.fixedAmount) - paid;
     return a + (bal>0?bal:0);
