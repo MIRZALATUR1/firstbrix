@@ -445,6 +445,9 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
       </div>
 
+      <h2 style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:0.4px;margin:4px 0 12px;color:var(--ink);display:flex;align-items:center;gap:8px">
+        🏗️ Business — Site Expenses
+      </h2>
       <div class="stat-row">
         <div class="stat brick"><div class="lbl" data-i18n="stat_total">Total Expense</div><div class="val" id="statTotal">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_labour">Labour</div><div class="val" id="statLabour">₹0</div></div>
@@ -454,8 +457,17 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="stat good owner-only"><div class="lbl" data-i18n="stat_clientpending">Client Pending</div><div class="val" id="statClientPending">₹0</div></div>
         <div class="stat bad owner-only"><div class="lbl" data-i18n="stat_investorpending">Investor Pending Return</div><div class="val" id="statInvestorPending">₹0</div></div>
         <div class="stat purple"><div class="lbl" data-i18n="stat_contractorbal">Contractor Balance Due</div><div class="val" id="statContractorBalance">₹0</div></div>
-        <div class="stat owner-only" style="border-left-color:#0F7355"><div class="lbl">Personal Investments</div><div class="val" id="statPersonalInvest" style="color:#0F7355">₹0</div></div>
-        <div class="stat owner-only" style="border-left-color:#B3372C"><div class="lbl">Personal Lending Pending</div><div class="val" id="statPersonalLoan" style="color:#B3372C">₹0</div></div>
+      </div>
+
+      <h2 class="owner-only" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:0.4px;margin:22px 0 12px;color:var(--ink);display:flex;align-items:center;gap:8px">
+        💰 Personal Investments &amp; Projects
+      </h2>
+      <div class="stat-row owner-only">
+        <div class="stat" style="border-left-color:#0F7355"><div class="lbl">Personal Investments</div><div class="val" id="statPersonalInvest" style="color:#0F7355">₹0</div></div>
+        <div class="stat" style="border-left-color:#B3372C"><div class="lbl">Personal Lending Pending</div><div class="val" id="statPersonalLoan" style="color:#B3372C">₹0</div></div>
+        <div class="stat" style="border-left-color:#1B4F8C"><div class="lbl">Project Investment (Invested)</div><div class="val" id="statProjectInvested" style="color:#1B4F8C">₹0</div></div>
+        <div class="stat" style="border-left-color:#0F7355"><div class="lbl">Project Realized P/L</div><div class="val" id="statProjectPL" style="color:#0F7355">₹0</div></div>
+        <div class="stat" style="border-left-color:#E8940C"><div class="lbl">Hamara Share (Projects)</div><div class="val" id="statProjectOurShare" style="color:#A66A05">₹0</div></div>
       </div>
 
       <div class="card" id="insightsCard">
@@ -491,6 +503,15 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="table-wrap"><table id="recentTable"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th data-i18n="th_type">Type</th><th>Category / Item</th><th data-i18n="th_name">Name</th><th data-i18n="th_amount">Amount</th>
         </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card owner-only">
+        <h2>5-Year Projection <small>Sirf reference ke liye — pichle average trend ko aage badhaya gaya hai, koi guarantee nahi</small></h2>
+        <div style="position:relative;height:240px;margin-bottom:16px"><canvas id="chartProjection"></canvas></div>
+        <div class="table-wrap"><table id="projectionTable"><thead><tr>
+          <th>Year</th><th>Projected Business Profit (Cumulative)</th><th>Est. Total Balance</th>
+        </tr></thead><tbody></tbody></table></div>
+        <div class="footnote" id="projectionNote"></div>
       </div>
     </section>
 
@@ -3440,16 +3461,10 @@ function renderPnL(){
 /* Monthly / Yearly / Average profit — separate from the main net figure
    because interest cost doesn't have a natural date, so it's excluded here
    and only shown in the overall Net Profit/Loss card above. */
-function renderTimeBasedProfit(){
-  const thisMonthKey = todayStr().slice(0,7);
-  const thisYearKey = todayStr().slice(0,4);
-  const sumBy = (arr, prefix) => arr.filter(r=> (r.date||'').startsWith(prefix)).reduce((a,r)=>a+Number(r.amount),0);
-
-  const monthProfit = sumBy(DATA.clientPayments, thisMonthKey)
-    - sumBy(DATA.expenses, thisMonthKey) - sumBy(DATA.udhar, thisMonthKey) - sumBy(DATA.officeExpenses, thisMonthKey);
-  const yearProfit = sumBy(DATA.clientPayments, thisYearKey)
-    - sumBy(DATA.expenses, thisYearKey) - sumBy(DATA.udhar, thisYearKey) - sumBy(DATA.officeExpenses, thisYearKey);
-
+/* Shared by the Time-based Profit card and the 5-Year Projection —
+   overall business net profit so far, and the average per month it works
+   out to since the earliest recorded transaction. */
+function computeBusinessAvgMonthly(){
   const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
   const totalSiteCost = DATA.sites.reduce((a,s)=>a+siteCost(s.id),0);
   const totalOffice = DATA.officeExpenses.reduce((a,r)=>a+Number(r.amount),0);
@@ -3470,7 +3485,20 @@ function renderTimeBasedProfit(){
     monthsElapsed = (now.getFullYear()-earliest.getFullYear())*12 + (now.getMonth()-earliest.getMonth()) + 1;
     if(monthsElapsed < 1) monthsElapsed = 1;
   }
-  const avgMonthly = overallNet / monthsElapsed;
+  return { overallNet, monthsElapsed, earliestLabel, avgMonthly: overallNet / monthsElapsed };
+}
+
+function renderTimeBasedProfit(){
+  const thisMonthKey = todayStr().slice(0,7);
+  const thisYearKey = todayStr().slice(0,4);
+  const sumBy = (arr, prefix) => arr.filter(r=> (r.date||'').startsWith(prefix)).reduce((a,r)=>a+Number(r.amount),0);
+
+  const monthProfit = sumBy(DATA.clientPayments, thisMonthKey)
+    - sumBy(DATA.expenses, thisMonthKey) - sumBy(DATA.udhar, thisMonthKey) - sumBy(DATA.officeExpenses, thisMonthKey);
+  const yearProfit = sumBy(DATA.clientPayments, thisYearKey)
+    - sumBy(DATA.expenses, thisYearKey) - sumBy(DATA.udhar, thisYearKey) - sumBy(DATA.officeExpenses, thisYearKey);
+
+  const { overallNet, monthsElapsed, earliestLabel, avgMonthly } = computeBusinessAvgMonthly();
 
   const setStat = (id, val) => {
     const el = document.getElementById(id);
@@ -3574,6 +3602,64 @@ function renderGrowthSuggestions(){
 
 /* ---------------- Dashboard ---------------- */
 document.getElementById('dashSiteFilter').addEventListener('change', renderDashboard);
+/* A simple, honest linear projection: "if the average monthly profit we've
+   made so far continues at the same rate, here's roughly where we'd be."
+   It deliberately does NOT try to project personal investments or project
+   deals forward, since we don't have a reliable growth rate for those —
+   their current totals are shown as a separate, static reference line. */
+let projectionChart = null;
+function renderFiveYearProjection(){
+  const tableEl = document.getElementById('projectionTable');
+  if(!tableEl) return;
+
+  const { overallNet, monthsElapsed, earliestLabel, avgMonthly } = computeBusinessAvgMonthly();
+  const personalTotal = DATA.personalInvestments.reduce((a,r)=>a+Number(r.amount),0);
+  let projectPL = 0;
+  DATA.projectUnits.forEach(u=>{ const c = computeUnitPL(u); if(c.pl!==null) projectPL += c.pl; });
+  const currentOtherAssets = personalTotal + projectPL;
+
+  const years = [1,2,3,4,5];
+  const rows = years.map(y=>{
+    const cumProfit = avgMonthly * 12 * y;
+    const estBalance = overallNet + cumProfit;
+    return { y, cumProfit, estBalance };
+  });
+
+  document.querySelector('#projectionTable tbody').innerHTML = rows.map(r=>`<tr>
+    <td>Year ${r.y}</td>
+    <td class="amt" style="color:${r.cumProfit>=0?'var(--good)':'var(--bad)'}">${r.cumProfit<0?'- ':''}${inr(Math.abs(r.cumProfit))}</td>
+    <td class="amt" style="font-weight:600">${r.estBalance<0?'- ':''}${inr(Math.abs(r.estBalance))}</td>
+  </tr>`).join('');
+
+  const note = document.getElementById('projectionNote');
+  if(note){
+    note.textContent = earliestLabel
+      ? `Ye projection sirf business (site) profit ke ${earliestLabel} se ab tak ke average (${inr(avgMonthly)}/month, ${monthsElapsed} mahine ke data se) ko seedha aage badha kar bani hai. Personal investments (${inr(personalTotal)} invested) aur project deals (${inr(projectPL)} realized P/L) is projection mein shamil nahi hain — unka growth rate predict karna reliable nahi hota, unki current value alag se track karo. Naye sites, market changes, ya kisi bhi badlaav se asli result kaafi alag ho sakta hai — ye sirf ek reference hai, guarantee nahi.`
+      : 'Projection banane ke liye abhi kaafi data nahi hai — kuch mahine ka business chalne do, phir ye card meaningful ho jayega.';
+  }
+
+  if(typeof Chart === 'undefined') return;
+  const canvas = document.getElementById('chartProjection');
+  if(!canvas) return;
+  if(projectionChart){ projectionChart.destroy(); projectionChart = null; }
+  projectionChart = new Chart(canvas, {
+    type:'line',
+    data:{
+      labels: ['Now', ...years.map(y=>'Year '+y)],
+      datasets:[{
+        label:'Est. Total Balance (Business)',
+        data: [overallNet, ...rows.map(r=>r.estBalance)],
+        borderColor:'#1B4F8C', backgroundColor:'rgba(27,79,140,0.12)', fill:true, tension:0.3
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ ticks:{ callback:v=>inr(v) } } }
+    }
+  });
+}
+
 function renderDashboard(){
   const filter = document.getElementById('dashSiteFilter').value;
   const exp = filter==='all' ? DATA.expenses : DATA.expenses.filter(e=>e.siteId===filter);
@@ -3598,6 +3684,21 @@ function renderDashboard(){
     const plEl = document.getElementById('statPersonalLoan');
     if(piEl) piEl.textContent = inr(investedTotal);
     if(plEl) plEl.textContent = inr(personalLoanPending);
+
+    let projInvested=0, projPL=0, projOurShare=0;
+    DATA.projectUnits.forEach(u=>{
+      const c = computeUnitPL(u);
+      projInvested += c.totalInvested;
+      if(c.pl!==null){ projPL += c.pl; projOurShare += c.ourShare; }
+    });
+    const projInvEl = document.getElementById('statProjectInvested');
+    const projPLEl = document.getElementById('statProjectPL');
+    const projShareEl = document.getElementById('statProjectOurShare');
+    if(projInvEl) projInvEl.textContent = inr(projInvested);
+    if(projPLEl) projPLEl.textContent = (projPL<0?'- ':'') + inr(Math.abs(projPL));
+    if(projShareEl) projShareEl.textContent = (projOurShare<0?'- ':'') + inr(Math.abs(projOurShare));
+
+    renderFiveYearProjection();
   }
 
   const clientPendingTotal = DATA.sites.reduce((a,s)=>{
