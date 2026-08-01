@@ -385,6 +385,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 <datalist id="dl-suppliers"></datalist>
 <datalist id="dl-clients"></datalist>
 <datalist id="dl-investors"></datalist>
+<datalist id="dl-projects"></datalist>
 <datalist id="dl-employees"></datalist>
 <datalist id="dl-sites-location"></datalist>
 
@@ -410,6 +411,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <button data-tab="office" class="owner-only"><span class="tab-ico">⌂</span> <span data-i18n="office_nav">Office Expense</span></button>
       <button data-tab="pnl" class="owner-only"><span class="tab-ico">±</span> <span data-i18n="pnl">Profit &amp; Loss</span></button>
       <button data-tab="personal" class="owner-only"><span class="tab-ico">💰</span> Personal Finance</button>
+      <button data-tab="projects" class="owner-only"><span class="tab-ico">🏘️</span> Project Investments</button>
       <button data-tab="team" class="owner-only"><span class="tab-ico">👥</span> <span data-i18n="team">Team Logins</span></button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
     </nav>
@@ -763,7 +765,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="card">
         <h2><span data-i18n="h2_newinvestor">New Investor Entry</span></h2>
         <div class="grid cols-3">
-          <div class="field"><label data-i18n="lbl_site">Site</label><select id="invSite"><option value="general">General (koi specific site nahi)</option></select></div>
+          <div class="field"><label>Kis ke liye liya (Site / Personal Investment)</label><select id="invSite"><option value="general">General (koi specific site/investment nahi)</option></select></div>
           <div class="field"><label data-i18n="lbl_investorname">Investor Name</label><input id="invName" list="dl-investors" placeholder="e.g. Mr. Deshmukh"></div>
           <div class="field"><label data-i18n="lbl_datetaken">Date Taken</label><input id="invDate" type="date"></div>
         </div>
@@ -784,6 +786,13 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <h2><span data-i18n="h2_allinvestors">All Investor Entries</span></h2>
         <div class="table-wrap"><table id="investorTable"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Investor</th><th>Taken</th><th>Return Due</th><th>Extra (Interest)</th><th>Expected Date</th><th data-i18n="th_status">Status</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Breakdown — Kis Site/Investment Ke Liye Kis Investor Ne Kitna Diya</h2>
+        <div class="table-wrap"><table id="investorBreakdownTable"><thead><tr>
+          <th>Site / Investment</th><th>Investor</th><th>Taken</th><th>Return Due</th><th>Status</th>
         </tr></thead><tbody></tbody></table></div>
       </div>
     </section>
@@ -841,6 +850,16 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card">
+        <h2>Time-based Profit <small>Kitna paisa har mahine, har saal, aur average bach raha hai</small></h2>
+        <div class="stat-row">
+          <div class="stat" style="border-left-color:#0F7355"><div class="lbl">This Month's Profit</div><div class="val" id="pnlMonthProfit" style="color:#0F7355">₹0</div></div>
+          <div class="stat" style="border-left-color:#1B4F8C"><div class="lbl">This Year's Profit</div><div class="val" id="pnlYearProfit" style="color:#1B4F8C">₹0</div></div>
+          <div class="stat" style="border-left-color:#6B4A8A"><div class="lbl">Average Monthly Profit</div><div class="val" id="pnlAvgMonthProfit" style="color:#6B4A8A">₹0</div></div>
+        </div>
+        <div class="footnote" id="pnlTimeNote"></div>
+      </div>
+
+      <div class="card">
         <h2><span data-i18n="h2_sitepnl">Site-wise Profit &amp; Loss</span></h2>
         <div class="table-wrap"><table id="pnlTable"><thead><tr>
           <th data-i18n="th_site">Site</th><th>Contract Value</th><th>Client Received</th><th>Client Pending</th><th>Site Cost (Labour+Material+Other+Udhar)</th><th>Profit / Loss</th>
@@ -852,6 +871,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="table-wrap"><table id="investorSummaryTable"><thead><tr>
           <th>Total Taken</th><th>Total Return Due</th><th>Already Returned</th><th>Pending Return</th>
         </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Growth Suggestions <small>Aapke numbers se nikaale gaye actionable ideas — final faisla khud lena</small></h2>
+        <ul id="growthList" style="margin:0;padding-left:20px;line-height:1.9;font-size:13.5px"></ul>
       </div>
     </section>
 
@@ -914,6 +938,63 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <h2>All Personal Lending</h2>
         <div class="table-wrap"><table id="plTable"><thead><tr>
           <th>Date</th><th>Person</th><th>Amount</th><th>Expected Return</th><th>Status</th><th>Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- PROJECT INVESTMENTS -->
+    <section id="tab-projects" style="display:none">
+      <h1 class="page-title">Project Investments</h1>
+      <p class="page-sub">Wo deals jaha aap (aur kabhi investor) mil kar kuch kharidte ho — plot, row house, land — aur baad mein resell karke profit/loss banta hai. Jaise 13 Row House project: 41L ka unit, aapne 25L diya, investor ne 15L diya, phir sell hone par dono ka share nikalta hai.</p>
+
+      <div class="stat-row">
+        <div class="stat" style="border-left-color:#1B4F8C"><div class="lbl">Total Invested (Sabhi Units)</div><div class="val" id="puStatInvested" style="color:#1B4F8C">₹0</div></div>
+        <div class="stat" style="border-left-color:#0F7355"><div class="lbl">Realized Profit/Loss</div><div class="val" id="puStatPL" style="color:#0F7355">₹0</div></div>
+        <div class="stat" style="border-left-color:#E8940C"><div class="lbl">Hamara Share</div><div class="val" id="puStatOurShare" style="color:#A66A05">₹0</div></div>
+        <div class="stat" style="border-left-color:#B3372C"><div class="lbl">Investor Ka Share</div><div class="val" id="puStatInvestorShare" style="color:#B3372C">₹0</div></div>
+        <div class="stat" style="border-left-color:#6B4A8A"><div class="lbl">Units Sold / Total</div><div class="val" id="puStatUnits" style="color:#6B4A8A">0 / 0</div></div>
+      </div>
+
+      <div class="card">
+        <h2>New Project Unit / Deal</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Project Name</label><input id="puProject" list="dl-projects" placeholder="e.g. 13 Row House - Nashik Road"></div>
+          <div class="field"><label>Unit Name / Number</label><input id="puUnit" placeholder="e.g. Row House #1, ya Plot A"></div>
+          <div class="field"><label>Purchase / Advance Date</label><input id="puDate" type="date"></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Total Unit Value (₹) — optional</label><input id="puUnitValue" type="number" min="0" placeholder="e.g. Market rate 41,00,000"></div>
+          <div class="field"><label>Hamara Investment (₹)</label><input id="puOurAmount" type="number" min="0" placeholder="e.g. 25,00,000"></div>
+          <div class="field"><label>Investor Investment (₹) — optional</label><input id="puInvAmount" type="number" min="0" placeholder="e.g. 15,00,000"></div>
+        </div>
+        <div class="field"><label>Investor Name — optional</label><input id="puInvName" list="dl-investors" placeholder="Agar koi investor sath mein hai"></div>
+        <div class="grid cols-3">
+          <div class="field"><label>Status</label>
+            <select id="puStatus"><option value="unsold">Unsold</option><option value="sold">Sold</option></select>
+          </div>
+          <div class="field"><label>Sale Price (₹) — jab bike</label><input id="puSalePrice" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Sale Date</label><input id="puSaleDate" type="date"></div>
+        </div>
+        <div class="field"><label>Note (optional)</label><input id="puNote" placeholder="e.g. buyer naam, survey no."></div>
+        <button class="btn btn-primary" id="puAddBtn">+ Add Unit / Deal</button>
+        <div class="hint">Profit/Loss aur dono ka share automatically calculate hoga jab Status "Sold" ho aur Sale Price bhara ho. Split hamesha investment ke ratio mein hota hai (jaise 25L:15L = 62.5%:37.5%).</div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h2 style="margin:0">All Units / Deals</h2>
+          <div class="toolbar-left"><select id="puListProjectFilter"><option value="all">All Projects</option></select></div>
+        </div>
+        <div class="table-wrap"><table id="puTable"><thead><tr>
+          <th>Project</th><th>Unit</th><th>Date</th><th>Hamara</th><th>Investor</th><th>Total Invested</th>
+          <th>Status</th><th>Sale Price</th><th>P/L</th><th>Hamara Share</th><th>Investor Share</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Project-wise Summary</h2>
+        <div class="table-wrap"><table id="puProjectSummaryTable"><thead><tr>
+          <th>Project</th><th>Units (Sold/Total)</th><th>Total Invested</th><th>Total Sale Value</th><th>Total P/L</th><th>Hamara Share</th><th>Investor Share</th>
         </tr></thead><tbody></tbody></table></div>
       </div>
     </section>
@@ -1079,6 +1160,52 @@ function uiAlert(message, title){
   });
 }
 
+/* Generic edit modal — every "Edit" button across the app uses this so we
+   don't need a duplicate inline-edit form for every single table. */
+function openEditModal(title, fields, onSave){
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  const fieldHtml = f=>{
+    const val = (f.value===undefined || f.value===null) ? '' : f.value;
+    if(f.type==='select'){
+      return `<div class="field"><label>${f.label}</label><select id="em_${f.key}">${
+        f.options.map(o=>`<option value="${o.value}" ${String(o.value)===String(val)?'selected':''}>${o.label}</option>`).join('')
+      }</select></div>`;
+    }
+    const safeVal = String(val).replace(/"/g,'&quot;');
+    return `<div class="field"><label>${f.label}</label><input id="em_${f.key}" type="${f.type||'text'}" value="${safeVal}"></div>`;
+  };
+  bg.innerHTML = `<div class="modal">
+    <h3>Edit ${title}</h3>
+    ${fields.map(fieldHtml).join('')}
+    <div class="login-error" id="emErr"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" id="emCancel" style="flex:1;justify-content:center">Cancel</button>
+      <button class="btn btn-primary" id="emSave" style="flex:1;justify-content:center">Save Changes</button>
+    </div></div>`;
+  document.body.appendChild(bg);
+  const close = ()=>bg.remove();
+  bg.addEventListener('click', e=>{ if(e.target===bg) close(); });
+  bg.querySelector('#emCancel').onclick = close;
+  bg.querySelector('#emSave').onclick = async ()=>{
+    const values = {};
+    fields.forEach(f=>{
+      const el = document.getElementById('em_'+f.key);
+      let v = el.value;
+      if(f.type==='number') v = Number(v)||0;
+      values[f.key] = v;
+    });
+    const errEl = bg.querySelector('#emErr');
+    try{
+      await onSave(values);
+      close();
+      showToast('Update ho gaya ✓');
+    }catch(e){
+      errEl.textContent = 'Error: ' + (e.message||e);
+    }
+  };
+}
+
 /* ---------------- Firebase: auth + data ----------------
    Security is enforced by Firestore rules on the server, not by this file.
    Staff accounts are simply refused the private/ documents, so client
@@ -1092,7 +1219,7 @@ const CONFIG_OK = FIREBASE_CONFIG && !String(FIREBASE_CONFIG.apiKey).startsWith(
 
 /* Which Firestore collection each in-memory array maps to */
 const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements' };
-const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
 /* Snapshot of what the server currently holds, so saveData() can write only
@@ -1501,7 +1628,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -1514,7 +1641,8 @@ function rerenderAll(){
   if(currentRole === 'owner'){
     renderClientBalanceTable(); renderClientPayTable();
     renderInvestorTable(); renderOfficeTable();
-    renderPersonalInvestments(); renderPersonalLoans();
+    renderPersonalInvestments(); renderPersonalLoans(); renderProjectUnits();
+    renderProjectUnits();
   }
 }
 
@@ -1593,6 +1721,7 @@ async function saveData(){
       sync('officeExpenses', 'officeExpenses');
       sync('personalInvestments', 'personalInvestments');
       sync('personalLoans', 'personalLoans');
+      sync('projectUnits', 'projectUnits');
       const prevFin = serverState.siteFinance || {};
       const seenFin = new Set();
       DATA.sites.forEach(s=>{
@@ -1638,9 +1767,10 @@ function refreshSuggestions(){
   const commonUnits = ['bags','kg','ton','cft','sqft','pieces','ltr','brass'];
   setDatalist('dl-units', [...new Set([...commonUnits, ...uniqueVals(DATA.udhar,'unit')])]);
   setDatalist('dl-clients', uniqueVals(DATA.clientPayments, 'clientName'));
-  setDatalist('dl-investors', uniqueVals(DATA.investorLoans, 'investorName'));
+  setDatalist('dl-investors', [...new Set([...uniqueVals(DATA.investorLoans, 'investorName'), ...uniqueVals(DATA.projectUnits, 'investorName')])]);
   setDatalist('dl-employees', uniqueVals(DATA.officeExpenses, 'paidTo'));
   setDatalist('dl-sites-location', uniqueVals(DATA.sites, 'location'));
+  setDatalist('dl-projects', uniqueVals(DATA.projectUnits, 'project'));
 }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function inr(n){ return '₹' + (Number(n)||0).toLocaleString('en-IN'); }
@@ -1652,6 +1782,18 @@ function showToast(msg){
   showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 function siteName(id){ const s = DATA.sites.find(s=>s.id===id); return s ? s.name : '—'; }
+
+/* Resolves an investor loan's "linked to" value, which can be 'general',
+   a plain site id, or 'personal:<investmentId>' for a personal investment. */
+function investorLinkName(val){
+  if(!val || val==='general') return 'General';
+  if(String(val).startsWith('personal:')){
+    const pid = val.slice(9);
+    const inv = DATA.personalInvestments.find(p=>p.id===pid);
+    return inv ? ('🏠 ' + inv.name) : 'Personal Investment (deleted)';
+  }
+  return '🏗️ ' + siteName(val);
+}
 
 /* ---------------- Tabs ---------------- */
 document.getElementById('navTabs').addEventListener('click', (e)=>{
@@ -1672,6 +1814,8 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='contractwork') renderAgreementsTable();
   if(btn.dataset.tab==='team') loadTeam();
   if(btn.dataset.tab==='personal'){ renderPersonalInvestments(); renderPersonalLoans(); }
+  if(btn.dataset.tab==='projects') renderProjectUnits();
+  if(btn.dataset.tab==='projects') renderProjectUnits();
 });
 
 /* ---------------- Site selects population ---------------- */
@@ -1695,7 +1839,11 @@ function renderSiteSelects(){
   });
   const invEl = document.getElementById('invSite');
   const invCur = invEl.value;
-  invEl.innerHTML = '<option value="general">General (koi specific site nahi)</option>' + DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const siteOpts = DATA.sites.map(s=>`<option value="${s.id}">🏗️ ${s.name}</option>`).join('');
+  const personalOpts = DATA.personalInvestments.map(p=>`<option value="personal:${p.id}">🏠 ${p.name}</option>`).join('');
+  invEl.innerHTML = '<option value="general">General (koi specific site/investment nahi)</option>'
+    + (siteOpts ? `<optgroup label="Sites">${siteOpts}</optgroup>` : '')
+    + (personalOpts ? `<optgroup label="Personal Investments">${personalOpts}</optgroup>` : '');
   if(invCur) invEl.value = invCur;
 
   const filterSelects = ['dashSiteFilter','expListSiteFilter','udListSiteFilter','repSite','cpListSiteFilter','agListSiteFilter','impSite'];
@@ -1818,6 +1966,9 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
 function editExpense(id){
   const r = DATA.expenses.find(e=>e.id===id);
   if(!r) return;
+  const sdBg = document.getElementById('siteDetailBg');
+  if(sdBg) sdBg.remove();
+  document.querySelector('#navTabs button[data-tab="expense"]').click();
   editingExpenseId = id;
   document.getElementById('expSite').value = r.siteId;
   document.getElementById('expType').value = r.type;
@@ -1944,11 +2095,27 @@ function renderUdharTable(){
     <td><span class="tag ${r.status}">${r.status}</span></td>
     <td>${r.note||'—'}</td>
     <td>
+      <button class="btn-danger-text" style="color:var(--blue)" onclick="editUdhar('${r.id}')">Edit</button>
+      &nbsp;·&nbsp;
       <button class="btn-danger-text" onclick="toggleUdhar('${r.id}')">${r.status==='paid'?'Mark Pending':'Mark Paid'}</button>
       &nbsp;·&nbsp;
       <button class="btn-danger-text" onclick="deleteUdhar('${r.id}')">Delete</button>
     </td>
   </tr>`).join('');
+}
+function editUdhar(id){
+  const r = DATA.udhar.find(x=>x.id===id);
+  if(!r) return;
+  openEditModal('Udhar Entry', [
+    {key:'supplier', label:'Supplier Name', value:r.supplier},
+    {key:'material', label:'Material Name', value:r.material},
+    {key:'qty', label:'Quantity', value:r.qty, type:'number'},
+    {key:'unit', label:'Unit', value:r.unit},
+    {key:'date', label:'Date', value:r.date, type:'date'},
+    {key:'amount', label:'Amount (₹)', value:r.amount, type:'number'},
+    {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'pending',label:'Pending'},{value:'paid',label:'Paid'}]},
+    {key:'note', label:'Note', value:r.note}
+  ], async v=>{ await db.collection('udhar').doc(id).update(v); });
 }
 async function toggleUdhar(id){
   const item = DATA.udhar.find(u=>u.id===id);
@@ -2056,8 +2223,17 @@ function renderSiteDetailLedger(siteId){
     <td>${r.label||'—'}</td>
     <td>${r.name||'—'}</td>
     <td class="amt" style="color:${r.inOut==='in'?'var(--good)':'var(--ink)'}">${r.inOut==='in'?'+ ':''}${inr(r.amount)}</td>
-    <td><button class="btn-danger-text" onclick="deleteSiteLedgerRow('${r.kind}','${r.id}').then(()=>{renderSiteDetailLedger('${siteId}');})">Delete</button></td>
+    <td>
+      <button class="btn-danger-text" style="color:var(--blue)" onclick="editSiteLedgerRow('${r.kind}','${r.id}')">Edit</button>
+      &nbsp;·&nbsp;
+      <button class="btn-danger-text" onclick="deleteSiteLedgerRow('${r.kind}','${r.id}').then(()=>{renderSiteDetailLedger('${siteId}');})">Delete</button>
+    </td>
   </tr>`).join('');
+}
+function editSiteLedgerRow(kind, id){
+  if(kind==='expense') return editExpense(id);
+  if(kind==='udhar') return editUdhar(id);
+  if(kind==='clientpay') return editClientPay(id);
 }
 
 function renderSiteDetailChart(siteId, received, cost){
@@ -2155,7 +2331,7 @@ function renderAgreementsTable(){
       <td class="amt">${inr(paid)}</td>
       <td class="amt" style="color:${balance>0?'var(--bad)':'var(--good)'}">${balance<0?'Extra Paid ':''}${inr(Math.abs(balance))}</td>
       <td>${r.note||'—'}</td>
-      <td><button class="btn-danger-text" onclick="deleteAgreement('${r.id}')">Delete</button></td>
+      <td><button class="btn-danger-text" style="color:var(--blue)" onclick="editAgreement('${r.id}')">Edit</button>&nbsp;·&nbsp;<button class="btn-danger-text" onclick="deleteAgreement('${r.id}')">Delete</button></td>
     </tr>`;
   }).join('');
   document.getElementById('agTotalLine').textContent = `Total Fixed: ${inr(totalFixed)} · Total Paid: ${inr(totalPaid)} · Total Balance Due: ${inr(totalBalance)}`;
@@ -2165,6 +2341,18 @@ async function deleteAgreement(id){
     await db.collection('agreements').doc(id).delete();
     showToast('Work agreement delete ho gaya');
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+function editAgreement(id){
+  const r = DATA.workAgreements.find(x=>x.id===id);
+  if(!r) return;
+  const cats = ['All','RCC','Brickwork','Plaster','Tiles','Paint','Fabrication','Door','Window','Electric','Plumbing','Other'];
+  openEditModal('Work Agreement', [
+    {key:'siteId', label:'Site', value:r.siteId, type:'select', options:DATA.sites.map(s=>({value:s.id,label:s.name}))},
+    {key:'contractor', label:'Contractor Name', value:r.contractor},
+    {key:'category', label:'Work Category', value:r.category, type:'select', options:cats.map(c=>({value:c,label:c==='All'?'All / Mixed Work':c}))},
+    {key:'fixedAmount', label:'Fixed Work Amount (₹)', value:r.fixedAmount, type:'number'},
+    {key:'note', label:'Note', value:r.note}
+  ], async v=>{ await db.collection('agreements').doc(id).update(v); });
 }
 document.getElementById('agListSiteFilter').addEventListener('change', renderAgreementsTable);
 
@@ -2676,8 +2864,19 @@ function renderClientPayTable(){
   tbody.innerHTML = rows.map(r=>`<tr>
     <td>${r.date}</td><td>${siteName(r.siteId)}</td><td>${r.clientName||'—'}</td><td>${r.mode||'—'}</td><td>${r.note||'—'}</td>
     <td class="amt">${inr(r.amount)}</td>
-    <td><button class="btn-danger-text" onclick="deleteClientPay('${r.id}')">Delete</button></td>
+    <td><button class="btn-danger-text" style="color:var(--blue)" onclick="editClientPay('${r.id}')">Edit</button>&nbsp;·&nbsp;<button class="btn-danger-text" onclick="deleteClientPay('${r.id}')">Delete</button></td>
   </tr>`).join('');
+}
+function editClientPay(id){
+  const r = DATA.clientPayments.find(x=>x.id===id);
+  if(!r) return;
+  openEditModal('Client Payment', [
+    {key:'clientName', label:'Client Name', value:r.clientName},
+    {key:'date', label:'Date', value:r.date, type:'date'},
+    {key:'amount', label:'Amount (₹)', value:r.amount, type:'number'},
+    {key:'mode', label:'Payment Mode', value:r.mode, type:'select', options:['Cash','Bank Transfer','UPI','Cheque'].map(m=>({value:m,label:m}))},
+    {key:'note', label:'Note', value:r.note}
+  ], async v=>{ await db.collection('clientPayments').doc(id).update(v); });
 }
 async function deleteClientPay(id){
   try{ await db.collection('clientPayments').doc(id).delete(); }
@@ -2722,20 +2921,78 @@ function renderInvestorTable(){
   }
   tbody.innerHTML = rows.map(r=>{
     const extra = Number(r.returnAmt) - Number(r.taken);
-    const site = r.siteId==='general' || !r.siteId ? 'General' : siteName(r.siteId);
+    const linked = investorLinkName(r.siteId);
     return `<tr>
-      <td>${r.date}</td><td>${site}</td><td>${r.investorName}</td>
+      <td>${r.date}</td><td>${linked}</td><td>${r.investorName}</td>
       <td class="amt">${inr(r.taken)}</td><td class="amt">${inr(r.returnAmt)}</td>
       <td class="amt">${extra>0?inr(extra):'—'}</td>
       <td>${r.expDate||'—'}</td>
       <td><span class="tag ${r.status==='returned'?'paid':'pending'}">${r.status}</span></td>
       <td>
+        <button class="btn-danger-text" style="color:var(--blue)" onclick="editInvestor('${r.id}')">Edit</button>
+        &nbsp;·&nbsp;
         <button class="btn-danger-text" onclick="toggleInvestor('${r.id}')">${r.status==='returned'?'Mark Pending':'Mark Returned'}</button>
         &nbsp;·&nbsp;
         <button class="btn-danger-text" onclick="deleteInvestor('${r.id}')">Delete</button>
       </td>
     </tr>`;
   }).join('');
+  renderInvestorBreakdown();
+}
+function renderInvestorBreakdown(){
+  const tbody = document.querySelector('#investorBreakdownTable tbody');
+  if(!tbody) return;
+  const groups = {};
+  DATA.investorLoans.forEach(r=>{
+    const key = r.siteId || 'general';
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+  const keys = Object.keys(groups).sort((a,b)=> investorLinkName(a).localeCompare(investorLinkName(b)));
+  if(keys.length===0){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Koi investor entry nahi hai.</td></tr>`;
+    return;
+  }
+  let html = '';
+  keys.forEach(key=>{
+    const rows = groups[key];
+    const linkLabel = investorLinkName(key);
+    rows.forEach((r,i)=>{
+      html += `<tr>
+        <td>${i===0 ? `<strong>${linkLabel}</strong>` : ''}</td>
+        <td>${r.investorName}</td>
+        <td class="amt">${inr(r.taken)}</td>
+        <td class="amt">${inr(r.returnAmt)}</td>
+        <td><span class="tag ${r.status==='returned'?'paid':'pending'}">${r.status}</span></td>
+      </tr>`;
+    });
+    const groupTaken = rows.reduce((a,r)=>a+Number(r.taken),0);
+    const groupReturn = rows.reduce((a,r)=>a+Number(r.returnAmt),0);
+    html += `<tr style="background:var(--surface-2);font-weight:600">
+      <td colspan="2">Subtotal — ${linkLabel}</td>
+      <td class="amt">${inr(groupTaken)}</td>
+      <td class="amt">${inr(groupReturn)}</td>
+      <td></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+function editInvestor(id){
+  const r = DATA.investorLoans.find(x=>x.id===id);
+  if(!r) return;
+  const linkOptions = [{value:'general', label:'General'}]
+    .concat(DATA.sites.map(s=>({value:s.id, label:'🏗️ '+s.name})))
+    .concat(DATA.personalInvestments.map(p=>({value:'personal:'+p.id, label:'🏠 '+p.name})));
+  openEditModal('Investor Entry', [
+    {key:'investorName', label:'Investor Name', value:r.investorName},
+    {key:'siteId', label:'Linked To', value:r.siteId||'general', type:'select', options:linkOptions},
+    {key:'date', label:'Date Taken', value:r.date, type:'date'},
+    {key:'taken', label:'Amount Taken (₹)', value:r.taken, type:'number'},
+    {key:'returnAmt', label:'Total Return Amount (₹)', value:r.returnAmt, type:'number'},
+    {key:'expDate', label:'Expected Return Date', value:r.expDate, type:'date'},
+    {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'pending',label:'Pending'},{value:'returned',label:'Returned'}]},
+    {key:'note', label:'Note', value:r.note}
+  ], async v=>{ await db.collection('investorLoans').doc(id).update(v); });
 }
 async function toggleInvestor(id){
   const item = DATA.investorLoans.find(i=>i.id===id);
@@ -2789,8 +3046,20 @@ function renderOfficeTable(){
   tbody.innerHTML = rows.map(r=>`<tr>
     <td>${r.date}</td><td>${r.category}</td><td>${r.paidTo}</td><td>${r.note||'—'}</td>
     <td class="amt">${inr(r.amount)}</td>
-    <td><button class="btn-danger-text" onclick="deleteOffice('${r.id}')">Delete</button></td>
+    <td><button class="btn-danger-text" style="color:var(--blue)" onclick="editOffice('${r.id}')">Edit</button>&nbsp;·&nbsp;<button class="btn-danger-text" onclick="deleteOffice('${r.id}')">Delete</button></td>
   </tr>`).join('');
+}
+function editOffice(id){
+  const r = DATA.officeExpenses.find(x=>x.id===id);
+  if(!r) return;
+  const cats = ['Employee Salary','Office Rent','Utility Bill','Stationery / Supplies','Travel / Conveyance','Other'];
+  openEditModal('Office Expense', [
+    {key:'category', label:'Category', value:r.category, type:'select', options:cats.map(c=>({value:c,label:c}))},
+    {key:'paidTo', label:'Paid To / Employee Name', value:r.paidTo},
+    {key:'date', label:'Date', value:r.date, type:'date'},
+    {key:'amount', label:'Amount (₹)', value:r.amount, type:'number'},
+    {key:'note', label:'Note', value:r.note}
+  ], async v=>{ await db.collection('officeExpenses').doc(id).update(v); });
 }
 async function deleteOffice(id){
   try{ await db.collection('officeExpenses').doc(id).delete(); }
@@ -2845,9 +3114,22 @@ function renderPersonalInvestments(){
       <td class="amt">${cv>0?inr(cv):'—'}</td>
       <td class="amt" style="color:${gain===null?'var(--ink-soft)':(gain>=0?'var(--good)':'var(--bad)')}">${gain===null?'—':(gain<0?'- ':'')+inr(Math.abs(gain))}</td>
       <td>${r.note||'—'}</td>
-      <td><button class="btn-danger-text" onclick="deletePersonalInvestment('${r.id}')">Delete</button></td>
+      <td><button class="btn-danger-text" style="color:var(--blue)" onclick="editPersonalInvestment('${r.id}')">Edit</button>&nbsp;·&nbsp;<button class="btn-danger-text" onclick="deletePersonalInvestment('${r.id}')">Delete</button></td>
     </tr>`;
   }).join('');
+}
+function editPersonalInvestment(id){
+  const r = DATA.personalInvestments.find(x=>x.id===id);
+  if(!r) return;
+  const types = ['Plot / Land','Row House','Apartment Project','Stocks / Mutual Fund','Insurance','Gold','Other'];
+  openEditModal('Personal Investment', [
+    {key:'type', label:'Investment Type', value:r.type, type:'select', options:types.map(t=>({value:t,label:t}))},
+    {key:'name', label:'Name / Description', value:r.name},
+    {key:'date', label:'Date', value:r.date, type:'date'},
+    {key:'amount', label:'Amount Invested (₹)', value:r.amount, type:'number'},
+    {key:'currentValue', label:'Current Value (₹)', value:r.currentValue, type:'number'},
+    {key:'note', label:'Note', value:r.note}
+  ], async v=>{ await db.collection('personalInvestments').doc(id).update(v); });
 }
 async function deletePersonalInvestment(id){
   if(!await uiConfirm('Ye investment entry delete karni hai?', 'Haan, delete karo')) return;
@@ -2896,11 +3178,25 @@ function renderPersonalLoans(){
     <td><span class="tag ${r.status==='returned'?'paid':'pending'}">${r.status}</span></td>
     <td>${r.note||'—'}</td>
     <td>
+      <button class="btn-danger-text" style="color:var(--blue)" onclick="editPersonalLoan('${r.id}')">Edit</button>
+      &nbsp;·&nbsp;
       <button class="btn-danger-text" style="color:var(--blue)" onclick="togglePersonalLoan('${r.id}')">${r.status==='returned'?'Mark Pending':'Mark Returned'}</button>
       &nbsp;·&nbsp;
       <button class="btn-danger-text" onclick="deletePersonalLoan('${r.id}')">Delete</button>
     </td>
   </tr>`).join('');
+}
+function editPersonalLoan(id){
+  const r = DATA.personalLoans.find(x=>x.id===id);
+  if(!r) return;
+  openEditModal('Personal Lending', [
+    {key:'personName', label:'Person Name', value:r.personName},
+    {key:'date', label:'Date Given', value:r.date, type:'date'},
+    {key:'amount', label:'Amount Given (₹)', value:r.amount, type:'number'},
+    {key:'expDate', label:'Expected Return Date', value:r.expDate, type:'date'},
+    {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'pending',label:'Pending'},{value:'returned',label:'Returned'}]},
+    {key:'note', label:'Note', value:r.note}
+  ], async v=>{ await db.collection('personalLoans').doc(id).update(v); });
 }
 async function togglePersonalLoan(id){
   const item = DATA.personalLoans.find(r=>r.id===id);
@@ -2916,6 +3212,177 @@ async function deletePersonalLoan(id){
     showToast('Lending entry delete ho gayi');
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
+
+/* ---------------- Project Investments (buy → resell, with investor split) ---------------- */
+
+/* Core math for one unit: total invested, profit/loss, and each side's share
+   split in proportion to how much each of us put in. */
+function computeUnitPL(u){
+  const our = Number(u.ourAmount)||0;
+  const inv = Number(u.invAmount)||0;
+  const totalInvested = our + inv;
+  const sold = u.status === 'sold' && Number(u.salePrice) > 0;
+  const salePrice = Number(u.salePrice)||0;
+  const pl = sold ? (salePrice - totalInvested) : null;
+  let ourShare = null, investorShare = null;
+  if(pl !== null){
+    if(totalInvested > 0){
+      ourShare = pl * (our / totalInvested);
+      investorShare = pl * (inv / totalInvested);
+    } else {
+      ourShare = pl; investorShare = 0;
+    }
+  }
+  return { our, inv, totalInvested, sold, salePrice, pl, ourShare, investorShare };
+}
+
+document.getElementById('puDate').value = todayStr();
+document.getElementById('puAddBtn').addEventListener('click', async ()=>{
+  const project = document.getElementById('puProject').value.trim();
+  const unit = document.getElementById('puUnit').value.trim();
+  const date = document.getElementById('puDate').value || todayStr();
+  const unitValue = Number(document.getElementById('puUnitValue').value) || 0;
+  const ourAmount = Number(document.getElementById('puOurAmount').value);
+  const invAmount = Number(document.getElementById('puInvAmount').value) || 0;
+  const investorName = document.getElementById('puInvName').value.trim();
+  const status = document.getElementById('puStatus').value;
+  const salePrice = Number(document.getElementById('puSalePrice').value) || 0;
+  const saleDate = document.getElementById('puSaleDate').value;
+  const note = document.getElementById('puNote').value.trim();
+
+  if(!project){ showToast('Project ka naam likho'); return; }
+  if(!unit){ showToast('Unit ka naam/number likho'); return; }
+  if(!ourAmount || ourAmount<=0){ showToast('Hamara investment amount daalo'); return; }
+
+  DATA.projectUnits.push({
+    id: uid(), project, unit, date, unitValue, ourAmount, invAmount, investorName,
+    status, salePrice, saleDate, note
+  });
+  document.getElementById('puUnit').value='';
+  document.getElementById('puUnitValue').value='';
+  document.getElementById('puOurAmount').value='';
+  document.getElementById('puInvAmount').value='';
+  document.getElementById('puSalePrice').value='';
+  document.getElementById('puSaleDate').value='';
+  document.getElementById('puNote').value='';
+  await saveData();
+  renderProjectUnits();
+  showToast('Unit add ho gayi ✓');
+});
+
+function renderProjectUnits(){
+  const tbody = document.querySelector('#puTable tbody');
+  if(!tbody) return;
+
+  // keep the project filter dropdown in sync with known project names
+  const filterEl = document.getElementById('puListProjectFilter');
+  const projects = [...new Set(DATA.projectUnits.map(u=>u.project))].sort();
+  const curFilter = filterEl.value;
+  filterEl.innerHTML = '<option value="all">All Projects</option>' + projects.map(p=>`<option value="${p}">${p}</option>`).join('');
+  if(projects.includes(curFilter)) filterEl.value = curFilter;
+
+  let rows = [...DATA.projectUnits].sort((a,b)=>b.date.localeCompare(a.date));
+  if(filterEl.value !== 'all') rows = rows.filter(u=>u.project===filterEl.value);
+
+  // top stats (always over ALL units, not just the filtered view)
+  let totalInvested=0, totalPL=0, ourShareTotal=0, investorShareTotal=0, soldCount=0;
+  DATA.projectUnits.forEach(u=>{
+    const c = computeUnitPL(u);
+    totalInvested += c.totalInvested;
+    if(c.pl !== null){ totalPL += c.pl; ourShareTotal += c.ourShare; investorShareTotal += c.investorShare; soldCount++; }
+  });
+  document.getElementById('puStatInvested').textContent = inr(totalInvested);
+  const plEl = document.getElementById('puStatPL');
+  plEl.textContent = (totalPL<0?'- ':'') + inr(Math.abs(totalPL));
+  document.getElementById('puStatOurShare').textContent = (ourShareTotal<0?'- ':'') + inr(Math.abs(ourShareTotal));
+  document.getElementById('puStatInvestorShare').textContent = (investorShareTotal<0?'- ':'') + inr(Math.abs(investorShareTotal));
+  document.getElementById('puStatUnits').textContent = `${soldCount} / ${DATA.projectUnits.length}`;
+
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="12" class="empty">Abhi koi project unit/deal nahi hai.</td></tr>`;
+  } else {
+    tbody.innerHTML = rows.map(u=>{
+      const c = computeUnitPL(u);
+      const plCell = c.pl===null ? '—' : `<span style="color:${c.pl>=0?'var(--good)':'var(--bad)'}">${c.pl<0?'- ':''}${inr(Math.abs(c.pl))}</span>`;
+      const ourShareCell = c.ourShare===null ? '—' : `${c.ourShare<0?'- ':''}${inr(Math.abs(c.ourShare))}`;
+      const invShareCell = c.investorShare===null ? '—' : `${c.investorShare<0?'- ':''}${inr(Math.abs(c.investorShare))}`;
+      return `<tr>
+        <td>${u.project}</td><td>${u.unit}</td><td>${u.date}</td>
+        <td class="amt">${inr(u.ourAmount)}</td>
+        <td class="amt">${u.invAmount?inr(u.invAmount)+(u.investorName?' ('+u.investorName+')':''):'—'}</td>
+        <td class="amt">${inr(c.totalInvested)}</td>
+        <td><span class="tag ${u.status==='sold'?'paid':'pending'}">${u.status}</span></td>
+        <td class="amt">${u.salePrice?inr(u.salePrice):'—'}</td>
+        <td class="amt">${plCell}</td>
+        <td class="amt">${ourShareCell}</td>
+        <td class="amt">${invShareCell}</td>
+        <td>
+          <button class="btn-danger-text" style="color:var(--blue)" onclick="editProjectUnit('${u.id}')">Edit</button>
+          &nbsp;·&nbsp;
+          <button class="btn-danger-text" onclick="deleteProjectUnit('${u.id}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  renderProjectSummary();
+}
+
+function renderProjectSummary(){
+  const tbody = document.querySelector('#puProjectSummaryTable tbody');
+  if(!tbody) return;
+  const groups = {};
+  DATA.projectUnits.forEach(u=>{ (groups[u.project] = groups[u.project]||[]).push(u); });
+  const names = Object.keys(groups).sort();
+  if(names.length===0){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Koi project nahi hai.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = names.map(name=>{
+    const units = groups[name];
+    let invested=0, saleValue=0, pl=0, ourShare=0, investorShare=0, sold=0;
+    units.forEach(u=>{
+      const c = computeUnitPL(u);
+      invested += c.totalInvested;
+      if(c.pl!==null){ saleValue += c.salePrice; pl += c.pl; ourShare += c.ourShare; investorShare += c.investorShare; sold++; }
+    });
+    return `<tr>
+      <td><strong>${name}</strong></td>
+      <td>${sold} / ${units.length}</td>
+      <td class="amt">${inr(invested)}</td>
+      <td class="amt">${saleValue?inr(saleValue):'—'}</td>
+      <td class="amt" style="color:${pl>=0?'var(--good)':'var(--bad)'}">${sold?((pl<0?'- ':'')+inr(Math.abs(pl))):'—'}</td>
+      <td class="amt">${sold?((ourShare<0?'- ':'')+inr(Math.abs(ourShare))):'—'}</td>
+      <td class="amt">${sold?((investorShare<0?'- ':'')+inr(Math.abs(investorShare))):'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function editProjectUnit(id){
+  const r = DATA.projectUnits.find(x=>x.id===id);
+  if(!r) return;
+  openEditModal('Project Unit', [
+    {key:'project', label:'Project Name', value:r.project},
+    {key:'unit', label:'Unit Name / Number', value:r.unit},
+    {key:'date', label:'Purchase / Advance Date', value:r.date, type:'date'},
+    {key:'unitValue', label:'Total Unit Value (₹)', value:r.unitValue, type:'number'},
+    {key:'ourAmount', label:'Hamara Investment (₹)', value:r.ourAmount, type:'number'},
+    {key:'invAmount', label:'Investor Investment (₹)', value:r.invAmount, type:'number'},
+    {key:'investorName', label:'Investor Name', value:r.investorName},
+    {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'unsold',label:'Unsold'},{value:'sold',label:'Sold'}]},
+    {key:'salePrice', label:'Sale Price (₹)', value:r.salePrice, type:'number'},
+    {key:'saleDate', label:'Sale Date', value:r.saleDate, type:'date'},
+    {key:'note', label:'Note', value:r.note}
+  ], async v=>{ await db.collection('projectUnits').doc(id).update(v); });
+}
+async function deleteProjectUnit(id){
+  if(!await uiConfirm('Ye unit/deal entry delete karni hai?', 'Haan, delete karo')) return;
+  try{
+    await db.collection('projectUnits').doc(id).delete();
+    showToast('Entry delete ho gayi');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+document.getElementById('puListProjectFilter').addEventListener('change', renderProjectUnits);
 
 /* ---------------- Profit & Loss tab ---------------- */
 function renderPnL(){
@@ -2935,6 +3402,9 @@ function renderPnL(){
   const netEl = document.getElementById('pnlNet');
   netEl.textContent = (net<0?'- ':'') + inr(Math.abs(net));
   netEl.style.color = net>=0 ? 'var(--good)' : 'var(--bad)';
+
+  renderTimeBasedProfit();
+  renderGrowthSuggestions();
 
   const tbody = document.querySelector('#pnlTable tbody');
   if(DATA.sites.length===0){
@@ -2965,6 +3435,141 @@ function renderPnL(){
     <td class="amt">${inr(totalTaken)}</td><td class="amt">${inr(totalReturnDue)}</td>
     <td class="amt">${inr(alreadyReturned)}</td><td class="amt">${inr(pendingReturn)}</td>
   </tr>`;
+}
+
+/* Monthly / Yearly / Average profit — separate from the main net figure
+   because interest cost doesn't have a natural date, so it's excluded here
+   and only shown in the overall Net Profit/Loss card above. */
+function renderTimeBasedProfit(){
+  const thisMonthKey = todayStr().slice(0,7);
+  const thisYearKey = todayStr().slice(0,4);
+  const sumBy = (arr, prefix) => arr.filter(r=> (r.date||'').startsWith(prefix)).reduce((a,r)=>a+Number(r.amount),0);
+
+  const monthProfit = sumBy(DATA.clientPayments, thisMonthKey)
+    - sumBy(DATA.expenses, thisMonthKey) - sumBy(DATA.udhar, thisMonthKey) - sumBy(DATA.officeExpenses, thisMonthKey);
+  const yearProfit = sumBy(DATA.clientPayments, thisYearKey)
+    - sumBy(DATA.expenses, thisYearKey) - sumBy(DATA.udhar, thisYearKey) - sumBy(DATA.officeExpenses, thisYearKey);
+
+  const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const totalSiteCost = DATA.sites.reduce((a,s)=>a+siteCost(s.id),0);
+  const totalOffice = DATA.officeExpenses.reduce((a,r)=>a+Number(r.amount),0);
+  const totalInterest = DATA.investorLoans.reduce((a,i)=>{ const extra=Number(i.returnAmt)-Number(i.taken); return a+(extra>0?extra:0); },0);
+  const overallNet = totalReceived - totalSiteCost - totalOffice - totalInterest;
+
+  const allDates = []
+    .concat(DATA.expenses.map(r=>r.date))
+    .concat(DATA.udhar.map(r=>r.date))
+    .concat(DATA.clientPayments.map(r=>r.date))
+    .concat(DATA.officeExpenses.map(r=>r.date))
+    .filter(Boolean).sort();
+
+  let monthsElapsed = 1, earliestLabel = '';
+  if(allDates.length){
+    earliestLabel = allDates[0];
+    const earliest = new Date(earliestLabel), now = new Date();
+    monthsElapsed = (now.getFullYear()-earliest.getFullYear())*12 + (now.getMonth()-earliest.getMonth()) + 1;
+    if(monthsElapsed < 1) monthsElapsed = 1;
+  }
+  const avgMonthly = overallNet / monthsElapsed;
+
+  const setStat = (id, val) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = (val<0?'- ':'') + inr(Math.abs(val));
+  };
+  setStat('pnlMonthProfit', monthProfit);
+  setStat('pnlYearProfit', yearProfit);
+  setStat('pnlAvgMonthProfit', avgMonthly);
+
+  const note = document.getElementById('pnlTimeNote');
+  if(note){
+    note.textContent = earliestLabel
+      ? `Calculation ${earliestLabel} se ab tak ke data par based hai (${monthsElapsed} mahine ka business). Investor interest cost isme shamil nahi hai — wo sirf upar wale Net Profit/Loss mein hai.`
+      : 'Abhi itna data nahi hai ki monthly/yearly profit calculate ho sake.';
+  }
+}
+
+/* Rule-based growth suggestions computed from the numbers already on
+   screen. Not financial advice — just patterns worth thinking about. */
+function renderGrowthSuggestions(){
+  const list = document.getElementById('growthList');
+  if(!list) return;
+  const tips = [];
+
+  const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const totalSiteCost = DATA.sites.reduce((a,s)=>a+siteCost(s.id),0);
+  const totalOffice = DATA.officeExpenses.reduce((a,r)=>a+Number(r.amount),0);
+  const totalInterest = DATA.investorLoans.reduce((a,i)=>{ const extra=Number(i.returnAmt)-Number(i.taken); return a+(extra>0?extra:0); },0);
+  const net = totalReceived - totalSiteCost - totalOffice - totalInterest;
+  const marginPct = totalReceived>0 ? (net/totalReceived)*100 : null;
+
+  // 1) Margin health
+  if(marginPct !== null){
+    if(marginPct < 10) tips.push(`Overall margin sirf <strong>${marginPct.toFixed(1)}%</strong> hai — industry mein construction margins usually 15-20% hote hain. Material/labour rates renegotiate karne ya kam-margin sites avoid karne pe socho.`);
+    else if(marginPct > 25) tips.push(`Margin <strong>${marginPct.toFixed(1)}%</strong> hai, jo healthy hai — is profit ka kuch hissa naye sites ya personal investments mein reinvest karne ka accha time hai.`);
+  }
+
+  // 2) Client payment collection
+  const contractSites = DATA.sites.filter(s=>Number(s.contractValue)>0);
+  if(contractSites.length){
+    const totalContract = contractSites.reduce((a,s)=>a+Number(s.contractValue),0);
+    const totalRecv = contractSites.reduce((a,s)=>a+siteReceived(s.id),0);
+    const collectionPct = totalContract>0 ? (totalRecv/totalContract)*100 : 0;
+    if(collectionPct < 60) tips.push(`Client se abhi tak sirf <strong>${collectionPct.toFixed(0)}%</strong> hi collect hua hai contract value ka. Payment milestones follow-up karke cash flow tez karo.`);
+  }
+
+  // 3) Material cost share
+  const labourTotal = DATA.expenses.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
+  const materialTotal = DATA.expenses.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
+  const expTotal = labourTotal + materialTotal;
+  if(expTotal>0 && (materialTotal/expTotal) > 0.6){
+    tips.push('Material cost total expense ka bada hissa hai — bulk order ya multiple suppliers se rate compare karke negotiate karo, isse margin sudhar sakta hai.');
+  }
+
+  // 4) Investor interest burden
+  if(totalInterest > 0 && totalReceived > 0 && (totalInterest/totalReceived) > 0.08){
+    tips.push(`Investor interest cost total income ka <strong>${((totalInterest/totalReceived)*100).toFixed(1)}%</strong> kha raha hai. High-interest investor loans pehle clear karne ki koshish karo, ya future funding cheaper rate pe negotiate karo.`);
+  }
+
+  // 5) Contractor dues risk
+  const contractorPending = DATA.workAgreements.reduce((a,ag)=>{
+    const bal = Number(ag.fixedAmount) - computePaidForAgreement(ag);
+    return a + (bal>0?bal:0);
+  },0);
+  if(contractorPending > 0 && totalReceived>0 && (contractorPending/totalReceived) > 0.15){
+    tips.push('Contractors ka pending balance kaafi high hai — time pe clear na kiya to acche contractors kaam chhod sakte hain ya rate badha sakte hain. Priority se clear karo.');
+  }
+
+  // 6) Client concentration / diversification
+  const activeSites = DATA.sites.length;
+  if(activeSites === 1){
+    tips.push('Abhi sirf ek hi site chal rahi hai — saara business ek hi project pe depend hai. Ek aur chhoti site ya project parallel mein lene se risk kam hoga.');
+  }
+
+  // 7) Personal investment diversification
+  const invTypes = new Set(DATA.personalInvestments.map(p=>p.type));
+  if(DATA.personalInvestments.length > 0 && invTypes.size === 1){
+    tips.push('Aapke saare personal investments ek hi type mein hain — Plot, Stocks, Insurance jaise different categories mein diversify karne se risk kam hota hai.');
+  }
+  const underperforming = DATA.personalInvestments.filter(p=>{
+    const cv = Number(p.currentValue)||0;
+    return cv>0 && cv < Number(p.amount)*0.9;
+  });
+  if(underperforming.length){
+    tips.push(`${underperforming.length} personal investment${underperforming.length>1?'s':''} ki current value invested amount se kaafi kam hai — inhe review karne ka time aa gaya hai.`);
+  }
+
+  // 8) Office overhead ratio
+  if(totalReceived>0 && (totalOffice/totalReceived) > 0.15){
+    tips.push('Office/staff kharcha total income ka bada hissa le raha hai — overhead review karke non-essential kharche kam karne pe socho.');
+  }
+
+  // Evergreen tips if not much data-driven signal yet
+  if(tips.length < 3){
+    tips.push('Har site ka Contract Value shuru mein hi set kar do — isse client collection % aur real margin turant dikhta hai.');
+    tips.push('3-6 mahine ka office + running expense jitna cash reserve mein rakho, taaki payment delay ho to bhi kaam na ruke.');
+  }
+
+  list.innerHTML = tips.map(t=>`<li>${t}</li>`).join('');
 }
 
 /* ---------------- Dashboard ---------------- */
@@ -3239,7 +3844,7 @@ function computeReportData(type, site='all', from='', to=''){
     title = 'Investor Funding Report';
     rows = raw.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>{
       const extra = Number(r.returnAmt) - Number(r.taken);
-      return {Date:r.date, Site:(r.siteId==='general'||!r.siteId)?'General':siteName(r.siteId), Investor:r.investorName, 'Amount Taken':Number(r.taken), 'Return Due':Number(r.returnAmt), 'Extra (Interest)':extra>0?extra:0, 'Expected Date':r.expDate||'—', Status:r.status, Note:r.note||'', Amount:Number(r.returnAmt)};
+      return {Date:r.date, Site:investorLinkName(r.siteId), Investor:r.investorName, 'Amount Taken':Number(r.taken), 'Return Due':Number(r.returnAmt), 'Extra (Interest)':extra>0?extra:0, 'Expected Date':r.expDate||'—', Status:r.status, Note:r.note||'', Amount:Number(r.returnAmt)};
     });
   } else if(type==='office'){
     const raw = DATA.officeExpenses.filter(r=> inRange(r.date));
