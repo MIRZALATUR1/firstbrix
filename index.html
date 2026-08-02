@@ -413,6 +413,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <button data-tab="personal" class="owner-only"><span class="tab-ico">💰</span> Personal Finance</button>
       <button data-tab="projects" class="owner-only"><span class="tab-ico">🏘️</span> Project Investments</button>
       <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> Payment Slabs</button>
+      <button data-tab="consultancy" class="owner-only"><span class="tab-ico">📐</span> Consultancy</button>
       <button data-tab="team" class="owner-only"><span class="tab-ico">👥</span> <span data-i18n="team">Team Logins</span></button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
     </nav>
@@ -459,6 +460,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="stat good owner-only"><div class="lbl" data-i18n="stat_clientpending">Client Pending</div><div class="val" id="statClientPending">₹0</div></div>
         <div class="stat bad owner-only"><div class="lbl" data-i18n="stat_investorpending">Investor Pending Return</div><div class="val" id="statInvestorPending">₹0</div></div>
         <div class="stat purple"><div class="lbl" data-i18n="stat_contractorbal">Contractor Balance Due</div><div class="val" id="statContractorBalance">₹0</div></div>
+        <div class="stat good owner-only"><div class="lbl">Consultancy Income</div><div class="val" id="statConsultancy">₹0</div></div>
       </div>
 
       <h2 class="owner-only" style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:0.4px;margin:22px 0 12px;color:var(--ink);display:flex;align-items:center;gap:8px">
@@ -808,7 +810,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="card">
         <h2><span data-i18n="h2_allinvestors">All Investor Entries</span></h2>
         <div class="table-wrap"><table id="investorTable"><thead><tr>
-          <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Investor</th><th>Taken</th><th>Return Due</th><th>Extra (Interest)</th><th>Expected Date</th><th data-i18n="th_status">Status</th><th></th>
+          <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Investor</th><th>Taken</th><th>Return Due</th><th>Extra (Interest)</th><th>Paid</th><th>Remaining</th><th data-i18n="th_status">Status</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
 
@@ -861,7 +863,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <p class="page-sub" data-i18n="sub_pnl">Client se aaya paisa, site ka kharcha, aur office kharcha — sab milaake overall profit ya loss.</p>
 
       <div class="stat-row">
-        <div class="stat brick"><div class="lbl" data-i18n="pnl_income">Total Client Received</div><div class="val" id="pnlIncome">₹0</div></div>
+        <div class="stat brick"><div class="lbl">Total Income (Client + Consultancy)</div><div class="val" id="pnlIncome">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="pnl_sitecost">Total Site Cost</div><div class="val" id="pnlSiteCost">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="pnl_office">Office Expense</div><div class="val" id="pnlOfficeCost">₹0</div></div>
         <div class="stat amber"><div class="lbl" data-i18n="pnl_interest">Investor Interest Cost</div><div class="val" id="pnlInterestCost">₹0</div></div>
@@ -1110,6 +1112,53 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
     </section>
 
+    <!-- CONSULTANCY -->
+    <section id="tab-consultancy" style="display:none">
+      <h1 class="page-title">Consultancy Income</h1>
+      <p class="page-sub">Construction se alag — Plan &amp; Design, Structural Consultancy, Property Dealing (commission), waghera ka income yahan track karo. Ye seedha overall Profit &amp; Loss mein bhi jud jayega.</p>
+
+      <div class="stat-row">
+        <div class="stat good"><div class="lbl">Total Received</div><div class="val" id="csStatReceived">₹0</div></div>
+        <div class="stat amber"><div class="lbl">Pending</div><div class="val" id="csStatPending">₹0</div></div>
+      </div>
+
+      <div class="card">
+        <h2>New Consultancy Income</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Service Type</label>
+            <select id="csType">
+              <option>Plan &amp; Design</option>
+              <option>Structural Consultancy</option>
+              <option>Property Dealing (Commission)</option>
+              <option>Site Supervision</option>
+              <option>Valuation / Estimation</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Client Name</label><input id="csClient" list="dl-clients" placeholder="e.g. Mr. Patil"></div>
+          <div class="field"><label>Date</label><input id="csDate" type="date"></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Amount (₹)</label><input id="csAmount" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Status</label>
+            <select id="csStatus"><option value="received">Received</option><option value="pending">Pending</option></select>
+          </div>
+          <div class="field"><label>Note (optional)</label><input id="csNote" placeholder="e.g. 3BHK plan, ya property naam"></div>
+        </div>
+        <button class="btn btn-primary" id="csAddBtn">+ Add Consultancy Income</button>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <h2 style="margin:0">All Consultancy Income</h2>
+          <div class="toolbar-left"><select id="csListTypeFilter"><option value="all">All Types</option></select></div>
+        </div>
+        <div class="table-wrap"><table id="csTable"><thead><tr>
+          <th>Date</th><th>Type</th><th>Client</th><th>Amount</th><th>Status</th><th>Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
     <!-- TEAM LOGINS -->
     <section id="tab-team" style="display:none">
       <h1 class="page-title" data-i18n="team">Team Logins</h1>
@@ -1330,7 +1379,7 @@ const CONFIG_OK = FIREBASE_CONFIG && !String(FIREBASE_CONFIG.apiKey).startsWith(
 
 /* Which Firestore collection each in-memory array maps to */
 const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements' };
-const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
 /* Snapshot of what the server currently holds, so saveData() can write only
@@ -1739,7 +1788,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -1754,6 +1803,7 @@ function rerenderAll(){
     renderInvestorTable(); renderOfficeTable();
     renderPersonalInvestments(); renderPersonalLoans(); renderProjectUnits();
     renderSavedSlabsList();
+    renderConsultancyIncome();
   }
 }
 
@@ -1834,6 +1884,7 @@ async function saveData(){
       sync('personalLoans', 'personalLoans');
       sync('projectUnits', 'projectUnits');
       sync('paymentSlabs', 'paymentSlabs');
+      sync('consultancyIncome', 'consultancyIncome');
       const prevFin = serverState.siteFinance || {};
       const seenFin = new Set();
       DATA.sites.forEach(s=>{
@@ -1928,6 +1979,7 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='personal'){ renderPersonalInvestments(); renderPersonalLoans(); }
   if(btn.dataset.tab==='projects') renderProjectUnits();
   if(btn.dataset.tab==='slabs') renderSavedSlabsList();
+  if(btn.dataset.tab==='consultancy') renderConsultancyIncome();
 });
 
 /* ---------------- Site selects population ---------------- */
@@ -3093,32 +3145,92 @@ document.getElementById('addInvestorBtn').addEventListener('click', async ()=>{
   showToast('Investor entry add ho gayi ✓');
 });
 
+/* Investors can now be paid back in installments. payments[] lives inside
+   each loan doc; status auto-flips to 'returned' once fully paid. */
+function investorPaidSoFar(loan){ return (loan.payments||[]).reduce((a,p)=>a+Number(p.amount),0); }
+function investorRemaining(loan){ return Math.max(Number(loan.returnAmt) - investorPaidSoFar(loan), 0); }
+function investorStatusLabel(loan){
+  const remaining = investorRemaining(loan);
+  if(remaining <= 0) return 'Fully Paid';
+  if(investorPaidSoFar(loan) > 0) return 'Partial';
+  return 'Pending';
+}
+
 function renderInvestorTable(){
   const rows = [...DATA.investorLoans].sort((a,b)=>b.date.localeCompare(a.date));
   const tbody = document.querySelector('#investorTable tbody');
   if(rows.length===0){
-    tbody.innerHTML = `<tr><td colspan="9" class="empty">Koi investor entry nahi mili.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="empty">Koi investor entry nahi mili.</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r=>{
     const extra = Number(r.returnAmt) - Number(r.taken);
     const linked = investorLinkName(r.siteId);
+    const paid = investorPaidSoFar(r);
+    const remaining = investorRemaining(r);
+    const statusLabel = investorStatusLabel(r);
+    const tagClass = remaining<=0 ? 'paid' : (paid>0 ? 'other' : 'pending');
     return `<tr>
       <td>${r.date}</td><td>${linked}</td><td>${r.investorName}</td>
       <td class="amt">${inr(r.taken)}</td><td class="amt">${inr(r.returnAmt)}</td>
       <td class="amt">${extra>0?inr(extra):'—'}</td>
-      <td>${r.expDate||'—'}</td>
-      <td><span class="tag ${r.status==='returned'?'paid':'pending'}">${r.status}</span></td>
+      <td class="amt" style="color:var(--good)">${inr(paid)}</td>
+      <td class="amt" style="color:${remaining>0?'var(--bad)':'inherit'}">${inr(remaining)}</td>
+      <td><span class="tag ${tagClass}">${statusLabel}</span></td>
       <td>
+        ${remaining>0 ? `<button class="btn-danger-text" style="color:var(--good)" onclick="openInvestorPaymentModal('${r.id}')">Pay Now</button>&nbsp;·&nbsp;` : ''}
         <button class="btn-danger-text" style="color:var(--blue)" onclick="editInvestor('${r.id}')">Edit</button>
-        &nbsp;·&nbsp;
-        <button class="btn-danger-text" onclick="toggleInvestor('${r.id}')">${r.status==='returned'?'Mark Pending':'Mark Returned'}</button>
         &nbsp;·&nbsp;
         <button class="btn-danger-text" onclick="deleteInvestor('${r.id}')">Delete</button>
       </td>
     </tr>`;
   }).join('');
   renderInvestorBreakdown();
+}
+
+function openInvestorPaymentModal(loanId){
+  const loan = DATA.investorLoans.find(x=>x.id===loanId);
+  if(!loan) return;
+  const paidSoFar = investorPaidSoFar(loan);
+  const remaining = investorRemaining(loan);
+  const history = (loan.payments||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal">
+    <h3>Pay ${loan.investorName}</h3>
+    <p>Ab tak diya: <strong>${inr(paidSoFar)}</strong> · Remaining: <strong>${inr(remaining)}</strong></p>
+    ${history.length ? `<div class="table-wrap" style="margin-bottom:14px;max-height:120px;overflow-y:auto"><table style="font-size:12px"><tbody>
+      ${history.map(p=>`<tr><td>${p.date}</td><td class="amt">${inr(p.amount)}</td><td>${p.note||''}</td></tr>`).join('')}
+    </tbody></table></div>` : ''}
+    <div class="field"><label>Payment Amount (₹)</label><input id="ipAmount" type="number" min="0" max="${remaining}" placeholder="${remaining}"></div>
+    <div class="field"><label>Date</label><input id="ipDate" type="date" value="${todayStr()}"></div>
+    <div class="field"><label>Note (optional)</label><input id="ipNote" placeholder="e.g. part payment via bank transfer"></div>
+    <div class="login-error" id="ipErr"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" id="ipCancel" style="flex:1;justify-content:center">Cancel</button>
+      <button class="btn btn-primary" id="ipSave" style="flex:1;justify-content:center">Save Payment</button>
+    </div></div>`;
+  document.body.appendChild(bg);
+  const close = ()=>bg.remove();
+  bg.addEventListener('click', e=>{ if(e.target===bg) close(); });
+  bg.querySelector('#ipCancel').onclick = close;
+  bg.querySelector('#ipSave').onclick = async ()=>{
+    const amount = Number(document.getElementById('ipAmount').value);
+    const date = document.getElementById('ipDate').value || todayStr();
+    const note = document.getElementById('ipNote').value.trim();
+    const errEl = bg.querySelector('#ipErr');
+    if(!amount || amount<=0){ errEl.textContent = 'Sahi amount daalo.'; return; }
+    const payments = [...(loan.payments||[]), { id: uid(), amount, date, note }];
+    const newRemaining = Number(loan.returnAmt) - payments.reduce((a,p)=>a+Number(p.amount),0);
+    try{
+      await db.collection('investorLoans').doc(loanId).update({
+        payments,
+        status: newRemaining <= 0 ? 'returned' : 'pending'
+      });
+      close();
+      showToast('Payment record ho gaya ✓');
+    }catch(e){ errEl.textContent = 'Error: ' + e.message; }
+  };
 }
 function renderInvestorBreakdown(){
   const tbody = document.querySelector('#investorBreakdownTable tbody');
@@ -3910,9 +4022,88 @@ document.getElementById('slWordBtn').addEventListener('click', ()=>{
   showToast('Word file taiyar ✓');
 });
 
+/* ---------------- Consultancy Income ---------------- */
+document.getElementById('csDate').value = todayStr();
+document.getElementById('csAddBtn').addEventListener('click', async ()=>{
+  const type = document.getElementById('csType').value;
+  const client = document.getElementById('csClient').value.trim();
+  const date = document.getElementById('csDate').value || todayStr();
+  const amount = Number(document.getElementById('csAmount').value);
+  const status = document.getElementById('csStatus').value;
+  const note = document.getElementById('csNote').value.trim();
+
+  if(!client){ showToast('Client ka naam likho'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+
+  DATA.consultancyIncome.push({ id: uid(), type, client, date, amount, status, note });
+  document.getElementById('csClient').value='';
+  document.getElementById('csAmount').value='';
+  document.getElementById('csNote').value='';
+  await saveData();
+  renderConsultancyIncome(); renderDashboard();
+  showToast('Consultancy income add ho gaya ✓');
+});
+
+function renderConsultancyIncome(){
+  const tbody = document.querySelector('#csTable tbody');
+  if(!tbody) return;
+
+  const filterEl = document.getElementById('csListTypeFilter');
+  if(filterEl.options.length<=1){
+    const types = ['Plan & Design','Structural Consultancy','Property Dealing (Commission)','Site Supervision','Valuation / Estimation','Other'];
+    filterEl.innerHTML = '<option value="all">All Types</option>' + types.map(t=>`<option value="${t}">${t}</option>`).join('');
+  }
+
+  let rows = [...DATA.consultancyIncome].sort((a,b)=>b.date.localeCompare(a.date));
+  if(filterEl.value !== 'all') rows = rows.filter(r=>r.type===filterEl.value);
+
+  const totalReceived = DATA.consultancyIncome.filter(r=>r.status==='received').reduce((a,r)=>a+Number(r.amount),0);
+  const totalPending = DATA.consultancyIncome.filter(r=>r.status==='pending').reduce((a,r)=>a+Number(r.amount),0);
+  document.getElementById('csStatReceived').textContent = inr(totalReceived);
+  document.getElementById('csStatPending').textContent = inr(totalPending);
+
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Abhi koi consultancy income entry nahi hai.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.date}</td><td><span class="tag other">${r.type}</span></td><td>${r.client}</td>
+    <td class="amt">${inr(r.amount)}</td>
+    <td><span class="tag ${r.status==='received'?'paid':'pending'}">${r.status}</span></td>
+    <td>${r.note||'—'}</td>
+    <td>
+      <button class="btn-danger-text" style="color:var(--blue)" onclick="editConsultancy('${r.id}')">Edit</button>
+      &nbsp;·&nbsp;
+      <button class="btn-danger-text" onclick="deleteConsultancy('${r.id}')">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+function editConsultancy(id){
+  const r = DATA.consultancyIncome.find(x=>x.id===id);
+  if(!r) return;
+  const types = ['Plan & Design','Structural Consultancy','Property Dealing (Commission)','Site Supervision','Valuation / Estimation','Other'];
+  openEditModal('Consultancy Income', [
+    {key:'type', label:'Service Type', value:r.type, type:'select', options:types.map(t=>({value:t,label:t}))},
+    {key:'client', label:'Client Name', value:r.client},
+    {key:'date', label:'Date', value:r.date, type:'date'},
+    {key:'amount', label:'Amount (₹)', value:r.amount, type:'number'},
+    {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'received',label:'Received'},{value:'pending',label:'Pending'}]},
+    {key:'note', label:'Note', value:r.note}
+  ], async v=>{ await db.collection('consultancyIncome').doc(id).update(v); });
+}
+async function deleteConsultancy(id){
+  if(!await uiConfirm('Ye consultancy income entry delete karni hai?', 'Haan, delete karo')) return;
+  try{
+    await db.collection('consultancyIncome').doc(id).delete();
+    showToast('Entry delete ho gayi');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+document.getElementById('csListTypeFilter').addEventListener('change', renderConsultancyIncome);
+
 /* ---------------- Profit & Loss tab ---------------- */
 function renderPnL(){
-  const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const consultancyReceived = DATA.consultancyIncome.filter(r=>r.status==='received').reduce((a,r)=>a+Number(r.amount),0);
+  const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0) + consultancyReceived;
   const totalSiteCost = DATA.sites.reduce((a,s)=>a+siteCost(s.id),0);
   const totalOffice = DATA.officeExpenses.reduce((a,r)=>a+Number(r.amount),0);
   const totalInterest = DATA.investorLoans.reduce((a,i)=>{
@@ -3955,8 +4146,8 @@ function renderPnL(){
 
   const totalTaken = DATA.investorLoans.reduce((a,i)=>a+Number(i.taken),0);
   const totalReturnDue = DATA.investorLoans.reduce((a,i)=>a+Number(i.returnAmt),0);
-  const alreadyReturned = DATA.investorLoans.filter(i=>i.status==='returned').reduce((a,i)=>a+Number(i.returnAmt),0);
-  const pendingReturn = totalReturnDue - alreadyReturned;
+  const alreadyReturned = DATA.investorLoans.reduce((a,i)=>a+investorPaidSoFar(i),0);
+  const pendingReturn = DATA.investorLoans.reduce((a,i)=>a+investorRemaining(i),0);
   document.querySelector('#investorSummaryTable tbody').innerHTML = `<tr>
     <td class="amt">${inr(totalTaken)}</td><td class="amt">${inr(totalReturnDue)}</td>
     <td class="amt">${inr(alreadyReturned)}</td><td class="amt">${inr(pendingReturn)}</td>
@@ -3970,7 +4161,8 @@ function renderPnL(){
    overall business net profit so far, and the average per month it works
    out to since the earliest recorded transaction. */
 function computeBusinessAvgMonthly(){
-  const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const consultancyReceived = DATA.consultancyIncome.filter(r=>r.status==='received').reduce((a,r)=>a+Number(r.amount),0);
+  const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0) + consultancyReceived;
   const totalSiteCost = DATA.sites.reduce((a,s)=>a+siteCost(s.id),0);
   const totalOffice = DATA.officeExpenses.reduce((a,r)=>a+Number(r.amount),0);
   const totalInterest = DATA.investorLoans.reduce((a,i)=>{ const extra=Number(i.returnAmt)-Number(i.taken); return a+(extra>0?extra:0); },0);
@@ -3981,6 +4173,7 @@ function computeBusinessAvgMonthly(){
     .concat(DATA.udhar.map(r=>r.date))
     .concat(DATA.clientPayments.map(r=>r.date))
     .concat(DATA.officeExpenses.map(r=>r.date))
+    .concat(DATA.consultancyIncome.map(r=>r.date))
     .filter(Boolean).sort();
 
   let monthsElapsed = 1, earliestLabel = '';
@@ -3997,10 +4190,11 @@ function renderTimeBasedProfit(){
   const thisMonthKey = todayStr().slice(0,7);
   const thisYearKey = todayStr().slice(0,4);
   const sumBy = (arr, prefix) => arr.filter(r=> (r.date||'').startsWith(prefix)).reduce((a,r)=>a+Number(r.amount),0);
+  const sumByReceived = (arr, prefix) => arr.filter(r=> (r.date||'').startsWith(prefix) && r.status==='received').reduce((a,r)=>a+Number(r.amount),0);
 
-  const monthProfit = sumBy(DATA.clientPayments, thisMonthKey)
+  const monthProfit = sumBy(DATA.clientPayments, thisMonthKey) + sumByReceived(DATA.consultancyIncome, thisMonthKey)
     - sumBy(DATA.expenses, thisMonthKey) - sumBy(DATA.udhar, thisMonthKey) - sumBy(DATA.officeExpenses, thisMonthKey);
-  const yearProfit = sumBy(DATA.clientPayments, thisYearKey)
+  const yearProfit = sumBy(DATA.clientPayments, thisYearKey) + sumByReceived(DATA.consultancyIncome, thisYearKey)
     - sumBy(DATA.expenses, thisYearKey) - sumBy(DATA.udhar, thisYearKey) - sumBy(DATA.officeExpenses, thisYearKey);
 
   const { overallNet, monthsElapsed, earliestLabel, avgMonthly } = computeBusinessAvgMonthly();
@@ -4216,7 +4410,7 @@ function renderDashboard(){
     return a + Math.max(contract - received, 0);
   },0);
   const investorPendingTotal = (filter==='all' ? DATA.investorLoans : DATA.investorLoans.filter(i=>i.siteId===filter))
-    .filter(i=>i.status!=='returned').reduce((a,i)=>a+Number(i.returnAmt),0);
+    .reduce((a,i)=>a+investorRemaining(i), 0);
   document.getElementById('statClientPending').textContent = inr(clientPendingTotal);
   document.getElementById('statInvestorPending').textContent = inr(investorPendingTotal);
 
@@ -4227,6 +4421,11 @@ function renderDashboard(){
     return a + (bal>0?bal:0);
   },0);
   document.getElementById('statContractorBalance').textContent = inr(contractorBalanceTotal);
+  if(currentRole === 'owner'){
+    const consultancyReceived = DATA.consultancyIncome.filter(r=>r.status==='received').reduce((a,r)=>a+Number(r.amount),0);
+    const csEl = document.getElementById('statConsultancy');
+    if(csEl) csEl.textContent = inr(consultancyReceived);
+  }
 
   const tbody = document.querySelector('#siteSummaryTable tbody');
   if(DATA.sites.length===0){
@@ -4392,7 +4591,7 @@ function renderInsights(){
       notes.push(`${pendingClient.length} site${pendingClient.length>1?'s':''} mein client se total <strong>${inr(totalPending)}</strong> abhi aana baki hai.`);
     }
 
-    const investorPending = DATA.investorLoans.filter(i=>i.status!=='returned').reduce((a,i)=>a+Number(i.returnAmt),0);
+    const investorPending = DATA.investorLoans.reduce((a,i)=>a+investorRemaining(i), 0);
     if(investorPending > 0) notes.push(`Investors ko total <strong>${inr(investorPending)}</strong> return karna abhi baki hai.`);
   }
 
