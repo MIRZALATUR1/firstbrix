@@ -142,6 +142,30 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:var(--ink-soft);padding:9px 10px;border-bottom:1px solid var(--line);background:var(--surface-2);font-weight:600;white-space:nowrap;}
+
+  /* Responsive table: collapses into labeled stacked cards whenever the
+     table's own container gets narrow — works for phones AND for a
+     desktop browser window that just happens to be narrow, since it
+     reacts to container width via a container query, not just viewport. */
+  .table-wrap{container-type:inline-size;}
+  @container (max-width: 560px){
+    .responsive-table thead{display:none;}
+    .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td{display:block;width:100%;}
+    .responsive-table tr{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--surface);}
+    .responsive-table td{border:none;padding:5px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;white-space:normal;text-align:right;}
+    .responsive-table td::before{content:attr(data-label);font-weight:600;color:var(--ink-soft);font-size:10.5px;text-transform:uppercase;letter-spacing:0.4px;text-align:left;flex-shrink:0;}
+    .responsive-table td:empty{display:none;}
+    .responsive-table td[data-label=""]{padding-top:8px;border-top:1px solid var(--line);margin-top:4px;}
+  }
+  @supports not (container-type: inline-size){
+    @media(max-width:560px){
+      .responsive-table thead{display:none;}
+      .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td{display:block;width:100%;}
+      .responsive-table tr{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--surface);}
+      .responsive-table td{border:none;padding:5px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;white-space:normal;text-align:right;}
+      .responsive-table td::before{content:attr(data-label);font-weight:600;color:var(--ink-soft);font-size:10.5px;text-transform:uppercase;letter-spacing:0.4px;text-align:left;flex-shrink:0;}
+    }
+  }
   td{padding:10px;border-bottom:1px solid var(--line);color:var(--ink);}
   tbody tr:last-child td{border-bottom:none;}
   tr:hover td{background:var(--surface-2);}
@@ -627,7 +651,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
         </div>
         <div class="hint" style="margin-top:6px">Udhar Material entries bhi yahan dikhti hain (unke Edit/Status ke liye Udhar Material tab pe jao).</div>
-        <div class="table-wrap"><table id="expenseTable"><thead><tr>
+        <div class="table-wrap"><table id="expenseTable" class="responsive-table"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th data-i18n="th_type">Type</th><th data-i18n="th_category">Category</th><th data-i18n="th_name">Name</th><th data-i18n="th_mode">Mode</th><th data-i18n="th_note">Note</th><th data-i18n="th_amount">Amount</th><th></th>
         </tr></thead><tbody></tbody></table></div>
         <div class="footnote" id="expTotalLine"></div>
@@ -2304,15 +2328,15 @@ function renderExpenseTable(){
     return;
   }
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.date}</td>
-    <td>${siteName(r.siteId)}</td>
-    <td><span class="tag ${r.type}">${r.kind==='udhar'?'udhar':r.type}</span></td>
-    <td>${r.category||'—'}</td>
-    <td>${r.name}</td>
-    <td>${r.mode||'—'}</td>
-    <td>${r.note||'—'}</td>
-    <td class="amt">${inr(r.amount)}</td>
-    <td>
+    <td data-label="Date">${r.date}</td>
+    <td data-label="Site">${siteName(r.siteId)}</td>
+    <td data-label="Type"><span class="tag ${r.type}">${r.kind==='udhar'?'udhar':r.type}</span></td>
+    <td data-label="Category">${r.category||'—'}</td>
+    <td data-label="Name">${r.name}</td>
+    <td data-label="Mode">${r.mode||'—'}</td>
+    <td data-label="Note">${r.note||'—'}</td>
+    <td data-label="Amount" class="amt">${inr(r.amount)}</td>
+    <td data-label="">
       <button class="btn-danger-text" style="color:var(--steel)" onclick="${r.kind==='udhar'?`editUdhar('${r.id}')`:`editExpense('${r.id}')`}">Edit</button>
       &nbsp;·&nbsp;
       <button class="btn-danger-text" onclick="${r.kind==='udhar'?`deleteUdhar('${r.id}')`:`deleteExpense('${r.id}')`}">Delete</button>
@@ -2538,7 +2562,7 @@ function openSiteDetail(siteId){
         ${!locked ? `<button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px" onclick="openQuickAddForSite('${siteId}')">+ Add Entry</button>` : ''}
       </div>
       <div class="footnote" id="siteDetailFilterNote"></div>
-      <div class="table-wrap"><table><thead><tr>
+      <div class="table-wrap"><table class="responsive-table"><thead><tr>
         <th>Date</th><th>Type</th><th>Item / Category</th><th>Name</th><th>Amount</th><th></th>
       </tr></thead><tbody id="siteDetailLedgerBody"></tbody></table></div>
 
@@ -2609,12 +2633,12 @@ function renderSiteDetailLedger(siteId){
   const kindTag = r => r.kind==='clientpay' ? 'paid' : (r.kind==='udhar' ? (r.tag==='paid'?'paid':'pending') : r.tag);
   const kindLabel = r => r.kind==='clientpay' ? 'Client Payment' : (r.kind==='udhar' ? 'Udhar' : r.tag);
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.date}</td>
-    <td><span class="tag ${kindTag(r)}">${kindLabel(r)}</span></td>
-    <td>${r.label||'—'}</td>
-    <td>${r.name||'—'}</td>
-    <td class="amt" style="color:${r.inOut==='in'?'var(--good)':'var(--ink)'}">${r.inOut==='in'?'+ ':''}${inr(r.amount)}</td>
-    <td>
+    <td data-label="Date">${r.date}</td>
+    <td data-label="Type"><span class="tag ${kindTag(r)}">${kindLabel(r)}</span></td>
+    <td data-label="Item / Category">${r.label||'—'}</td>
+    <td data-label="Name">${r.name||'—'}</td>
+    <td data-label="Amount" class="amt" style="color:${r.inOut==='in'?'var(--good)':'var(--ink)'}">${r.inOut==='in'?'+ ':''}${inr(r.amount)}</td>
+    <td data-label="">
       <button class="btn-danger-text" style="color:var(--blue)" onclick="editSiteLedgerRow('${r.kind}','${r.id}')">Edit</button>
       &nbsp;·&nbsp;
       <button class="btn-danger-text" onclick="deleteSiteLedgerRow('${r.kind}','${r.id}').then(()=>{renderSiteDetailLedger('${siteId}');})">Delete</button>
