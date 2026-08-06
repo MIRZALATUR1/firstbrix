@@ -2444,6 +2444,7 @@ function deleteSiteLedgerRow(kind, id){
 function openSiteDetail(siteId){
   const site = DATA.sites.find(s=>s.id===siteId);
   if(!site) return;
+  siteLedgerFilter = null;
 
   const cost = siteCost(siteId);
   const received = currentRole==='owner' ? siteReceived(siteId) : 0;
@@ -2501,19 +2502,19 @@ function openSiteDetail(siteId){
       </div>
 
       <div class="card" style="margin-bottom:16px;padding:16px 18px">
-        <h2 style="margin:0 0 10px;font-size:14px;border:none;padding:0">Performance Breakdown <small style="display:block;font-weight:400;color:var(--ink-soft);margin-top:2px">Kahan kitna gaya</small></h2>
+        <h2 style="margin:0 0 10px;font-size:14px;border:none;padding:0">Performance Breakdown <small style="display:block;font-weight:400;color:var(--ink-soft);margin-top:2px">Kahan kitna gaya — kisi bhi row pe click karo, neeche uski entries dikhengi</small></h2>
         <div class="table-wrap"><table style="font-size:12.5px"><tbody>
-          <tr><td>Labour</td><td class="amt">${inr(labourCost)}</td></tr>
-          <tr><td>Material</td><td class="amt">${inr(materialCost)}</td></tr>
-          <tr><td>Other</td><td class="amt">${inr(otherCost)}</td></tr>
-          <tr><td>Udhar Material</td><td class="amt">${inr(udharCost)}</td></tr>
+          <tr style="cursor:pointer" onclick="filterSiteLedgerByType('${siteId}','expense','labour','Labour')"><td>Labour</td><td class="amt">${inr(labourCost)}</td></tr>
+          <tr style="cursor:pointer" onclick="filterSiteLedgerByType('${siteId}','expense','material','Material')"><td>Material</td><td class="amt">${inr(materialCost)}</td></tr>
+          <tr style="cursor:pointer" onclick="filterSiteLedgerByType('${siteId}','expense','other','Other')"><td>Other</td><td class="amt">${inr(otherCost)}</td></tr>
+          <tr style="cursor:pointer" onclick="filterSiteLedgerByType('${siteId}','udhar','','Udhar Material')"><td>Udhar Material</td><td class="amt">${inr(udharCost)}</td></tr>
           <tr><td>Contractor Balance Still Due</td><td class="amt" style="color:${contractorPending>0?'var(--bad)':'inherit'}">${inr(contractorPending)}</td></tr>
           <tr style="background:var(--surface-2);font-weight:700"><td>Total Cost (Outcome)</td><td class="amt">${inr(cost)}</td></tr>
         </tbody></table></div>
         ${matRows.length ? `
-        <h2 style="margin:16px 0 8px;font-size:13px;border:none;padding:0">Material-wise Breakdown <small style="display:block;font-weight:400;color:var(--ink-soft);margin-top:2px">Kitna Cement, Steel, Tiles waghera lagi (Material expense + Udhar dono milaake)</small></h2>
+        <h2 style="margin:16px 0 8px;font-size:13px;border:none;padding:0">Material-wise Breakdown <small style="display:block;font-weight:400;color:var(--ink-soft);margin-top:2px">Kitna Cement, Steel, Tiles waghera lagi (Material expense + Udhar dono milaake) — click karke details dekho</small></h2>
         <div class="table-wrap"><table style="font-size:12.5px"><tbody>
-          ${matRows.map(([name,amt])=>`<tr><td>${name}</td><td class="amt">${inr(amt)}</td></tr>`).join('')}
+          ${matRows.map(([name,amt])=>`<tr style="cursor:pointer" onclick="filterSiteLedgerByMaterial('${siteId}','${name.replace(/'/g,"\\'")}')"><td>${name}</td><td class="amt">${inr(amt)}</td></tr>`).join('')}
         </tbody></table></div>` : ''}
       </div>
 
@@ -2521,9 +2522,10 @@ function openSiteDetail(siteId){
         <canvas id="siteDetailChart"></canvas>
       </div>
       <div class="toolbar">
-        <h2 style="margin:0;border:none;padding:0;font-size:16px">Date-wise Entries</h2>
+        <h2 id="siteDetailLedgerHeading" style="margin:0;border:none;padding:0;font-size:16px">Date-wise Entries</h2>
         ${!locked ? `<button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px" onclick="openQuickAddForSite('${siteId}')">+ Add Entry</button>` : ''}
       </div>
+      <div class="footnote" id="siteDetailFilterNote"></div>
       <div class="table-wrap"><table><thead><tr>
         <th>Date</th><th>Type</th><th>Item / Category</th><th>Name</th><th>Amount</th><th></th>
       </tr></thead><tbody id="siteDetailLedgerBody"></tbody></table></div>
@@ -2536,12 +2538,48 @@ function openSiteDetail(siteId){
   renderSiteDetailChart(siteId, received, cost);
 }
 
+let siteLedgerFilter = null; // { name: 'Cement', test: r => boolean } or null
+
+function filterSiteLedgerByType(siteId, kind, tag, label){
+  filterSiteLedger(siteId, {
+    name: label,
+    test: r => r.kind===kind && (tag ? r.tag===tag : true)
+  });
+}
+function filterSiteLedgerByMaterial(siteId, materialName){
+  filterSiteLedger(siteId, {
+    name: materialName,
+    test: r => (r.kind==='expense' && r.tag==='material' && r.label===materialName) || (r.kind==='udhar' && r.label===materialName)
+  });
+}
+
+function filterSiteLedger(siteId, filter){
+  siteLedgerFilter = filter;
+  renderSiteDetailLedger(siteId);
+  const ledgerHeading = document.getElementById('siteDetailLedgerHeading');
+  if(ledgerHeading) ledgerHeading.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function clearSiteLedgerFilter(siteId){
+  siteLedgerFilter = null;
+  renderSiteDetailLedger(siteId);
+}
+
 function renderSiteDetailLedger(siteId){
   const tbody = document.getElementById('siteDetailLedgerBody');
   if(!tbody) return;
-  const rows = buildSiteLedger(siteId);
+  let rows = buildSiteLedger(siteId);
+
+  const filterNote = document.getElementById('siteDetailFilterNote');
+  if(siteLedgerFilter){
+    rows = rows.filter(siteLedgerFilter.test);
+    if(filterNote) filterNote.innerHTML = `Showing only: <strong>${siteLedgerFilter.name}</strong> &nbsp;
+      <button class="btn-danger-text" onclick="clearSiteLedgerFilter('${siteId}')">Show All</button>`;
+  } else if(filterNote){
+    filterNote.textContent = '';
+  }
+
   if(rows.length===0){
-    tbody.innerHTML = `<tr><td colspan="6" class="empty">Is site ki abhi koi entry nahi hai.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">${siteLedgerFilter ? 'Is filter ke liye koi entry nahi mili.' : 'Is site ki abhi koi entry nahi hai.'}</td></tr>`;
     return;
   }
   const kindTag = r => r.kind==='clientpay' ? 'paid' : (r.kind==='udhar' ? (r.tag==='paid'?'paid':'pending') : r.tag);
