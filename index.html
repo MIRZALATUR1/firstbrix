@@ -151,6 +151,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
   .tag.other{background:var(--hivis-soft);color:#8A5A05;}
   .tag.paid{background:var(--good-soft);color:var(--good);}
   .tag.pending{background:var(--hivis-soft);color:#8A5A05;}
+  .tag.udhar{background:var(--bad-soft);color:var(--bad);}
   .amt{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:-0.2px;}
   .empty{padding:34px;text-align:center;color:var(--ink-soft);font-size:13px;}
   .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;}
@@ -503,6 +504,13 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card">
+        <h2>Material-wise Breakdown <small>Kitna Cement, Steel, Tiles waghera laga — Material expense + Udhar dono milaake (upar wali site-filter ke hisaab se)</small></h2>
+        <div class="table-wrap"><table id="materialBreakdownTable"><thead><tr>
+          <th>Material Type</th><th>Amount</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
         <h2><span data-i18n="h2_recent">Recent Entries</span></h2>
         <div class="table-wrap"><table id="recentTable"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th data-i18n="th_type">Type</th><th>Category / Item</th><th data-i18n="th_name">Name</th><th data-i18n="th_amount">Amount</th>
@@ -565,6 +573,13 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
               <option>Electric</option><option>Plumbing</option><option>Other</option>
             </select>
           </div>
+          <div class="field" id="expMaterialTypeWrap" style="display:none"><label>Material Type</label>
+            <select id="expMaterialType">
+              <option>Cement</option><option>Steel / TMT Bar</option><option>Bricks</option><option>Sand</option>
+              <option>Aggregate / Gitti</option><option>Tiles</option><option>Paint</option><option>Plumbing Material</option>
+              <option>Electrical Material</option><option>Hardware</option><option>Wood / Furniture</option><option>Other</option>
+            </select>
+          </div>
         </div>
         <div class="grid cols-3">
           <div class="field"><label id="expNameLabel">Contractor Name</label><input id="expName" list="dl-labour-names" placeholder="e.g. Ramesh Kumar"></div>
@@ -593,9 +608,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
             <select id="expListTypeFilter">
               <option value="all">All Types</option><option value="labour">Labour</option>
               <option value="material">Material</option><option value="other">Other</option>
+              <option value="udhar">Udhar Material</option>
             </select>
           </div>
         </div>
+        <div class="hint" style="margin-top:6px">Udhar Material entries bhi yahan dikhti hain (unke Edit/Status ke liye Udhar Material tab pe jao).</div>
         <div class="table-wrap"><table id="expenseTable"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th data-i18n="th_type">Type</th><th data-i18n="th_category">Category</th><th data-i18n="th_name">Name</th><th data-i18n="th_mode">Mode</th><th data-i18n="th_note">Note</th><th data-i18n="th_amount">Amount</th><th></th>
         </tr></thead><tbody></tbody></table></div>
@@ -613,7 +630,13 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="grid cols-3">
           <div class="field"><label data-i18n="lbl_site">Site</label><select id="udSite"></select></div>
           <div class="field"><label data-i18n="lbl_suppliername">Supplier Name</label><input id="udSupplier" list="dl-suppliers" placeholder="e.g. Shree Hardware Store"></div>
-          <div class="field"><label data-i18n="lbl_materialname">Material Name</label><input id="udMaterial" list="dl-materials" placeholder="e.g. Cement, Steel, Sand"></div>
+          <div class="field"><label data-i18n="lbl_materialname">Material Type</label>
+            <select id="udMaterial">
+              <option>Cement</option><option>Steel / TMT Bar</option><option>Bricks</option><option>Sand</option>
+              <option>Aggregate / Gitti</option><option>Tiles</option><option>Paint</option><option>Plumbing Material</option>
+              <option>Electrical Material</option><option>Hardware</option><option>Wood / Furniture</option><option>Other</option>
+            </select>
+          </div>
         </div>
         <div class="grid cols-4">
           <div class="field"><label data-i18n="lbl_qty">Quantity</label><input id="udQty" type="number" min="0" placeholder="0"></div>
@@ -2121,8 +2144,10 @@ async function deleteSite(id){
 /* ---------------- Add Expense tab ---------------- */
 document.getElementById('expType').addEventListener('change', (e)=>{
   const isLabour = e.target.value==='labour';
+  const isMaterial = e.target.value==='material';
   document.getElementById('expCategoryWrap').style.display = isLabour ? 'block' : 'none';
-  document.getElementById('expNameLabel').textContent = isLabour ? 'Contractor Name' : (e.target.value==='material' ? 'Vendor / Shop Name' : 'Paid To');
+  document.getElementById('expMaterialTypeWrap').style.display = isMaterial ? 'block' : 'none';
+  document.getElementById('expNameLabel').textContent = isLabour ? 'Contractor Name' : (isMaterial ? 'Vendor / Shop Name' : 'Paid To');
   const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names' };
   document.getElementById('expName').setAttribute('list', listMap[e.target.value]);
 });
@@ -2133,7 +2158,8 @@ let editingExpenseId = null;
 document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   const siteId = document.getElementById('expSite').value;
   const type = document.getElementById('expType').value;
-  const category = type==='labour' ? document.getElementById('expCategory').value : '';
+  const category = type==='labour' ? document.getElementById('expCategory').value
+                   : type==='material' ? document.getElementById('expMaterialType').value : '';
   const contractor = document.getElementById('expName').value.trim();
   const date = document.getElementById('expDate').value || todayStr();
   const amount = Number(document.getElementById('expAmount').value);
@@ -2172,6 +2198,7 @@ function editExpense(id){
   document.getElementById('expType').value = r.type;
   document.getElementById('expType').dispatchEvent(new Event('change'));
   if(r.type==='labour' && r.category) document.getElementById('expCategory').value = r.category;
+  if(r.type==='material' && r.category) document.getElementById('expMaterialType').value = r.category;
   document.getElementById('expName').value = r.contractor||'';
   document.getElementById('expDate').value = r.date;
   document.getElementById('expAmount').value = r.amount;
@@ -2199,11 +2226,16 @@ function renderExpenseTable(){
   const siteFilter = document.getElementById('expListSiteFilter').value;
   const typeFilter = document.getElementById('expListTypeFilter').value;
   const q = (document.getElementById('expSearch').value||'').trim().toLowerCase();
-  let rows = [...DATA.expenses].sort((a,b)=> b.date.localeCompare(a.date));
+
+  let rows = [
+    ...DATA.expenses.map(r=>({ kind:'expense', id:r.id, date:r.date, siteId:r.siteId, type:r.type, category:r.category, name:r.contractor, mode:r.mode, note:r.note, amount:r.amount })),
+    ...DATA.udhar.map(r=>({ kind:'udhar', id:r.id, date:r.date, siteId:r.siteId, type:'udhar', category:r.material, name:r.supplier, mode:r.status, note:r.note, amount:r.amount }))
+  ].sort((a,b)=> b.date.localeCompare(a.date));
+
   if(siteFilter && siteFilter!=='all') rows = rows.filter(r=>r.siteId===siteFilter);
   if(typeFilter && typeFilter!=='all') rows = rows.filter(r=>r.type===typeFilter);
   if(q) rows = rows.filter(r=>
-    (r.contractor||'').toLowerCase().includes(q) ||
+    (r.name||'').toLowerCase().includes(q) ||
     (r.category||'').toLowerCase().includes(q) ||
     (r.note||'').toLowerCase().includes(q)
   );
@@ -2216,16 +2248,16 @@ function renderExpenseTable(){
   tbody.innerHTML = rows.map(r=>`<tr>
     <td>${r.date}</td>
     <td>${siteName(r.siteId)}</td>
-    <td><span class="tag ${r.type}">${r.type}</span></td>
+    <td><span class="tag ${r.type}">${r.kind==='udhar'?'udhar':r.type}</span></td>
     <td>${r.category||'—'}</td>
-    <td>${r.contractor}</td>
+    <td>${r.name}</td>
     <td>${r.mode||'—'}</td>
     <td>${r.note||'—'}</td>
     <td class="amt">${inr(r.amount)}</td>
     <td>
-      <button class="btn-danger-text" style="color:var(--steel)" onclick="editExpense('${r.id}')">Edit</button>
+      <button class="btn-danger-text" style="color:var(--steel)" onclick="${r.kind==='udhar'?`editUdhar('${r.id}')`:`editExpense('${r.id}')`}">Edit</button>
       &nbsp;·&nbsp;
-      <button class="btn-danger-text" onclick="deleteExpense('${r.id}')">Delete</button>
+      <button class="btn-danger-text" onclick="${r.kind==='udhar'?`deleteUdhar('${r.id}')`:`deleteExpense('${r.id}')`}">Delete</button>
     </td>
   </tr>`).join('');
   const total = rows.reduce((a,r)=>a+Number(r.amount),0);
@@ -2269,7 +2301,7 @@ document.getElementById('addUdharBtn').addEventListener('click', async ()=>{
   document.getElementById('udAmount').value='';
   document.getElementById('udNote').value='';
   await saveData();
-  renderUdharTable(); renderDashboard(); renderSitesTable();
+  renderUdharTable(); renderDashboard(); renderSitesTable(); renderExpenseTable();
   showToast('Udhar entry add ho gayi ✓');
 });
 
@@ -2302,12 +2334,14 @@ function renderUdharTable(){
     </td>
   </tr>`).join('');
 }
+const MATERIAL_TYPES = ['Cement','Steel / TMT Bar','Bricks','Sand','Aggregate / Gitti','Tiles','Paint','Plumbing Material','Electrical Material','Hardware','Wood / Furniture','Other'];
+
 function editUdhar(id){
   const r = DATA.udhar.find(x=>x.id===id);
   if(!r) return;
   openEditModal('Udhar Entry', [
     {key:'supplier', label:'Supplier Name', value:r.supplier},
-    {key:'material', label:'Material Name', value:r.material},
+    {key:'material', label:'Material Type', value:r.material, type:'select', options:MATERIAL_TYPES.map(m=>({value:m,label:m}))},
     {key:'qty', label:'Quantity', value:r.qty, type:'number'},
     {key:'unit', label:'Unit', value:r.unit},
     {key:'date', label:'Date', value:r.date, type:'date'},
@@ -2384,6 +2418,19 @@ function openSiteDetail(siteId){
   const contractValue = Number(site.contractValue)||0;
   const clientPending = contractValue ? Math.max(contractValue-received,0) : 0;
 
+  // Material-wise breakdown: combines both "Material" type expenses AND
+  // Udhar entries, since both represent material bought for the site.
+  const matBreakdown = {};
+  exp.filter(e=>e.type==='material').forEach(e=>{
+    const key = e.category || 'Other';
+    matBreakdown[key] = (matBreakdown[key]||0) + Number(e.amount);
+  });
+  DATA.udhar.filter(u=>u.siteId===siteId).forEach(u=>{
+    const key = u.material || 'Other';
+    matBreakdown[key] = (matBreakdown[key]||0) + Number(u.amount);
+  });
+  const matRows = Object.entries(matBreakdown).sort((a,b)=>b[1]-a[1]);
+
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.id = 'siteDetailBg';
@@ -2417,6 +2464,11 @@ function openSiteDetail(siteId){
           <tr><td>Contractor Balance Still Due</td><td class="amt" style="color:${contractorPending>0?'var(--bad)':'inherit'}">${inr(contractorPending)}</td></tr>
           <tr style="background:var(--surface-2);font-weight:700"><td>Total Cost (Outcome)</td><td class="amt">${inr(cost)}</td></tr>
         </tbody></table></div>
+        ${matRows.length ? `
+        <h2 style="margin:16px 0 8px;font-size:13px;border:none;padding:0">Material-wise Breakdown <small style="display:block;font-weight:400;color:var(--ink-soft);margin-top:2px">Kitna Cement, Steel, Tiles waghera lagi (Material expense + Udhar dono milaake)</small></h2>
+        <div class="table-wrap"><table style="font-size:12.5px"><tbody>
+          ${matRows.map(([name,amt])=>`<tr><td>${name}</td><td class="amt">${inr(amt)}</td></tr>`).join('')}
+        </tbody></table></div>` : ''}
       </div>
 
       <div style="position:relative;height:220px;margin-bottom:18px">
@@ -4458,11 +4510,31 @@ function renderDashboard(){
     </tr>`).join('');
   }
 
+  renderMaterialBreakdown(exp, ud);
   renderCharts(exp, ud);
   renderInsights();
 }
 
 /* ---------------- Charts ---------------- */
+function renderMaterialBreakdown(exp, ud){
+  const tbody = document.querySelector('#materialBreakdownTable tbody');
+  if(!tbody) return;
+  const map = {};
+  exp.filter(e=>e.type==='material').forEach(e=>{
+    const key = e.category || 'Other';
+    map[key] = (map[key]||0) + Number(e.amount);
+  });
+  ud.forEach(u=>{
+    const key = u.material || 'Other';
+    map[key] = (map[key]||0) + Number(u.amount);
+  });
+  const rows = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="2" class="empty">Abhi koi material expense nahi hai.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(([name,amt])=>`<tr><td>${name}</td><td class="amt">${inr(amt)}</td></tr>`).join('');
+}
 let charts = {};
 function chartDefaults(){
   return {
