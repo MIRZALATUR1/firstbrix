@@ -592,6 +592,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
           <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="expNote" placeholder="e.g. 2nd floor slab payment"></div>
         </div>
+        <div class="login-error" id="expFormErr" style="margin-bottom:8px"></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <button class="btn btn-primary" id="addExpenseBtn">+ <span data-i18n="btn_addexpense">Add Expense</span></button>
           <button class="btn btn-ghost" id="cancelEditBtn" style="display:none">Cancel Edit</button>
@@ -1482,11 +1483,7 @@ document.getElementById('googleBtn').addEventListener('click', async ()=>{
   document.getElementById('loginError').textContent = '';
   const provider = new firebase.auth.GoogleAuthProvider();
   try{
-    if(IS_MOBILE){
-      await auth.signInWithRedirect(provider);   // more reliable on phones
-    } else {
-      await auth.signInWithPopup(provider);
-    }
+    await auth.signInWithRedirect(provider);   // redirect is far more reliable than popups, which Google often flags as insecure
   }catch(e){ showAuthError(e); }
 });
 
@@ -2155,21 +2152,63 @@ document.getElementById('expDate').value = todayStr();
 
 let editingExpenseId = null;
 
+/* Catches the common mistake: same contractor/vendor name (via autocomplete)
+   already paid on the same date — at this site or any other site. Doesn't
+   block it, just makes the person confirm before it goes through. */
+async function checkDuplicatePayment(name, date, excludeId){
+  const nameNorm = (name||'').trim().toLowerCase();
+  if(!nameNorm) return true;
+  const matches = DATA.expenses.filter(e=>
+    e.id !== excludeId &&
+    (e.contractor||'').trim().toLowerCase() === nameNorm &&
+    e.date === date
+  );
+  if(matches.length === 0) return true;
+
+  const lines = matches.map(m=>
+    `• ${siteName(m.siteId)} — ${inr(m.amount)} (${m.type}${m.category?', '+m.category:''})`
+  ).join('\n');
+  const msg = `"${name}" ko is date (${date}) par pehle se ${matches.length>1?'entries':'ek entry'} hai:\n\n${lines}\n\nKya phir bhi ye nayi entry add karni hai?`;
+  return await uiConfirm(msg, 'Haan, phir bhi add karo');
+}
+
 document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   const siteId = document.getElementById('expSite').value;
   const type = document.getElementById('expType').value;
   const category = type==='labour' ? document.getElementById('expCategory').value
                    : type==='material' ? document.getElementById('expMaterialType').value : '';
-  const contractor = document.getElementById('expName').value.trim();
+  const nameEl = document.getElementById('expName');
+  const amountEl = document.getElementById('expAmount');
+  const contractor = nameEl.value.trim();
   const date = document.getElementById('expDate').value || todayStr();
-  const amount = Number(document.getElementById('expAmount').value);
+  const amount = Number(amountEl.value);
   const mode = document.getElementById('expMode').value;
   const note = document.getElementById('expNote').value.trim();
 
+  // Clear any previous error highlighting
+  [nameEl, amountEl].forEach(el=>el.style.borderColor='');
+  const errEl = document.getElementById('expFormErr');
+  errEl.textContent = '';
+
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
   if(isSiteLockedForMe(siteId)){ showToast('Ye site complete ho chuki hai — sirf owner isme naya expense add kar sakta hai'); return; }
-  if(!contractor){ showToast('Naam daalo'); return; }
-  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+  if(!contractor){
+    errEl.textContent = type==='material' ? '⚠ "Vendor / Shop Name" field khali hai — ye bharna zaroori hai (material ki description Note mein daalo).' : '⚠ Naam daalo — ye field khali hai.';
+    nameEl.style.borderColor = 'var(--bad)';
+    nameEl.scrollIntoView({behavior:'smooth', block:'center'});
+    nameEl.focus();
+    return;
+  }
+  if(!amount || amount<=0){
+    errEl.textContent = '⚠ Sahi amount daalo — abhi ye khali ya 0 hai.';
+    amountEl.style.borderColor = 'var(--bad)';
+    amountEl.scrollIntoView({behavior:'smooth', block:'center'});
+    amountEl.focus();
+    return;
+  }
+
+  const proceed = await checkDuplicatePayment(contractor, date, editingExpenseId);
+  if(!proceed) return;
 
   if(editingExpenseId){
     const item = DATA.expenses.find(e=>e.id===editingExpenseId);
@@ -3046,6 +3085,9 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
   if(!name){ err.textContent = 'Naam likho.'; return; }
   if(!amount || amount<=0){ err.textContent = 'Amount daalo.'; return; }
   err.textContent = '';
+
+  const proceed = await checkDuplicatePayment(name, date, null);
+  if(!proceed) return;
 
   DATA.expenses.push({
     id: uid(), siteId, type,
