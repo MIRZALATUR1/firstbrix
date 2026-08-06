@@ -180,7 +180,14 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
   .fab:active{transform:translateY(1px);}
   .fab .plus{font-size:19px;line-height:1;font-weight:400;}
   .quick-modal{width:440px;}
-  .site-detail-modal{width:820px;max-width:96vw;max-height:92vh;}
+  /* Desktop: fixed, centered card with its own bounded height — everything
+     scrolls inside it, the page behind never moves. Written with higher
+     specificity so the generic .modal rule can never override the height. */
+  .modal-bg .site-detail-modal.site-detail-modal{
+    width:820px;max-width:96vw;
+    height:85vh;height:85dvh;max-height:85vh;max-height:85dvh;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
   .quick-modal .modal-head{
     margin:-26px -28px 18px;padding:16px 28px;background:var(--steel-900);
     border-radius:12px 12px 0 0;color:#fff;
@@ -297,6 +304,12 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
     .fab{right:16px;bottom:16px;padding:14px 20px;font-size:14.5px;}
     .quick-modal{width:100%;}
     .quick-modal .modal-head{margin:-26px -18px 16px;padding:15px 18px;}
+    .modal-bg .site-detail-modal.site-detail-modal{
+      width:100%;max-width:100%;
+      height:100%;max-height:100%;height:100dvh;max-height:100dvh;
+      border-radius:0;
+    }
+    #siteDetailBg{padding:0;}
     .toast{left:14px;right:14px;bottom:84px;text-align:center;}
   }
 </style>
@@ -2236,8 +2249,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
 function editExpense(id){
   const r = DATA.expenses.find(e=>e.id===id);
   if(!r) return;
-  const sdBg = document.getElementById('siteDetailBg');
-  if(sdBg) sdBg.remove();
+  if(document.getElementById('siteDetailBg')) closeSiteDetail();
   document.querySelector('#navTabs button[data-tab="expense"]').click();
   editingExpenseId = id;
   document.getElementById('expSite').value = r.siteId;
@@ -2482,12 +2494,12 @@ function openSiteDetail(siteId){
   bg.className = 'modal-bg';
   bg.id = 'siteDetailBg';
   bg.innerHTML = `<div class="modal site-detail-modal" style="display:flex;flex-direction:column;padding:0;overflow:hidden">
-    <div class="modal-head" style="margin:0;border-radius:0;display:flex;justify-content:space-between;align-items:center;gap:10px">
+    <div class="modal-head" style="margin:0;border-radius:0;display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;z-index:5;flex-shrink:0">
       <div>
         <h3 style="margin:0">${site.name} <span class="tag ${isCompleted?'paid':'pending'}" style="vertical-align:middle;margin-left:6px">${isCompleted?'Completed':'Running'}</span></h3>
         <p style="margin:2px 0 0">${site.location||'Location not set'}</p>
       </div>
-      <button onclick="document.getElementById('siteDetailBg').remove()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px">&times;</button>
+      <button onclick="closeSiteDetail()" title="Close" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;padding:6px 11px;border-radius:6px;flex-shrink:0">&times;</button>
     </div>
     <div style="padding:20px 24px;overflow-y:auto;flex:1">
       ${locked ? `<div style="background:var(--hivis-soft);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:#8A5A05">
@@ -2529,14 +2541,26 @@ function openSiteDetail(siteId){
       <div class="table-wrap"><table><thead><tr>
         <th>Date</th><th>Type</th><th>Item / Category</th><th>Name</th><th>Amount</th><th></th>
       </tr></thead><tbody id="siteDetailLedgerBody"></tbody></table></div>
+
+      <button class="btn btn-ghost" onclick="closeSiteDetail()" style="width:100%;justify-content:center;margin-top:20px;padding:12px">← Back / Close</button>
     </div>
   </div>`;
   document.body.appendChild(bg);
-  bg.addEventListener('click', e=>{ if(e.target===bg) bg.remove(); });
+  document.body.style.overflow = 'hidden'; // stop the page behind the modal from also scrolling
+  bg.addEventListener('click', e=>{ if(e.target===bg) closeSiteDetail(); });
 
   renderSiteDetailLedger(siteId);
   renderSiteDetailChart(siteId, received, cost);
 }
+
+function closeSiteDetail(){
+  const bg = document.getElementById('siteDetailBg');
+  if(bg) bg.remove();
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && document.getElementById('siteDetailBg')) closeSiteDetail();
+});
 
 let siteLedgerFilter = null; // { name: 'Cement', test: r => boolean } or null
 
