@@ -1281,6 +1281,13 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <option>Electric</option><option>Plumbing</option><option>Other</option>
       </select>
     </div>
+    <div class="field" id="qMaterialTypeWrap" style="display:none"><label>Material Type</label>
+      <select id="qMaterialType">
+        <option>Cement</option><option>Steel / TMT Bar</option><option>Bricks</option><option>Sand</option>
+        <option>Aggregate / Gitti</option><option>Tiles</option><option>Paint</option><option>Plumbing Material</option>
+        <option>Electrical Material</option><option>Hardware</option><option>Wood / Furniture</option><option>Other</option>
+      </select>
+    </div>
     <div class="field"><label id="qNameLabel">Contractor name</label><input id="qName" list="dl-labour-names" placeholder="Naam likho ya list se chuno"></div>
     <div class="grid cols-2">
       <div class="field"><label data-i18n="lbl_date">Date</label><input id="qDate" type="date"></div>
@@ -3045,9 +3052,11 @@ const qModal = document.getElementById('quickModal');
 
 document.getElementById('qType').addEventListener('change', e=>{
   const isLabour = e.target.value==='labour';
+  const isMaterial = e.target.value==='material';
   document.getElementById('qCategoryWrap').style.display = isLabour ? 'block' : 'none';
+  document.getElementById('qMaterialTypeWrap').style.display = isMaterial ? 'block' : 'none';
   document.getElementById('qNameLabel').textContent =
-    isLabour ? 'Contractor name' : (e.target.value==='material' ? 'Vendor / shop name' : 'Paid to');
+    isLabour ? 'Contractor name' : (isMaterial ? 'Vendor / shop name' : 'Paid to');
   const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names' };
   document.getElementById('qName').setAttribute('list', listMap[e.target.value]);
 });
@@ -3091,7 +3100,8 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
 
   DATA.expenses.push({
     id: uid(), siteId, type,
-    category: type==='labour' ? document.getElementById('qCategory').value : '',
+    category: type==='labour' ? document.getElementById('qCategory').value
+              : type==='material' ? document.getElementById('qMaterialType').value : '',
     contractor: name, date, amount,
     mode: document.getElementById('qMode').value,
     note: document.getElementById('qNote').value.trim()
