@@ -601,6 +601,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
               <option value="labour">Labour</option>
               <option value="material">Material</option>
               <option value="other">Other</option>
+              <option value="udhar">Udhar (Credit from Supplier)</option>
             </select>
           </div>
           <div class="field" id="expCategoryWrap"><label data-i18n="lbl_labourcat">Labour Category</label>
@@ -617,6 +618,20 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
               <option>Electrical Material</option><option>Hardware</option><option>Wood / Furniture</option><option>Other</option>
             </select>
           </div>
+          <div class="field" id="expUdharMaterialWrap" style="display:none"><label>Material Type</label>
+            <select id="expUdharMaterial">
+              <option>Cement</option><option>Steel / TMT Bar</option><option>Bricks</option><option>Sand</option>
+              <option>Aggregate / Gitti</option><option>Tiles</option><option>Paint</option><option>Plumbing Material</option>
+              <option>Electrical Material</option><option>Hardware</option><option>Wood / Furniture</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid cols-3" id="expUdharQtyRow" style="display:none">
+          <div class="field"><label>Quantity</label><input id="expQty" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Unit</label><input id="expUnit" placeholder="e.g. bags / kg / ton"></div>
+          <div class="field"><label>Status</label>
+            <select id="expUdharStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
+          </div>
         </div>
         <div class="grid cols-3">
           <div class="field"><label id="expNameLabel">Contractor Name</label><input id="expName" list="dl-labour-names" placeholder="e.g. Ramesh Kumar"></div>
@@ -624,7 +639,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label data-i18n="lbl_amount">Amount (₹)</label><input id="expAmount" type="number" min="0" placeholder="0"></div>
         </div>
         <div class="grid cols-2">
-          <div class="field"><label data-i18n="lbl_paymode">Payment Mode</label>
+          <div class="field" id="expModeWrap"><label data-i18n="lbl_paymode">Payment Mode</label>
             <select id="expMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option></select>
           </div>
           <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="expNote" placeholder="e.g. 2nd floor slab payment"></div>
@@ -701,6 +716,13 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
         <div class="table-wrap"><table id="udharTable"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Supplier</th><th>Material</th><th>Qty</th><th data-i18n="th_amount">Amount</th><th data-i18n="th_status">Status</th><th data-i18n="th_note">Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Vendor Ledger <small>Ek vendor se kayi sites pe udhar liya ho, to yahan se lumpsum payment do — system khud purane bill se shuru karke adjust kar dega (chahe wo kisi bhi site ka ho)</small></h2>
+        <div class="table-wrap"><table id="vendorLedgerTable"><thead><tr>
+          <th>Vendor</th><th>Total Billed (Sabhi Sites)</th><th>Total Paid</th><th>Outstanding</th><th>Bills</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
     </section>
@@ -1446,7 +1468,7 @@ let unsubs = [];             // live listeners
 const CONFIG_OK = FIREBASE_CONFIG && !String(FIREBASE_CONFIG.apiKey).startsWith('PASTE_');
 
 /* Which Firestore collection each in-memory array maps to */
-const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements' };
+const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments' };
 const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
@@ -1852,7 +1874,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -1860,6 +1882,7 @@ function rerenderAll(){
   renderSitesTable();
   renderExpenseTable();
   renderUdharTable();
+  renderVendorLedger();
   renderAgreementsTable();
   renderDashboard();
   if(currentRole === 'owner'){
@@ -1939,6 +1962,7 @@ async function saveData(){
     sync('expenses', 'expenses');
     sync('udhar', 'udhar');
     sync('workAgreements', 'agreements');
+    sync('vendorPayments', 'vendorPayments');
 
     if(currentRole === 'owner'){
       sync('clientPayments', 'clientPayments');
@@ -2054,6 +2078,76 @@ function isSiteLockedForMe(siteId){
   const s = DATA.sites.find(x=>x.id===siteId);
   return !!(s && s.status === 'completed');
 }
+/* ---------------- Vendor Ledger (multi-site lumpsum payments) ----------------
+   A supplier/vendor can supply material across MANY sites. When we pay them
+   a lumpsum, this allocates that payment across their oldest unpaid bills
+   first (FIFO — "purana bill pehle clear"), possibly spanning several sites.
+   Original bills are never modified — this is a computed overlay on top of
+   them, recalculated fresh from the data every time so it can never drift. */
+function vendorNameKey(name){ return (name||'').trim().toLowerCase(); }
+
+function computeVendorAllocations(supplier){
+  const key = vendorNameKey(supplier);
+  const bills = DATA.udhar.filter(u => vendorNameKey(u.supplier) === key)
+    .slice().sort((a,b)=> a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  const payments = DATA.vendorPayments.filter(p => vendorNameKey(p.supplier) === key)
+    .slice().sort((a,b)=> a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+
+  const billRemaining = {}, billPaid = {};
+  bills.forEach(b => { billRemaining[b.id] = Number(b.amount); billPaid[b.id] = 0; });
+
+  const paymentAllocations = {};
+  payments.forEach(p => {
+    let left = Number(p.amount);
+    const allocs = [];
+    for(const b of bills){
+      if(left <= 0) break;
+      if(billRemaining[b.id] <= 0) continue;
+      const apply = Math.min(left, billRemaining[b.id]);
+      billRemaining[b.id] -= apply;
+      billPaid[b.id] += apply;
+      left -= apply;
+      allocs.push({ udharId:b.id, siteId:b.siteId, material:b.material, billDate:b.date, amount:apply });
+    }
+    paymentAllocations[p.id] = { allocs, unallocated:left };
+  });
+
+  return { bills, payments, billRemaining, billPaid, paymentAllocations };
+}
+
+function allVendorNames(){
+  const seen = new Map();
+  DATA.udhar.forEach(u=>{
+    const key = vendorNameKey(u.supplier);
+    if(key && !seen.has(key)) seen.set(key, u.supplier.trim());
+  });
+  return [...seen.values()].sort();
+}
+
+function vendorTotals(supplier){
+  const { bills, payments, billRemaining } = computeVendorAllocations(supplier);
+  const billed = bills.reduce((a,b)=>a+Number(b.amount),0);
+  const paid = payments.reduce((a,p)=>a+Number(p.amount),0);
+  const outstanding = Object.values(billRemaining).reduce((a,v)=>a+Math.max(v,0),0);
+  return { billed, paid, outstanding, billCount:bills.length };
+}
+
+/* Preview only — used to show "yeh payment kahan jayegi" before saving */
+function previewFifoAllocation(supplier, amount){
+  const { bills, billRemaining: existingRemaining } = computeVendorAllocations(supplier);
+  let left = Number(amount);
+  const preview = [];
+  for(const b of bills){
+    if(left <= 0) break;
+    const rem = existingRemaining[b.id];
+    if(rem <= 0) continue;
+    const apply = Math.min(left, rem);
+    preview.push({ site: siteName(b.siteId), material:b.material, billDate:b.date, billAmount:b.amount, appliedNow:apply, remainingAfter: rem-apply });
+    left -= apply;
+  }
+  return { preview, leftover: left };
+}
+
 function siteCost(siteId){
   const exp = DATA.expenses.filter(e=>e.siteId===siteId).reduce((a,e)=>a+Number(e.amount),0);
   const ud = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
@@ -2184,13 +2278,19 @@ async function deleteSite(id){
 
 /* ---------------- Add Expense tab ---------------- */
 document.getElementById('expType').addEventListener('change', (e)=>{
-  const isLabour = e.target.value==='labour';
-  const isMaterial = e.target.value==='material';
+  const val = e.target.value;
+  const isLabour = val==='labour';
+  const isMaterial = val==='material';
+  const isUdhar = val==='udhar';
   document.getElementById('expCategoryWrap').style.display = isLabour ? 'block' : 'none';
   document.getElementById('expMaterialTypeWrap').style.display = isMaterial ? 'block' : 'none';
-  document.getElementById('expNameLabel').textContent = isLabour ? 'Contractor Name' : (isMaterial ? 'Vendor / Shop Name' : 'Paid To');
-  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names' };
-  document.getElementById('expName').setAttribute('list', listMap[e.target.value]);
+  document.getElementById('expUdharMaterialWrap').style.display = isUdhar ? 'block' : 'none';
+  document.getElementById('expUdharQtyRow').style.display = isUdhar ? 'flex' : 'none';
+  document.getElementById('expModeWrap').style.display = isUdhar ? 'none' : 'block';
+  document.getElementById('expNameLabel').textContent =
+    isLabour ? 'Contractor Name' : isMaterial ? 'Vendor / Shop Name' : isUdhar ? 'Supplier Name' : 'Paid To';
+  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names', udhar:'dl-suppliers' };
+  document.getElementById('expName').setAttribute('list', listMap[val]);
 });
 document.getElementById('expDate').value = todayStr();
 
@@ -2253,6 +2353,27 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
 
   const proceed = await checkDuplicatePayment(contractor, date, editingExpenseId);
   if(!proceed) return;
+
+  if(type === 'udhar'){
+    try{
+      await db.collection('udhar').add({
+        siteId, supplier: contractor,
+        material: document.getElementById('expUdharMaterial').value,
+        qty: document.getElementById('expQty').value,
+        unit: document.getElementById('expUnit').value.trim(),
+        date, amount,
+        status: document.getElementById('expUdharStatus').value,
+        note
+      });
+      showToast('Udhar entry add ho gayi ✓');
+    }catch(e){ errEl.textContent = 'Error: ' + e.message; return; }
+    document.getElementById('expName').value='';
+    document.getElementById('expAmount').value='';
+    document.getElementById('expQty').value='';
+    document.getElementById('expUnit').value='';
+    document.getElementById('expNote').value='';
+    return;
+  }
 
   if(editingExpenseId){
     const item = DATA.expenses.find(e=>e.id===editingExpenseId);
@@ -2448,6 +2569,110 @@ async function deleteUdhar(id){
 }
 document.getElementById('udListSiteFilter').addEventListener('change', renderUdharTable);
 document.getElementById('udListStatusFilter').addEventListener('change', renderUdharTable);
+
+/* ---------------- Vendor Ledger UI ---------------- */
+function renderVendorLedger(){
+  const tbody = document.querySelector('#vendorLedgerTable tbody');
+  if(!tbody) return;
+  const vendors = allVendorNames();
+  if(vendors.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Abhi koi udhar entry nahi hai, isliye vendor ledger khaali hai.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = vendors.map(v=>{
+    const t = vendorTotals(v);
+    return `<tr>
+      <td><strong>${v}</strong></td>
+      <td class="amt">${inr(t.billed)}</td>
+      <td class="amt" style="color:var(--good)">${inr(t.paid)}</td>
+      <td class="amt" style="color:${t.outstanding>0?'var(--bad)':'inherit'}">${inr(t.outstanding)}</td>
+      <td>${t.billCount}</td>
+      <td>
+        <button class="btn-danger-text" style="color:var(--blue)" onclick="openVendorBillsModal('${v.replace(/'/g,"\\'")}')">View Bills</button>
+        &nbsp;·&nbsp;
+        <button class="btn-danger-text" style="color:var(--good)" onclick="openPayVendorModal('${v.replace(/'/g,"\\'")}')">Pay Vendor</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openPayVendorModal(supplier){
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal" style="width:460px">
+    <h3>Pay ${supplier}</h3>
+    <p>Amount daalo — system automatically inke sabse purane pending bill se shuru karke, chahe kisi bhi site ka ho, adjust karta jayega.</p>
+    <div class="grid cols-2">
+      <div class="field"><label>Amount (₹)</label><input id="vpAmount" type="number" min="0" placeholder="e.g. 100000"></div>
+      <div class="field"><label>Date</label><input id="vpDate" type="date" value="${todayStr()}"></div>
+    </div>
+    <div class="field"><label>Note (optional)</label><input id="vpNote" placeholder="e.g. bank transfer / cash"></div>
+    <div id="vpPreview" style="margin:10px 0"></div>
+    <div class="login-error" id="vpErr"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" id="vpCancel" style="flex:1;justify-content:center">Cancel</button>
+      <button class="btn btn-primary" id="vpSave" style="flex:1;justify-content:center">Save Payment</button>
+    </div></div>`;
+  document.body.appendChild(bg);
+  const close = ()=>bg.remove();
+  bg.addEventListener('click', e=>{ if(e.target===bg) close(); });
+  bg.querySelector('#vpCancel').onclick = close;
+
+  const updatePreview = ()=>{
+    const amt = Number(document.getElementById('vpAmount').value);
+    const previewEl = document.getElementById('vpPreview');
+    if(!amt || amt<=0){ previewEl.innerHTML = ''; return; }
+    const { preview, leftover } = previewFifoAllocation(supplier, amt);
+    if(preview.length===0){
+      previewEl.innerHTML = `<div class="footnote">Is vendor ka koi pending bill nahi hai — pura amount unallocated rahega.</div>`;
+      return;
+    }
+    previewEl.innerHTML = `<div class="table-wrap" style="max-height:180px;overflow-y:auto"><table style="font-size:12px"><thead><tr>
+      <th>Site</th><th>Material</th><th>Bill Date</th><th>Applied Now</th>
+    </tr></thead><tbody>
+      ${preview.map(p=>`<tr><td>${p.site}</td><td>${p.material}</td><td>${p.billDate}</td><td class="amt">${inr(p.appliedNow)}</td></tr>`).join('')}
+    </tbody></table></div>
+    ${leftover>0 ? `<div class="footnote" style="color:var(--amber)">⚠ ${inr(leftover)} kisi bill se match nahi hua (sab bills clear ho jayenge) — extra credit reh jayega.</div>` : ''}`;
+  };
+  document.getElementById('vpAmount').addEventListener('input', updatePreview);
+
+  bg.querySelector('#vpSave').onclick = async ()=>{
+    const amount = Number(document.getElementById('vpAmount').value);
+    const date = document.getElementById('vpDate').value || todayStr();
+    const note = document.getElementById('vpNote').value.trim();
+    const errEl = document.getElementById('vpErr');
+    if(!amount || amount<=0){ errEl.textContent = 'Sahi amount daalo.'; return; }
+    try{
+      await db.collection('vendorPayments').add({ supplier, amount, date, note });
+      close();
+      showToast(`${supplier} ko payment record ho gaya ✓`);
+    }catch(e){ errEl.textContent = 'Error: ' + e.message; }
+  };
+}
+
+function openVendorBillsModal(supplier){
+  const { bills, billPaid, billRemaining } = computeVendorAllocations(supplier);
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal" style="width:560px;max-width:96vw">
+    <h3>${supplier} — Original Bills</h3>
+    <p>Ye aapki asli billing hai, site-wise, jaisi ki entry ki gayi thi — kisi bhi payment se ye badalti nahi.</p>
+    <div class="table-wrap" style="max-height:340px;overflow-y:auto"><table style="font-size:12.5px"><thead><tr>
+      <th>Date</th><th>Site</th><th>Material</th><th>Bill Amount</th><th>Paid (Vendor Ledger)</th><th>Remaining</th>
+    </tr></thead><tbody>
+      ${bills.map(b=>`<tr>
+        <td>${b.date}</td><td>${siteName(b.siteId)}</td><td>${b.material}</td>
+        <td class="amt">${inr(b.amount)}</td>
+        <td class="amt" style="color:var(--good)">${inr(billPaid[b.id]||0)}</td>
+        <td class="amt" style="color:${billRemaining[b.id]>0?'var(--bad)':'inherit'}">${inr(billRemaining[b.id]||0)}</td>
+      </tr>`).join('')}
+    </tbody></table></div>
+    <button class="btn btn-primary" id="vbClose" style="width:100%;justify-content:center;margin-top:14px">Close</button>
+  </div>`;
+  document.body.appendChild(bg);
+  bg.addEventListener('click', e=>{ if(e.target===bg) bg.remove(); });
+  bg.querySelector('#vbClose').onclick = ()=>bg.remove();
+}
 
 /* ---------------- Site Detail (drill-down view) ---------------- */
 let siteDetailChart = null;
