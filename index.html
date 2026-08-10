@@ -529,7 +529,14 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card">
-        <h2><span data-i18n="h2_trend">Monthly Trend</span> <small>Bold line = monthly total, halki line = 15-din ka breakup. Cursor kisi bhi point pe rakho, us date ka exact amount dikhega.</small></h2>
+        <div class="toolbar">
+          <h2 style="margin:0;border:none;padding:0"><span data-i18n="h2_trend">Monthly Trend</span> <small style="display:block;font-weight:400">Bold line = monthly total, halki line = 15-din ka breakup. Cursor kisi bhi point pe rakho, exact amount dikhega.</small></h2>
+          <div class="toolbar-left">
+            <button class="btn btn-ghost" id="trendPrevBtn" style="padding:7px 12px;font-size:12.5px">← Pichle Mahine</button>
+            <span class="footnote" id="trendRangeLabel" style="margin:0"></span>
+            <button class="btn btn-ghost" id="trendNextBtn" style="padding:7px 12px;font-size:12.5px">Agle Mahine →</button>
+          </div>
+        </div>
         <div style="position:relative;height:280px"><canvas id="chartTrend"></canvas></div>
       </div>
 
@@ -5241,6 +5248,21 @@ function renderMaterialBreakdown(exp, ud){
   tbody.innerHTML = rows.map(([name,amt])=>`<tr><td>${name}</td><td class="amt">${inr(amt)}</td></tr>`).join('');
 }
 let charts = {};
+let trendWindowOffset = 0; // 0 = most recent 6 months; higher = further back in time
+document.getElementById('trendPrevBtn').addEventListener('click', ()=>{
+  trendWindowOffset += 4;
+  renderCharts(
+    document.getElementById('dashSiteFilter').value==='all' ? DATA.expenses : DATA.expenses.filter(e=>e.siteId===document.getElementById('dashSiteFilter').value),
+    document.getElementById('dashSiteFilter').value==='all' ? DATA.udhar : DATA.udhar.filter(u=>u.siteId===document.getElementById('dashSiteFilter').value)
+  );
+});
+document.getElementById('trendNextBtn').addEventListener('click', ()=>{
+  trendWindowOffset = Math.max(trendWindowOffset - 4, 0);
+  renderCharts(
+    document.getElementById('dashSiteFilter').value==='all' ? DATA.expenses : DATA.expenses.filter(e=>e.siteId===document.getElementById('dashSiteFilter').value),
+    document.getElementById('dashSiteFilter').value==='all' ? DATA.udhar : DATA.udhar.filter(u=>u.siteId===document.getElementById('dashSiteFilter').value)
+  );
+});
 function chartDefaults(){
   return {
     responsive:true, maintainAspectRatio:false,
@@ -5320,7 +5342,24 @@ function renderCharts(exp, ud){
   DATA.expenses.forEach(e=>addAmt(e.date, Number(e.amount)));
   DATA.udhar.forEach(u=>addAmt(u.date, Number(u.amount)));
 
-  const periodKeys = Object.keys(byFortnight).sort().slice(-12); // last 6 months, 2 points each
+  const allPeriodKeys = Object.keys(byFortnight).sort();
+  const WINDOW = 12; // 12 fortnights = 6 months at a time, same size as before
+  const maxOffset = Math.max(allPeriodKeys.length - WINDOW, 0);
+  if(trendWindowOffset < 0) trendWindowOffset = 0;
+  if(trendWindowOffset > maxOffset) trendWindowOffset = maxOffset;
+  const end = allPeriodKeys.length - trendWindowOffset;
+  const start = Math.max(end - WINDOW, 0);
+  const periodKeys = allPeriodKeys.slice(start, end);
+
+  const prevBtn = document.getElementById('trendPrevBtn');
+  const nextBtn = document.getElementById('trendNextBtn');
+  const rangeLabel = document.getElementById('trendRangeLabel');
+  if(prevBtn) prevBtn.disabled = (start === 0);
+  if(nextBtn) nextBtn.disabled = (trendWindowOffset === 0);
+  if(rangeLabel && periodKeys.length){
+    rangeLabel.textContent = `${periodKeys[0].slice(0,7)} – ${periodKeys[periodKeys.length-1].slice(0,7)}`;
+  }
+
   killChart('trend');
   const trendEl = document.getElementById('chartTrend');
   if(trendEl && periodKeys.length){
