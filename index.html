@@ -82,6 +82,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
   }
   nav.tabs button:hover{background:rgba(255,255,255,0.055);color:#fff;}
   nav.tabs button.active{background:var(--blue);color:#fff;font-weight:600;box-shadow:inset 3px 0 0 var(--hivis);}
+  .nav-group-label{
+    font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;
+    color:#5E6C7E;padding:14px 13px 5px;font-weight:600;
+  }
+  .nav-group-label:first-child{padding-top:4px;}
   .tab-ico{width:15px;text-align:center;font-size:13px;opacity:.85;}
   .sidebar-foot{padding:13px 20px;font-size:10.5px;color:#5E6C7E;border-top:1px solid rgba(255,255,255,0.07);line-height:1.5;}
 
@@ -438,24 +443,35 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
     </div>
     <div class="brickstrip"></div>
     <nav class="tabs" id="navTabs">
+      <div class="nav-group-label">Operations</div>
       <button data-tab="dashboard" class="active"><span class="tab-ico">▦</span> <span data-i18n="dashboard">Dashboard</span></button>
       <button data-tab="sites"><span class="tab-ico">◆</span> <span data-i18n="sites">Sites</span></button>
       <button data-tab="expense"><span class="tab-ico">₹</span> <span data-i18n="expense">Add Expense</span></button>
       <button data-tab="udhar"><span class="tab-ico">↺</span> <span data-i18n="udhar">Udhar Material</span></button>
       <button data-tab="contractwork"><span class="tab-ico">⚒</span> <span data-i18n="contractwork">Contractor Work</span></button>
       <button data-tab="import"><span class="tab-ico">⇪</span> <span data-i18n="import">Import Data</span></button>
+
+      <div class="nav-group-label owner-only">Client &amp; Funding</div>
       <button data-tab="clientpay" class="owner-only"><span class="tab-ico">⇩</span> <span data-i18n="clientpay">Client Payments</span></button>
       <button data-tab="investor" class="owner-only"><span class="tab-ico">⇧</span> <span data-i18n="investor">Investor Funding</span></button>
-      <button data-tab="office" class="owner-only"><span class="tab-ico">⌂</span> <span data-i18n="office_nav">Office Expense</span></button>
+      <button data-tab="sitefunding" class="owner-only"><span class="tab-ico">🏛️</span> Site Funding</button>
       <button data-tab="pnl" class="owner-only"><span class="tab-ico">±</span> <span data-i18n="pnl">Profit &amp; Loss</span></button>
+
+      <div class="nav-group-label owner-only">Company Expenses</div>
+      <button data-tab="office" class="owner-only"><span class="tab-ico">⌂</span> <span data-i18n="office_nav">Office Expense</span></button>
+      <button data-tab="consultancy" class="owner-only"><span class="tab-ico">📐</span> Consultancy</button>
+
+      <div class="nav-group-label owner-only">Personal &amp; Projects</div>
       <button data-tab="personal" class="owner-only"><span class="tab-ico">💰</span> Personal Finance</button>
       <button data-tab="projects" class="owner-only"><span class="tab-ico">🏘️</span> Project Investments</button>
+
+      <div class="nav-group-label">Tools</div>
       <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> Payment Slabs</button>
-      <button data-tab="consultancy" class="owner-only"><span class="tab-ico">📐</span> Consultancy</button>
+      <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
+
+      <div class="nav-group-label owner-only">Admin</div>
       <button data-tab="team" class="owner-only"><span class="tab-ico">👥</span> <span data-i18n="team">Team Logins</span></button>
       <button data-tab="audit" class="owner-only"><span class="tab-ico">🕓</span> Audit Log</button>
-      <button data-tab="sitefunding" class="owner-only"><span class="tab-ico">🏛️</span> Site Funding</button>
-      <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
     </nav>
     <div class="sidebar-foot">Data is saved automatically to your account, per browser session.</div>
   </aside>
@@ -3884,10 +3900,11 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
 });
 
 /* ---------------- Backup & Restore ---------------- */
-document.getElementById('backupBtn').addEventListener('click', ()=>{
+document.getElementById('backupBtn').addEventListener('click', async ()=>{
   const blob = new Blob([JSON.stringify(DATA, null, 2)], {type:'application/json'});
   saveBlob(blob, `FirstBrix_Backup_${todayStr()}.json`);
   showToast('Backup taiyar ✓');
+  try{ await db.collection('meta').doc('lastBackup').set({ date: todayStr() }); }catch(e){}
 });
 
 document.getElementById('restoreFile').addEventListener('change', async (e)=>{
@@ -5983,6 +6000,16 @@ function renderReminders(){
   const items = []; // { urgency: 'high'|'medium', text }
 
   if(currentRole === 'owner'){
+    // Backup reminder — nudge if it's been 7+ days (or never)
+    if(lastBackupDate === null){
+      items.push({ urgency:'medium', text:`Aapne kabhi <strong>Backup</strong> download nahi ki — Import Data tab se ek le lo, data safe rahega.` });
+    } else if(lastBackupDate){
+      const days = daysBetween(lastBackupDate);
+      if(days !== null && days >= 7){
+        items.push({ urgency: days>=14 ? 'high':'medium', text:`Last Backup <strong>${days} din</strong> pehle li thi (${lastBackupDate}) — ek nayi le lena chahiye.` });
+      }
+    }
+
     // Investor returns past their expected date
     DATA.investorLoans.forEach(i=>{
       if(i.status==='returned' || investorRemaining(i)<=0) return;
@@ -6450,9 +6477,17 @@ async function init(){
   renderDashboard();
   generateReport();
   showStorageMode();
-  if(currentRole==='owner') await loadTeam();
+  if(currentRole==='owner'){
+    await loadTeam();
+    try{
+      const d = await db.collection('meta').doc('lastBackup').get();
+      lastBackupDate = d.exists ? d.data().date : null;
+    }catch(e){ lastBackupDate = null; }
+    renderReminders();
+  }
   await maybeRunAutoReport(false);
 }
+let lastBackupDate = undefined; // undefined = not checked yet, null = never backed up
 
 function showBootTimeoutError(){
   const el = document.getElementById('bootLoader');
