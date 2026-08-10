@@ -518,11 +518,6 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="stat" style="border-left-color:#E8940C"><div class="lbl">Hamara Share (Projects)</div><div class="val" id="statProjectOurShare" style="color:#A66A05">₹0</div></div>
       </div>
 
-      <div class="card" id="remindersCard" style="display:none">
-        <h2>⏰ Reminders <small>Overdue aur pending cheezein — action lena chahiye</small></h2>
-        <ul id="remindersList" style="margin:0;padding-left:20px;line-height:1.9;font-size:13.5px"></ul>
-      </div>
-
       <div class="card" id="insightsCard">
         <h2><span data-i18n="h2_performance">Company Performance</span> <small>Aapke data se nikaale gaye patterns — final faisla khud lena</small></h2>
         <ul id="insightsList" style="margin:0;padding-left:20px;line-height:1.9;font-size:13.5px"></ul>
@@ -570,6 +565,12 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="table-wrap"><table id="recentTable"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th data-i18n="th_type">Type</th><th>Category / Item</th><th data-i18n="th_name">Name</th><th data-i18n="th_amount">Amount</th>
         </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card" id="remindersCard" style="display:none">
+        <h2>⏰ Reminders <small>Overdue aur pending cheezein — action lena chahiye</small></h2>
+        <ul id="remindersList" style="margin:0;padding-left:20px;line-height:1.9;font-size:13.5px"></ul>
+        <button class="btn btn-ghost" id="remindersShowMoreBtn" style="display:none;margin-top:10px;padding:6px 12px;font-size:12px"></button>
       </div>
 
       <div class="card owner-only">
@@ -2458,6 +2459,36 @@ document.getElementById('addSiteBtn').addEventListener('click', async ()=>{
   logAudit('create','Site', `"${name}" add ki gayi${gstApplicable?' (GST applicable)':''}`);
 });
 
+function editSite(id){
+  const s = DATA.sites.find(x=>x.id===id);
+  if(!s) return;
+  openEditModal('Site', [
+    {key:'name', label:'Site Name', value:s.name},
+    {key:'location', label:'Location', value:s.location},
+    {key:'contractValue', label:'Contract / Project Value (₹)', value:s.contractValue, type:'number'},
+    {key:'siteType', label:'Site Type', value:s.siteType||'private', type:'select', options:[
+      {value:'private', label:'Private Client'}, {value:'government', label:'Government / Subcontract (RA Bill)'}
+    ]},
+    {key:'gstApplicable', label:'GST Applicable', value:s.gstApplicable?'yes':'no', type:'select', options:[
+      {value:'no', label:'No'}, {value:'yes', label:'Yes'}
+    ]},
+    {key:'gstin', label:'Client GSTIN', value:s.gstin},
+    {key:'gstRate', label:'GST Rate (%)', value:s.gstRate!==undefined?s.gstRate:18, type:'number'},
+    {key:'hsn', label:'HSN/SAC Code', value:s.hsn}
+  ], async v=>{
+    await db.collection('sites').doc(id).update({ name:v.name, location:v.location });
+    await db.collection('siteFinance').doc(id).set({
+      contractValue: Number(v.contractValue)||0,
+      siteType: v.siteType,
+      gstApplicable: v.gstApplicable === 'yes',
+      gstin: v.gstin,
+      gstRate: Number(v.gstRate)||18,
+      hsn: v.hsn
+    });
+    logAudit('update','Site', `"${v.name}" ke details edit kiye`);
+  });
+}
+
 function renderSitesTable(){
   const tbody = document.querySelector('#sitesTable tbody');
   if(DATA.sites.length===0){
@@ -2474,7 +2505,7 @@ function renderSitesTable(){
     const count = exp.length + ud.length;
     const isCompleted = s.status === 'completed';
     return `<tr>
-      <td><a href="javascript:void(0)" onclick="openSiteDetail('${s.id}')" style="color:var(--blue);font-weight:600;text-decoration:none">${s.name} →</a></td>
+      <td><a href="javascript:void(0)" onclick="openSiteDetail('${s.id}')" style="color:var(--blue);font-weight:600;text-decoration:none">${s.name} →</a>${s.siteType==='government'?' <span class="tag other" style="font-size:9.5px">GOVT</span>':''}</td>
       <td>${s.location||'—'}</td>
       <td><span class="tag ${isCompleted?'paid':'pending'}">${isCompleted?'Completed':'Running'}</span></td>
       <td class="amt owner-only">${contract ? inr(contract) : '—'}</td>
@@ -2483,6 +2514,8 @@ function renderSitesTable(){
       <td class="amt">${inr(cost)}</td>
       <td>${count}</td>
       <td>
+        <button class="btn-danger-text owner-only" style="color:var(--blue)" onclick="editSite('${s.id}')">Edit</button>
+        &nbsp;·&nbsp;
         <button class="btn-danger-text owner-only" style="color:var(--good)" onclick="toggleSiteStatus('${s.id}')">${isCompleted?'Reopen':'Mark Complete'}</button>
         &nbsp;·&nbsp;
         <button class="btn-danger-text owner-only" onclick="deleteSite('${s.id}')">Delete</button>
@@ -6010,8 +6043,24 @@ function renderReminders(){
   if(items.length === 0){ card.style.display = 'none'; return; }
   card.style.display = 'block';
   items.sort((a,b)=> (a.urgency==='high'?0:1) - (b.urgency==='high'?0:1));
-  list.innerHTML = items.map(it=>`<li style="color:${it.urgency==='high'?'var(--bad)':'inherit'}">${it.text}</li>`).join('');
+
+  const LIMIT = 4;
+  const visible = remindersExpanded ? items : items.slice(0, LIMIT);
+  list.innerHTML = visible.map(it=>`<li style="color:${it.urgency==='high'?'var(--bad)':'inherit'}">${it.text}</li>`).join('');
+
+  const moreBtn = document.getElementById('remindersShowMoreBtn');
+  if(items.length > LIMIT){
+    moreBtn.style.display = 'inline-flex';
+    moreBtn.textContent = remindersExpanded ? 'Kam Dikhao' : `Aur Dikhao (${items.length - LIMIT} more)`;
+  } else {
+    moreBtn.style.display = 'none';
+  }
 }
+let remindersExpanded = false;
+document.getElementById('remindersShowMoreBtn').addEventListener('click', ()=>{
+  remindersExpanded = !remindersExpanded;
+  renderReminders();
+});
 
 function renderInsights(){
   const list = document.getElementById('insightsList');
