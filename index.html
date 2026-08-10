@@ -743,6 +743,16 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
       <div class="card">
         <div class="toolbar">
+          <h2 style="margin:0">Payment History <small style="display:block;font-weight:400;color:var(--ink-soft)">Kisko, kab, kitna diya — sabhi vendor payments</small></h2>
+          <div class="toolbar-left"><select id="vpListFilter"><option value="all">All Vendors</option></select></div>
+        </div>
+        <div class="table-wrap"><table id="vendorPaymentsTable"><thead><tr>
+          <th>Date</th><th>Vendor</th><th>Amount</th><th>Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
           <h2 style="margin:0">All Udhar Entries <small style="display:block;font-weight:400;color:var(--ink-soft)">Original billing — jaisi entry ki gayi thi, waisi hi</small></h2>
           <div class="toolbar-left">
             <select id="udListSiteFilter"><option value="all">All Sites</option></select>
@@ -750,7 +760,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
         </div>
         <div class="table-wrap"><table id="udharTable"><thead><tr>
-          <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Supplier</th><th>Material</th><th>Qty</th><th data-i18n="th_amount">Amount</th><th data-i18n="th_status">Status</th><th data-i18n="th_note">Note</th><th></th>
+          <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Supplier</th><th>Material</th><th>Qty</th><th data-i18n="th_amount">Amount</th><th>Paid</th><th data-i18n="th_status">Status</th><th data-i18n="th_note">Note</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
     </section>
@@ -2582,29 +2592,53 @@ function renderUdharTable(){
   const statusFilter = document.getElementById('udListStatusFilter').value;
   let rows = [...DATA.udhar].sort((a,b)=> b.date.localeCompare(a.date));
   if(siteFilter && siteFilter!=='all') rows = rows.filter(r=>r.siteId===siteFilter);
-  if(statusFilter && statusFilter!=='all') rows = rows.filter(r=>r.status===statusFilter);
+
+  // Effective status: paid if manually marked paid OR fully covered by
+  // vendor payments (via FIFO allocation) — whichever comes first.
+  const remMap = udharRemainingForEntries(DATA.udhar);
+  const effStatus = r => {
+    const remaining = remMap[r.id];
+    const remainingKnown = remaining !== undefined;
+    if(r.status==='paid' || (remainingKnown && remaining<=0)) return 'paid';
+    if(remainingKnown && remaining < Number(r.amount)) return 'partial';
+    return 'pending';
+  };
+
+  if(statusFilter && statusFilter!=='all') rows = rows.filter(r=>{
+    const s = effStatus(r);
+    return statusFilter==='paid' ? s==='paid' : s!=='paid';
+  });
+
   const tbody = document.querySelector('#udharTable tbody');
   if(rows.length===0){
-    tbody.innerHTML = `<tr><td colspan="9" class="empty">Koi udhar entry nahi mili.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="empty">Koi udhar entry nahi mili.</td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.date}</td>
-    <td>${siteName(r.siteId)}</td>
-    <td>${r.supplier}</td>
-    <td>${r.material}${r.qty?(' ('+r.qty+' '+(r.unit||'')+')'):''}</td>
-    <td>${r.qty||'—'} ${r.unit||''}</td>
-    <td class="amt">${inr(r.amount)}</td>
-    <td><span class="tag ${r.status}">${r.status}</span></td>
-    <td>${r.note||'—'}</td>
-    <td>
-      <button class="btn-danger-text" style="color:var(--blue)" onclick="editUdhar('${r.id}')">Edit</button>
-      &nbsp;·&nbsp;
-      <button class="btn-danger-text" onclick="toggleUdhar('${r.id}')">${r.status==='paid'?'Mark Pending':'Mark Paid'}</button>
-      &nbsp;·&nbsp;
-      <button class="btn-danger-text" onclick="deleteUdhar('${r.id}')">Delete</button>
-    </td>
-  </tr>`).join('');
+  tbody.innerHTML = rows.map(r=>{
+    const remaining = remMap[r.id] !== undefined ? remMap[r.id] : Number(r.amount);
+    const paid = Number(r.amount) - remaining;
+    const s = effStatus(r);
+    const tagClass = s==='paid' ? 'paid' : (s==='partial' ? 'other' : 'pending');
+    const label = s==='paid' ? 'Paid' : (s==='partial' ? 'Partial' : 'Pending');
+    return `<tr>
+      <td>${r.date}</td>
+      <td>${siteName(r.siteId)}</td>
+      <td>${r.supplier}</td>
+      <td>${r.material}${r.qty?(' ('+r.qty+' '+(r.unit||'')+')'):''}</td>
+      <td>${r.qty||'—'} ${r.unit||''}</td>
+      <td class="amt">${inr(r.amount)}</td>
+      <td class="amt" style="color:var(--good)">${paid>0?inr(paid):'—'}</td>
+      <td><span class="tag ${tagClass}">${label}</span></td>
+      <td>${r.note||'—'}</td>
+      <td>
+        <button class="btn-danger-text" style="color:var(--blue)" onclick="editUdhar('${r.id}')">Edit</button>
+        &nbsp;·&nbsp;
+        <button class="btn-danger-text" onclick="toggleUdhar('${r.id}')">${r.status==='paid'?'Mark Pending':'Mark Paid (manual)'}</button>
+        &nbsp;·&nbsp;
+        <button class="btn-danger-text" onclick="deleteUdhar('${r.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 const MATERIAL_TYPES = ['Cement','Steel / TMT Bar','Bricks','Sand','Aggregate / Gitti','Tiles','Paint','Plumbing Material','Electrical Material','Hardware','Wood / Furniture','Other'];
 
@@ -2663,7 +2697,42 @@ function renderVendorLedger(){
       </td>
     </tr>`;
   }).join('');
+  renderVendorPayments();
 }
+
+function renderVendorPayments(){
+  const tbody = document.querySelector('#vendorPaymentsTable tbody');
+  if(!tbody) return;
+
+  const filterEl = document.getElementById('vpListFilter');
+  const vendors = allVendorNames();
+  const cur = filterEl.value;
+  filterEl.innerHTML = '<option value="all">All Vendors</option>' + vendors.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(vendors.includes(cur)) filterEl.value = cur;
+
+  let rows = [...DATA.vendorPayments].sort((a,b)=> b.date.localeCompare(a.date));
+  if(filterEl.value !== 'all') rows = rows.filter(p=>vendorNameKey(p.supplier)===vendorNameKey(filterEl.value));
+
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Abhi koi vendor payment nahi ki gayi.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(p=>`<tr>
+    <td>${p.date}</td>
+    <td><strong>${p.supplier}</strong></td>
+    <td class="amt" style="color:var(--good)">${inr(p.amount)}</td>
+    <td>${p.note||'—'}</td>
+    <td><button class="btn-danger-text" onclick="deleteVendorPayment('${p.id}')">Delete</button></td>
+  </tr>`).join('');
+}
+async function deleteVendorPayment(id){
+  if(!await uiConfirm('Ye payment record delete karni hai? Isse jo bills iske through paid hue the, wo wapas Pending ho jayenge.', 'Haan, delete karo')) return;
+  try{
+    await db.collection('vendorPayments').doc(id).delete();
+    showToast('Payment record delete ho gaya');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+document.getElementById('vpListFilter').addEventListener('change', renderVendorPayments);
 
 function openPayVendorModal(supplier){
   const bg = document.createElement('div');
