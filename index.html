@@ -454,24 +454,24 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="nav-group-label owner-only">Client &amp; Funding</div>
       <button data-tab="clientpay" class="owner-only"><span class="tab-ico">⇩</span> <span data-i18n="clientpay">Client Payments</span></button>
       <button data-tab="investor" class="owner-only"><span class="tab-ico">⇧</span> <span data-i18n="investor">Investor Funding</span></button>
-      <button data-tab="sitefunding" class="owner-only"><span class="tab-ico">🏛️</span> Site Funding</button>
+      <button data-tab="sitefunding" class="owner-only"><span class="tab-ico">🏛️</span> <span data-i18n="sitefunding">Site Funding</span></button>
       <button data-tab="pnl" class="owner-only"><span class="tab-ico">±</span> <span data-i18n="pnl">Profit &amp; Loss</span></button>
 
       <div class="nav-group-label owner-only">Company Expenses</div>
       <button data-tab="office" class="owner-only"><span class="tab-ico">⌂</span> <span data-i18n="office_nav">Office Expense</span></button>
-      <button data-tab="consultancy" class="owner-only"><span class="tab-ico">📐</span> Consultancy</button>
+      <button data-tab="consultancy" class="owner-only"><span class="tab-ico">📐</span> <span data-i18n="consultancy">Consultancy</span></button>
 
       <div class="nav-group-label owner-only">Personal &amp; Projects</div>
-      <button data-tab="personal" class="owner-only"><span class="tab-ico">💰</span> Personal Finance</button>
-      <button data-tab="projects" class="owner-only"><span class="tab-ico">🏘️</span> Project Investments</button>
+      <button data-tab="personal" class="owner-only"><span class="tab-ico">💰</span> <span data-i18n="personal">Personal Finance</span></button>
+      <button data-tab="projects" class="owner-only"><span class="tab-ico">🏘️</span> <span data-i18n="projects">Project Investments</span></button>
 
       <div class="nav-group-label">Tools</div>
-      <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> Payment Slabs</button>
+      <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> <span data-i18n="slabs">Payment Slabs</span></button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
 
       <div class="nav-group-label owner-only">Admin</div>
       <button data-tab="team" class="owner-only"><span class="tab-ico">👥</span> <span data-i18n="team">Team Logins</span></button>
-      <button data-tab="audit" class="owner-only"><span class="tab-ico">🕓</span> Audit Log</button>
+      <button data-tab="audit" class="owner-only"><span class="tab-ico">🕓</span> <span data-i18n="audit">Audit Log</span></button>
     </nav>
     <div class="sidebar-foot">Data is saved automatically to your account, per browser session.</div>
   </aside>
@@ -1100,7 +1100,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
     <!-- PERSONAL FINANCE -->
     <section id="tab-personal" style="display:none">
-      <h1 class="page-title">Personal Finance</h1>
+      <h1 class="page-title" data-i18n="personal">Personal Finance</h1>
       <p class="page-sub">Ye aapka personal paisa hai — company ke sites se alag. Plot, row house, apartment project, stocks, insurance mein kiya gaya investment, aur kisi ko personally diya gaya udhar — sab yahan track karo. Ye employee ko kabhi nahi dikhega.</p>
 
       <div class="stat-row">
@@ -1163,7 +1163,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
     <!-- PROJECT INVESTMENTS -->
     <section id="tab-projects" style="display:none">
-      <h1 class="page-title">Project Investments</h1>
+      <h1 class="page-title" data-i18n="projects">Project Investments</h1>
       <p class="page-sub">Wo deals jaha aap (aur kabhi investor) mil kar kuch kharidte ho — plot, row house, land — aur baad mein resell karke profit/loss banta hai. Jaise 13 Row House project: 41L ka unit, aapne 25L diya, investor ne 15L diya, phir sell hone par dono ka share nikalta hai.</p>
 
       <div class="stat-row">
@@ -1224,7 +1224,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
     <!-- PAYMENT SLABS -->
     <section id="tab-slabs" style="display:none">
-      <h1 class="page-title">Payment Slab Generator</h1>
+      <h1 class="page-title" data-i18n="slabs_title">Payment Slab Generator</h1>
       <p class="page-sub">Client ke saath payment schedule banao — kab kitna % milega. Poori tarah editable hai, apne hisab se stages aur percentages badlo, phir PDF/Word download karo.</p>
 
       <div class="card">
@@ -1308,7 +1308,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
     <!-- CONSULTANCY -->
     <section id="tab-consultancy" style="display:none">
-      <h1 class="page-title">Consultancy Income</h1>
+      <h1 class="page-title" data-i18n="consultancy_title">Consultancy Income</h1>
       <p class="page-sub">Construction se alag — Plan &amp; Design, Structural Consultancy, Property Dealing (commission), waghera ka income yahan track karo. Ye seedha overall Profit &amp; Loss mein bhi jud jayega.</p>
 
       <div class="stat-row">
@@ -1387,7 +1387,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
     <!-- SITE FUNDING -->
     <section id="tab-sitefunding" style="display:none">
-      <h1 class="page-title">Site Funding <small style="display:block;font-size:13px;font-weight:400;color:var(--ink-soft);margin-top:4px">Government/subcontract sites ke liye — start mein jo invest karna padta hai, uska source aur RA bill se recovery track karo</small></h1>
+      <h1 class="page-title"><span data-i18n="sitefunding">Site Funding</span> <small style="display:block;font-size:13px;font-weight:400;color:var(--ink-soft);margin-top:4px">Government/subcontract sites ke liye — start mein jo invest karna padta hai, uska source aur RA bill se recovery track karo</small></h1>
 
       <div class="card">
         <h2>Step 1 — Funding Suggestion Lo</h2>
@@ -1439,7 +1439,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
     <!-- AUDIT LOG -->
     <section id="tab-audit" style="display:none">
-      <h1 class="page-title">Audit Log</h1>
+      <h1 class="page-title" data-i18n="audit">Audit Log</h1>
       <p class="page-sub">Kisne, kab, kya kiya — sabhi important actions (add/delete) ka record. Ye kabhi edit ya delete nahi ho sakta, sirf dekha ja sakta hai.</p>
 
       <div class="card">
@@ -1782,6 +1782,8 @@ hinglish: {
   contractwork:'Contractor Work', import:'Import Data', clientpay:'Client Payments',
   investor:'Investor Funding', office:'Office & Employee Expense', office_nav:'Office Expense',
   pnl:'Profit & Loss', team:'Team Logins', reports:'Reports',
+  personal:'Personal Finance', projects:'Project Investments', slabs:'Payment Slabs', slabs_title:'Payment Slab Generator',
+  consultancy:'Consultancy', consultancy_title:'Consultancy Income', audit:'Audit Log', sitefunding:'Site Funding',
   sub_dashboard:'Sabhi sites ka overall expense summary.',
   sub_sites:'Har construction site ko yahan add karo, phir uske expenses track karo.',
   sub_expense:'Labour, material ya koi bhi other expense yahan se add karo.',
@@ -1827,6 +1829,8 @@ en: {
   dashboard:'Dashboard', sites:'Sites', expense:'Add Expense', udhar:'Credit Material', contractwork:'Contractor Work',
   import:'Import Data', clientpay:'Client Payments', investor:'Investor Funding', office:'Office & Employee Expense',
   office_nav:'Office Expense', pnl:'Profit & Loss', team:'Team Logins', reports:'Reports',
+  personal:'Personal Finance', projects:'Project Investments', slabs:'Payment Slabs', slabs_title:'Payment Slab Generator',
+  consultancy:'Consultancy', consultancy_title:'Consultancy Income', audit:'Audit Log', sitefunding:'Site Funding',
   sub_dashboard:'Overall expense summary across all sites.',
   sub_sites:'Add each construction site here, then track its expenses.',
   sub_expense:'Add labour, material, or any other expense here.',
@@ -1872,6 +1876,8 @@ hi: {
   dashboard:'डैशबोर्ड', sites:'साइट्स', expense:'खर्च जोड़ें', udhar:'उधार सामान', contractwork:'ठेकेदार का काम',
   import:'डेटा इम्पोर्ट करें', clientpay:'क्लाइंट भुगतान', investor:'निवेशक फंडिंग', office:'ऑफिस और कर्मचारी खर्च',
   office_nav:'ऑफिस खर्च', pnl:'लाभ और हानि', team:'टीम लॉगिन', reports:'रिपोर्ट्स',
+  personal:'व्यक्तिगत वित्त', projects:'प्रोजेक्ट निवेश', slabs:'पेमेंट स्लैब', slabs_title:'पेमेंट स्लैब जनरेटर',
+  consultancy:'कंसल्टेंसी', consultancy_title:'कंसल्टेंसी आय', audit:'ऑडिट लॉग', sitefunding:'साइट फंडिंग',
   sub_dashboard:'सभी साइट्स का कुल खर्च सारांश।',
   sub_sites:'हर निर्माण साइट यहाँ जोड़ें, फिर उसका खर्च ट्रैक करें।',
   sub_expense:'लेबर, सामान या कोई भी अन्य खर्च यहाँ से जोड़ें।',
@@ -1917,6 +1923,8 @@ mr: {
   dashboard:'डॅशबोर्ड', sites:'साइट्स', expense:'खर्च जोडा', udhar:'उधार साहित्य', contractwork:'कंत्राटदाराचे काम',
   import:'डेटा इम्पोर्ट करा', clientpay:'क्लायंट पेमेंट', investor:'गुंतवणूकदार निधी', office:'ऑफिस आणि कर्मचारी खर्च',
   office_nav:'ऑफिस खर्च', pnl:'नफा आणि तोटा', team:'टीम लॉगिन', reports:'रिपोर्ट्स',
+  personal:'वैयक्तिक वित्त', projects:'प्रकल्प गुंतवणूक', slabs:'पेमेंट स्लॅब', slabs_title:'पेमेंट स्लॅब जनरेटर',
+  consultancy:'सल्लागार सेवा', consultancy_title:'सल्लागार उत्पन्न', audit:'ऑडिट लॉग', sitefunding:'साइट फंडिंग',
   sub_dashboard:'सर्व साइट्सचा एकूण खर्च सारांश.',
   sub_sites:'प्रत्येक बांधकाम साइट इथे जोडा, मग तिचा खर्च ट्रॅक करा.',
   sub_expense:'लेबर, साहित्य किंवा इतर कोणताही खर्च इथून जोडा.',
