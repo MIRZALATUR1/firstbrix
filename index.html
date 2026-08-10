@@ -453,6 +453,8 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> Payment Slabs</button>
       <button data-tab="consultancy" class="owner-only"><span class="tab-ico">📐</span> Consultancy</button>
       <button data-tab="team" class="owner-only"><span class="tab-ico">👥</span> <span data-i18n="team">Team Logins</span></button>
+      <button data-tab="audit" class="owner-only"><span class="tab-ico">🕓</span> Audit Log</button>
+      <button data-tab="sitefunding" class="owner-only"><span class="tab-ico">🏛️</span> Site Funding</button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
     </nav>
     <div class="sidebar-foot">Data is saved automatically to your account, per browser session.</div>
@@ -461,6 +463,10 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
   <main>
     <div class="topbar">
       <div class="who">Logged in as <strong id="whoLabel">firstbrix</strong></div>
+      <div style="position:relative;flex:1;max-width:320px;min-width:160px">
+        <input id="globalSearchBox" placeholder="🔍 Kisi bhi naam se search karo..." style="width:100%;padding:8px 12px;font-size:13px">
+        <div id="globalSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(16,24,35,0.15);max-height:400px;overflow-y:auto;z-index:60"></div>
+      </div>
       <div class="topbar-right">
         <select id="langSwitchApp" style="width:auto;min-width:0;padding:7px 10px;font-size:12px">
           <option value="hinglish">Hinglish</option>
@@ -510,6 +516,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="stat" style="border-left-color:#1B4F8C"><div class="lbl">Project Investment (Invested)</div><div class="val" id="statProjectInvested" style="color:#1B4F8C">₹0</div></div>
         <div class="stat" style="border-left-color:#0F7355"><div class="lbl">Project Realized P/L</div><div class="val" id="statProjectPL" style="color:#0F7355">₹0</div></div>
         <div class="stat" style="border-left-color:#E8940C"><div class="lbl">Hamara Share (Projects)</div><div class="val" id="statProjectOurShare" style="color:#A66A05">₹0</div></div>
+      </div>
+
+      <div class="card" id="remindersCard" style="display:none">
+        <h2>⏰ Reminders <small>Overdue aur pending cheezein — action lena chahiye</small></h2>
+        <ul id="remindersList" style="margin:0;padding-left:20px;line-height:1.9;font-size:13.5px"></ul>
       </div>
 
       <div class="card" id="insightsCard">
@@ -610,8 +621,29 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="split">
           <div class="field" style="flex:2"><label data-i18n="lbl_sitename">Site Name</label><input id="newSiteName" placeholder="e.g. Nashik Road Bungalow"></div>
           <div class="field" style="flex:2"><label data-i18n="lbl_location_opt">Location (optional)</label><input id="newSiteLocation" list="dl-sites-location" placeholder="e.g. Nashik, Maharashtra"></div>
-          <div class="field owner-only" style="flex:1.4"><label data-i18n="lbl_contractvalue">Contract Value (₹) — optional</label><input id="newSiteContract" type="number" min="0" placeholder="Client se total kitna aana hai"></div>
+          <div class="field owner-only" style="flex:1.4"><label data-i18n="lbl_contractvalue">Contract / Project Value (₹)</label><input id="newSiteContract" type="number" min="0" placeholder="Total project value"></div>
           <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="addSiteBtn">+ <span data-i18n="btn_addsite">Add Site</span></button></div>
+        </div>
+        <div class="field owner-only" style="max-width:420px">
+          <label>Site Type</label>
+          <select id="newSiteType">
+            <option value="private">Private Client (jaisa normal ghar/project)</option>
+            <option value="government">Government / Subcontract (RA Bill based)</option>
+          </select>
+        </div>
+        <div class="hint owner-only" id="newSiteTypeHint" style="display:none;margin-top:-6px;margin-bottom:14px">
+          Government/subcontract kaam mein pehle aapko invest karna padta hai, phir RA (Running Account) bills ke through payment milta hai. Site add hone ke baad <strong>"Site Funding"</strong> tab se investment aur uska source track karo.
+        </div>
+        <div class="field owner-only" style="margin-top:4px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px;color:var(--ink)">
+            <input type="checkbox" id="newSiteGstApplicable" style="width:auto;accent-color:var(--blue)">
+            GST wala kaam hai (jaise government/institutional project) — private ghar ke liye ye off rehne do
+          </label>
+        </div>
+        <div class="grid cols-3" id="newSiteGstFieldsWrap" style="display:none">
+          <div class="field"><label>Client GSTIN</label><input id="newSiteGstin" placeholder="e.g. 27ABCDE1234F1Z5"></div>
+          <div class="field"><label>GST Rate (%)</label><input id="newSiteGstRate" type="number" min="0" max="28" value="18"></div>
+          <div class="field"><label>HSN/SAC Code — optional</label><input id="newSiteHsn" placeholder="e.g. 9954 (construction services)"></div>
         </div>
       </div>
 
@@ -889,6 +921,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
           <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="cpNote" placeholder="e.g. 2nd installment"></div>
         </div>
+        <div class="grid cols-2" id="cpRaBillWrap" style="display:none">
+          <div class="field"><label>RA Bill Number</label><input id="cpRaBillNo" placeholder="e.g. RA Bill 3"></div>
+          <div class="field"><label>Work Value Certified (₹) — optional</label><input id="cpRaWorkValue" type="number" min="0" placeholder="Engineer/PWD ne kitne ka certify kiya"></div>
+        </div>
+        <div class="footnote" id="cpGstNote" style="display:none"></div>
         <button class="btn btn-primary" id="addClientPayBtn">+ <span data-i18n="btn_addpayment">Add Payment</span></button>
       </div>
 
@@ -896,6 +933,18 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <h2><span data-i18n="h2_clientbalance">Site-wise Client Balance</span></h2>
         <div class="table-wrap"><table id="clientBalanceTable"><thead><tr>
           <th data-i18n="th_site">Site</th><th>Contract Value</th><th>Received</th><th>Pending</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card" id="gstSummaryCard" style="display:none">
+        <h2>GST Summary <small>Sirf GST-applicable sites ka — filing ke liye</small></h2>
+        <div class="stat-row">
+          <div class="stat" style="border-left-color:#1B4F8C"><div class="lbl">Total Received (GST Sites)</div><div class="val" id="gstTotalReceived" style="color:#1B4F8C">₹0</div></div>
+          <div class="stat" style="border-left-color:#0F7355"><div class="lbl">Taxable Value</div><div class="val" id="gstTaxableValue" style="color:#0F7355">₹0</div></div>
+          <div class="stat" style="border-left-color:#E8940C"><div class="lbl">Total GST (Output Tax)</div><div class="val" id="gstOutputTax" style="color:#A66A05">₹0</div></div>
+        </div>
+        <div class="table-wrap"><table id="gstBySiteTable"><thead><tr>
+          <th>Site</th><th>GSTIN</th><th>Rate</th><th>Received</th><th>Taxable Value</th><th>GST Amount</th>
         </tr></thead><tbody></tbody></table></div>
       </div>
 
@@ -1319,6 +1368,78 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
     </section>
 
+    <!-- SITE FUNDING -->
+    <section id="tab-sitefunding" style="display:none">
+      <h1 class="page-title">Site Funding <small style="display:block;font-size:13px;font-weight:400;color:var(--ink-soft);margin-top:4px">Government/subcontract sites ke liye — start mein jo invest karna padta hai, uska source aur RA bill se recovery track karo</small></h1>
+
+      <div class="card">
+        <h2>Step 1 — Funding Suggestion Lo</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Government/Subcontract Site</label><select id="sfSite"></select></div>
+          <div class="field"><label>Kitna Invest Karna Hai (₹)</label><input id="sfNeeded" type="number" min="0" placeholder="e.g. 500000"></div>
+          <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-steel" id="sfSuggestBtn">💡 Suggestion Do</button></div>
+        </div>
+        <div id="sfSuggestionBox"></div>
+      </div>
+
+      <div class="card">
+        <h2>Step 2 — Investment Record Karo</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Government/Subcontract Site</label><select id="siSite"></select></div>
+          <div class="field"><label>Amount (₹)</label><input id="siAmount" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Date</label><input id="siDate" type="date"></div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label>Source</label>
+            <select id="siSourceType">
+              <option value="site_diversion">Dusri Site ke Client Payment se Adjust</option>
+              <option value="personal">Khud (Personal Investment)</option>
+              <option value="investor">Investor ka Paisa</option>
+            </select>
+          </div>
+          <div class="field" id="siSourceSiteWrap"><label>Kis Site se Le Rahe Ho</label><select id="siSourceSite"></select></div>
+          <div class="field" id="siInvestorNameWrap" style="display:none"><label>Investor ka Naam</label><input id="siInvestorName" list="dl-investors" placeholder="e.g. Mr. Deshmukh"></div>
+        </div>
+        <div class="field"><label>Note (optional)</label><input id="siNote" placeholder="e.g. security deposit / mobilization advance"></div>
+        <button class="btn btn-primary" id="siSaveBtn">+ Investment Save Karo</button>
+        <div class="hint">"Dusri site se adjust" chuno to us site ka available buffer (safe amount) upar Step 1 mein dikh chuka hoga — usi hisaab se decide karo.</div>
+      </div>
+
+      <div class="card">
+        <h2>Funding History <small>Har government site mein ab tak kitna invest hua, kahan se</small></h2>
+        <div class="table-wrap"><table id="siteFundingTable"><thead><tr>
+          <th>Date</th><th>Site</th><th>Amount</th><th>Source</th><th>Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>RA Bill Summary <small>Government sites ke liye — Client Payments mein diye RA bills se</small></h2>
+        <div class="table-wrap"><table id="raBillSummaryTable"><thead><tr>
+          <th>Site</th><th>Total Project Value</th><th>Total Invested (Funding)</th><th>Received via RA Bills</th><th>Net Position</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- AUDIT LOG -->
+    <section id="tab-audit" style="display:none">
+      <h1 class="page-title">Audit Log</h1>
+      <p class="page-sub">Kisne, kab, kya kiya — sabhi important actions (add/delete) ka record. Ye kabhi edit ya delete nahi ho sakta, sirf dekha ja sakta hai.</p>
+
+      <div class="card">
+        <div class="toolbar">
+          <h2 style="margin:0">Recent Activity <small style="display:block;font-weight:400;color:var(--ink-soft)">Latest 150 actions</small></h2>
+          <div class="toolbar-left">
+            <select id="auditUserFilter"><option value="all">All Users</option></select>
+            <select id="auditActionFilter"><option value="all">All Actions</option><option value="create">Create</option><option value="delete">Delete</option></select>
+            <button class="btn btn-ghost" id="auditRefreshBtn" style="padding:7px 12px;font-size:12.5px">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="auditTable"><thead><tr>
+          <th>Date &amp; Time</th><th>User</th><th>Action</th><th>Area</th><th>Details</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
     <!-- REPORTS -->
     <section id="tab-reports" style="display:none">
       <h1 class="page-title" data-i18n="reports">Reports</h1>
@@ -1527,8 +1648,24 @@ let unsubs = [];             // live listeners
 const CONFIG_OK = FIREBASE_CONFIG && !String(FIREBASE_CONFIG.apiKey).startsWith('PASTE_');
 
 /* Which Firestore collection each in-memory array maps to */
+/* ---------------- Audit Trail ----------------
+   Every risky action (money entries, deletes) gets a timestamped log entry
+   so it's always clear who did what. Logging never blocks the actual action
+   — if it fails, we just skip it silently rather than break the app. */
+async function logAudit(action, area, summary){
+  try{
+    const who = currentUser ? (currentUser.name || currentUser.email) : (currentRole==='owner' ? 'Owner' : 'Staff');
+    await db.collection('auditLog').add({
+      ts: new Date().toISOString(),
+      user: who,
+      role: currentRole || 'unknown',
+      action, area, summary
+    });
+  }catch(e){ /* never block on audit failure */ }
+}
+
 const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments' };
-const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
 /* Snapshot of what the server currently holds, so saveData() can write only
@@ -1933,7 +2070,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -1950,6 +2087,7 @@ function rerenderAll(){
     renderPersonalInvestments(); renderPersonalLoans(); renderProjectUnits();
     renderSavedSlabsList();
     renderConsultancyIncome();
+    renderSiteFunding();
   }
 }
 
@@ -1976,7 +2114,7 @@ function attachListeners(){
       SITE_FINANCE = {};
       serverState.siteFinance = {};
       snap.docs.forEach(d=>{
-        SITE_FINANCE[d.id] = d.data().contractValue || 0;
+        SITE_FINANCE[d.id] = d.data();
         serverState.siteFinance[d.id] = JSON.stringify(d.data());
       });
       applySiteFinance();
@@ -1987,7 +2125,15 @@ function attachListeners(){
 
 let SITE_FINANCE = {};
 function applySiteFinance(){
-  DATA.sites.forEach(s=>{ s.contractValue = SITE_FINANCE[s.id] || 0; });
+  DATA.sites.forEach(s=>{
+    const fin = SITE_FINANCE[s.id] || {};
+    s.contractValue = fin.contractValue || 0;
+    s.siteType = fin.siteType || 'private';
+    s.gstApplicable = fin.gstApplicable || false;
+    s.gstin = fin.gstin || '';
+    s.gstRate = fin.gstRate !== undefined ? fin.gstRate : 18;
+    s.hsn = fin.hsn || '';
+  });
 }
 
 async function loadData(){ attachListeners(); }
@@ -2017,7 +2163,7 @@ async function saveData(){
       });
     };
 
-    sync('sites', 'sites', body => { const b={...body}; delete b.contractValue; return b; });
+    sync('sites', 'sites', body => { const b={...body}; delete b.contractValue; delete b.siteType; delete b.gstApplicable; delete b.gstin; delete b.gstRate; delete b.hsn; return b; });
     sync('expenses', 'expenses');
     sync('udhar', 'udhar');
     sync('workAgreements', 'agreements');
@@ -2032,10 +2178,18 @@ async function saveData(){
       sync('projectUnits', 'projectUnits');
       sync('paymentSlabs', 'paymentSlabs');
       sync('consultancyIncome', 'consultancyIncome');
+      sync('siteInvestments', 'siteInvestments');
       const prevFin = serverState.siteFinance || {};
       const seenFin = new Set();
       DATA.sites.forEach(s=>{
-        const body = { contractValue: Number(s.contractValue)||0 };
+        const body = {
+          contractValue: Number(s.contractValue)||0,
+          siteType: s.siteType || 'private',
+          gstApplicable: !!s.gstApplicable,
+          gstin: s.gstin || '',
+          gstRate: s.gstRate !== undefined ? Number(s.gstRate) : 18,
+          hsn: s.hsn || ''
+        };
         seenFin.add(s.id);
         if(prevFin[s.id] !== JSON.stringify(body)){
           batch.set(db.collection('siteFinance').doc(s.id), body); writes++;
@@ -2123,6 +2277,8 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='pnl') renderPnL();
   if(btn.dataset.tab==='contractwork') renderAgreementsTable();
   if(btn.dataset.tab==='team') loadTeam();
+  if(btn.dataset.tab==='audit') loadAuditLog();
+  if(btn.dataset.tab==='sitefunding') renderSiteFunding();
   if(btn.dataset.tab==='personal'){ renderPersonalInvestments(); renderPersonalLoans(); }
   if(btn.dataset.tab==='projects') renderProjectUnits();
   if(btn.dataset.tab==='slabs') renderSavedSlabsList();
@@ -2270,18 +2426,36 @@ function renderSiteSelects(){
 }
 
 /* ---------------- Sites tab ---------------- */
+document.getElementById('newSiteGstApplicable').addEventListener('change', e=>{
+  document.getElementById('newSiteGstFieldsWrap').style.display = e.target.checked ? 'grid' : 'none';
+});
+document.getElementById('newSiteType').addEventListener('change', e=>{
+  document.getElementById('newSiteTypeHint').style.display = e.target.value==='government' ? 'block' : 'none';
+});
 document.getElementById('addSiteBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('newSiteName').value.trim();
   const loc = document.getElementById('newSiteLocation').value.trim();
   const contractValue = Number(document.getElementById('newSiteContract').value) || 0;
+  const siteType = document.getElementById('newSiteType').value;
+  const gstApplicable = document.getElementById('newSiteGstApplicable').checked;
+  const gstin = document.getElementById('newSiteGstin').value.trim();
+  const gstRate = Number(document.getElementById('newSiteGstRate').value) || 18;
+  const hsn = document.getElementById('newSiteHsn').value.trim();
   if(!name){ showToast('Site ka naam daalo'); return; }
-  DATA.sites.push({ id: uid(), name, location: loc, contractValue, createdAt: todayStr() });
+  DATA.sites.push({ id: uid(), name, location: loc, contractValue, siteType, gstApplicable, gstin, gstRate, hsn, createdAt: todayStr() });
   document.getElementById('newSiteName').value='';
   document.getElementById('newSiteLocation').value='';
   document.getElementById('newSiteContract').value='';
+  document.getElementById('newSiteType').value='private';
+  document.getElementById('newSiteTypeHint').style.display='none';
+  document.getElementById('newSiteGstApplicable').checked = false;
+  document.getElementById('newSiteGstin').value='';
+  document.getElementById('newSiteHsn').value='';
+  document.getElementById('newSiteGstFieldsWrap').style.display = 'none';
   await saveData();
   renderSiteSelects(); renderSitesTable();
   showToast('Site add ho gayi ✓');
+  logAudit('create','Site', `"${name}" add ki gayi${gstApplicable?' (GST applicable)':''}`);
 });
 
 function renderSitesTable(){
@@ -2331,6 +2505,7 @@ async function toggleSiteStatus(id){
 }
 async function deleteSite(id){
   if(!await uiConfirm('Ye site delete karoge? Isse jude sabhi expense/udhar/payment entries bhi delete ho jayenge.', 'Haan, delete karo')) return;
+  const siteBeingDeleted = DATA.sites.find(s=>s.id===id);
   try{
     const batch = db.batch();
     batch.delete(db.collection('sites').doc(id));
@@ -2345,6 +2520,7 @@ async function deleteSite(id){
     }
     await batch.commit();
     showToast('Site delete ho gayi');
+    if(siteBeingDeleted) logAudit('delete','Site', `"${siteBeingDeleted.name}" aur uski saari entries delete ki gayin`);
   }catch(e){
     showToast('Delete nahi hua — dobara try karo');
     console.error('deleteSite', e);
@@ -2555,9 +2731,11 @@ function renderExpenseTable(){
 async function deleteExpense(id){
   if(!await uiConfirm('Ye entry delete karni hai?', 'Haan, delete karo')) return;
   if(editingExpenseId===id) cancelExpenseEdit(false);
+  const r = DATA.expenses.find(e=>e.id===id);
   try{
     await db.collection('expenses').doc(id).delete();
     showToast('Entry delete ho gayi');
+    if(r) logAudit('delete','Expense', `${r.contractor} — ${inr(r.amount)} (${siteName(r.siteId)}, ${r.type})`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 document.getElementById('expListSiteFilter').addEventListener('change', renderExpenseTable);
@@ -2672,9 +2850,11 @@ async function toggleUdhar(id){
   }catch(e){ showToast('Update nahi hua — dobara try karo'); }
 }
 async function deleteUdhar(id){
+  const r = DATA.udhar.find(u=>u.id===id);
   try{
     await db.collection('udhar').doc(id).delete();
     showToast('Udhar entry delete ho gayi');
+    if(r) logAudit('delete','Udhar', `${r.supplier} — ${inr(r.amount)} (${r.material}, ${siteName(r.siteId)})`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 document.getElementById('udListSiteFilter').addEventListener('change', renderUdharTable);
@@ -2734,9 +2914,11 @@ function renderVendorPayments(){
 }
 async function deleteVendorPayment(id){
   if(!await uiConfirm('Ye payment record delete karni hai? Isse jo bills iske through paid hue the, wo wapas Pending ho jayenge.', 'Haan, delete karo')) return;
+  const p = DATA.vendorPayments.find(x=>x.id===id);
   try{
     await db.collection('vendorPayments').doc(id).delete();
     showToast('Payment record delete ho gaya');
+    if(p) logAudit('delete','Vendor Payment', `${p.supplier} — ${inr(p.amount)} paid on ${p.date}`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 document.getElementById('vpListFilter').addEventListener('change', renderVendorPayments);
@@ -2791,6 +2973,7 @@ function openPayVendorModal(supplier){
       await db.collection('vendorPayments').add({ supplier, amount, date, note });
       close();
       showToast(`${supplier} ko payment record ho gaya ✓`);
+      logAudit('create','Vendor Payment', `${supplier} ko ${inr(amount)} paid on ${date}`);
     }catch(e){ errEl.textContent = 'Error: ' + e.message; }
   };
 }
@@ -3123,9 +3306,11 @@ function renderAgreementsTable(){
   document.getElementById('agTotalLine').textContent = `Total Fixed: ${inr(totalFixed)} · Total Paid: ${inr(totalPaid)} · Total Balance Due: ${inr(totalBalance)}`;
 }
 async function deleteAgreement(id){
+  const r = DATA.workAgreements.find(x=>x.id===id);
   try{
     await db.collection('agreements').doc(id).delete();
     showToast('Work agreement delete ho gaya');
+    if(r) logAudit('delete','Contractor Agreement', `${r.contractor} — ${inr(r.fixedAmount)} (${siteName(r.siteId)})`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 function editAgreement(id){
@@ -3320,6 +3505,51 @@ document.getElementById('impConfirmBtn').addEventListener('click', async ()=>{
    on first sign-in. Staff choose their own password (or use Google), so
    no password ever passes through this app. */
 let TEAM = [];
+
+/* ---------------- Audit Log (owner only) ---------------- */
+let auditRows = [];
+async function loadAuditLog(){
+  try{
+    const snap = await db.collection('auditLog').orderBy('ts','desc').limit(150).get();
+    auditRows = snap.docs.map(d=>d.data());
+  }catch(e){
+    auditRows = [];
+    console.error('audit load', e);
+  }
+  const userFilter = document.getElementById('auditUserFilter');
+  const users = [...new Set(auditRows.map(r=>r.user))].sort();
+  const curUser = userFilter.value;
+  userFilter.innerHTML = '<option value="all">All Users</option>' + users.map(u=>`<option value="${u}">${u}</option>`).join('');
+  if(users.includes(curUser)) userFilter.value = curUser;
+  renderAuditLog();
+}
+function renderAuditLog(){
+  const tbody = document.querySelector('#auditTable tbody');
+  if(!tbody) return;
+  const userFilter = document.getElementById('auditUserFilter').value;
+  const actionFilter = document.getElementById('auditActionFilter').value;
+  let rows = auditRows;
+  if(userFilter!=='all') rows = rows.filter(r=>r.user===userFilter);
+  if(actionFilter!=='all') rows = rows.filter(r=>r.action===actionFilter);
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Abhi koi activity record nahi hai.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>{
+    const dt = new Date(r.ts);
+    const dtLabel = isNaN(dt) ? r.ts : dt.toLocaleString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<tr>
+      <td>${dtLabel}</td>
+      <td>${r.user}</td>
+      <td><span class="tag ${r.action==='delete'?'pending':'paid'}">${r.action}</span></td>
+      <td>${r.area}</td>
+      <td>${r.summary}</td>
+    </tr>`;
+  }).join('');
+}
+document.getElementById('auditUserFilter').addEventListener('change', renderAuditLog);
+document.getElementById('auditActionFilter').addEventListener('change', renderAuditLog);
+document.getElementById('auditRefreshBtn').addEventListener('click', loadAuditLog);
 
 async function loadTeam(){
   if(currentRole !== 'owner') return;
@@ -3654,6 +3884,25 @@ document.getElementById('restoreFile').addEventListener('change', async (e)=>{
 
 /* ---------------- Client Payments tab ---------------- */
 document.getElementById('cpDate').value = todayStr();
+function updateCpGstNote(){
+  const siteId = document.getElementById('cpSite').value;
+  const amount = Number(document.getElementById('cpAmount').value);
+  const site = DATA.sites.find(s=>s.id===siteId);
+  const noteEl = document.getElementById('cpGstNote');
+  document.getElementById('cpRaBillWrap').style.display = (site && site.siteType==='government') ? 'grid' : 'none';
+  if(site && site.gstApplicable && amount>0){
+    const rate = Number(site.gstRate)||18;
+    const taxable = amount / (1 + rate/100);
+    const gstAmt = amount - taxable;
+    noteEl.style.display = 'block';
+    noteEl.innerHTML = `GST Applicable Site (${rate}%) — Taxable Value: <strong>${inr(taxable)}</strong> · GST Amount: <strong>${inr(gstAmt)}</strong> (total received amount GST-inclusive maana gaya hai)`;
+  } else {
+    noteEl.style.display = 'none';
+  }
+}
+document.getElementById('cpSite').addEventListener('change', updateCpGstNote);
+document.getElementById('cpAmount').addEventListener('input', updateCpGstNote);
+
 document.getElementById('addClientPayBtn').addEventListener('click', async ()=>{
   const siteId = document.getElementById('cpSite').value;
   const clientName = document.getElementById('cpClient').value.trim();
@@ -3665,10 +3914,23 @@ document.getElementById('addClientPayBtn').addEventListener('click', async ()=>{
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
 
-  DATA.clientPayments.push({ id: uid(), siteId, clientName, date, amount, mode, note });
+  const site = DATA.sites.find(s=>s.id===siteId);
+  let gstRate = null, taxableValue = null, gstAmount = null;
+  if(site && site.gstApplicable){
+    gstRate = Number(site.gstRate)||18;
+    taxableValue = amount / (1 + gstRate/100);
+    gstAmount = amount - taxableValue;
+  }
+
+  const raBillNo = document.getElementById('cpRaBillNo').value.trim();
+  const raWorkValue = document.getElementById('cpRaWorkValue').value ? Number(document.getElementById('cpRaWorkValue').value) : null;
+  DATA.clientPayments.push({ id: uid(), siteId, clientName, date, amount, mode, note, gstRate, taxableValue, gstAmount, raBillNo, raWorkValue });
+  document.getElementById('cpRaBillNo').value='';
+  document.getElementById('cpRaWorkValue').value='';
   document.getElementById('cpClient').value='';
   document.getElementById('cpAmount').value='';
   document.getElementById('cpNote').value='';
+  document.getElementById('cpGstNote').style.display = 'none';
   await saveData();
   renderClientBalanceTable(); renderClientPayTable(); renderSitesTable(); renderDashboard();
   showToast('Client payment add ho gayi ✓');
@@ -3686,6 +3948,34 @@ function renderClientBalanceTable(){
     const pending = contract - received;
     return `<tr><td><strong>${s.name}</strong></td><td class="amt">${contract?inr(contract):'—'}</td><td class="amt">${inr(received)}</td><td class="amt">${contract?inr(pending):'—'}</td></tr>`;
   }).join('');
+  renderGstSummary();
+}
+
+function renderGstSummary(){
+  const card = document.getElementById('gstSummaryCard');
+  if(!card) return;
+  const gstSites = DATA.sites.filter(s=>s.gstApplicable);
+  if(gstSites.length===0){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  let totalReceived=0, totalTaxable=0, totalGst=0;
+  const rows = gstSites.map(s=>{
+    const payments = DATA.clientPayments.filter(p=>p.siteId===s.id);
+    const received = payments.reduce((a,p)=>a+Number(p.amount),0);
+    const taxable = payments.reduce((a,p)=>a+(p.taxableValue!==null&&p.taxableValue!==undefined?Number(p.taxableValue):Number(p.amount)/(1+(Number(s.gstRate)||18)/100)),0);
+    const gst = received - taxable;
+    totalReceived += received; totalTaxable += taxable; totalGst += gst;
+    return { name:s.name, gstin:s.gstin, rate:s.gstRate||18, received, taxable, gst };
+  });
+
+  document.getElementById('gstTotalReceived').textContent = inr(totalReceived);
+  document.getElementById('gstTaxableValue').textContent = inr(totalTaxable);
+  document.getElementById('gstOutputTax').textContent = inr(totalGst);
+
+  document.querySelector('#gstBySiteTable tbody').innerHTML = rows.map(r=>`<tr>
+    <td>${r.name}</td><td>${r.gstin||'—'}</td><td>${r.rate}%</td>
+    <td class="amt">${inr(r.received)}</td><td class="amt">${inr(r.taxable)}</td><td class="amt" style="color:var(--good)">${inr(r.gst)}</td>
+  </tr>`).join('');
 }
 function renderClientPayTable(){
   const siteFilter = document.getElementById('cpListSiteFilter').value;
@@ -3714,9 +4004,11 @@ function editClientPay(id){
   ], async v=>{ await db.collection('clientPayments').doc(id).update(v); });
 }
 async function deleteClientPay(id){
+  const r = DATA.clientPayments.find(x=>x.id===id);
   try{ await db.collection('clientPayments').doc(id).delete(); }
   catch(e){ showToast('Delete nahi hua — dobara try karo'); return; }
   showToast('Payment entry delete ho gayi');
+  if(r) logAudit('delete','Client Payment', `${r.clientName||'Client'} — ${inr(r.amount)} (${siteName(r.siteId)})`);
 }
 document.getElementById('cpListSiteFilter').addEventListener('change', renderClientPayTable);
 
@@ -3897,9 +4189,11 @@ async function toggleInvestor(id){
   catch(e){ showToast('Update nahi hua — dobara try karo'); }
 }
 async function deleteInvestor(id){
+  const r = DATA.investorLoans.find(x=>x.id===id);
   try{
     await db.collection('investorLoans').doc(id).delete();
     showToast('Investor entry delete ho gayi');
+    if(r) logAudit('delete','Investor Loan', `${r.investorName} — Taken ${inr(r.taken)}`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 
@@ -3957,10 +4251,12 @@ function editOffice(id){
   ], async v=>{ await db.collection('officeExpenses').doc(id).update(v); });
 }
 async function deleteOffice(id){
+  const r = DATA.officeExpenses.find(x=>x.id===id);
   try{ await db.collection('officeExpenses').doc(id).delete(); }
   catch(e){ showToast('Delete nahi hua — dobara try karo'); return; }
   renderOfficeTable(); renderDashboard();
   showToast('Office expense entry delete ho gayi');
+  if(r) logAudit('delete','Office Expense', `${r.category} — ${inr(r.amount)} (${r.paidTo})`);
 }
 document.getElementById('ofListCategoryFilter').addEventListener('change', renderOfficeTable);
 
@@ -4028,9 +4324,11 @@ function editPersonalInvestment(id){
 }
 async function deletePersonalInvestment(id){
   if(!await uiConfirm('Ye investment entry delete karni hai?', 'Haan, delete karo')) return;
+  const r = DATA.personalInvestments.find(x=>x.id===id);
   try{
     await db.collection('personalInvestments').doc(id).delete();
     showToast('Investment entry delete ho gayi');
+    if(r) logAudit('delete','Personal Investment', `${r.name} — ${inr(r.amount)}`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 
@@ -4102,9 +4400,11 @@ async function togglePersonalLoan(id){
 }
 async function deletePersonalLoan(id){
   if(!await uiConfirm('Ye lending entry delete karni hai?', 'Haan, delete karo')) return;
+  const r = DATA.personalLoans.find(x=>x.id===id);
   try{
     await db.collection('personalLoans').doc(id).delete();
     showToast('Lending entry delete ho gayi');
+    if(r) logAudit('delete','Personal Lending', `${r.personName} — ${inr(r.amount)}`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 
@@ -4276,9 +4576,11 @@ function editProjectUnit(id){
 }
 async function deleteProjectUnit(id){
   if(!await uiConfirm('Ye unit/deal entry delete karni hai?', 'Haan, delete karo')) return;
+  const r = DATA.projectUnits.find(x=>x.id===id);
   try{
     await db.collection('projectUnits').doc(id).delete();
     showToast('Entry delete ho gayi');
+    if(r) logAudit('delete','Project Unit', `${r.project} — ${r.unit}`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 document.getElementById('puListProjectFilter').addEventListener('change', renderProjectUnits);
@@ -4695,9 +4997,11 @@ function editConsultancy(id){
 }
 async function deleteConsultancy(id){
   if(!await uiConfirm('Ye consultancy income entry delete karni hai?', 'Haan, delete karo')) return;
+  const r = DATA.consultancyIncome.find(x=>x.id===id);
   try{
     await db.collection('consultancyIncome').doc(id).delete();
     showToast('Entry delete ho gayi');
+    if(r) logAudit('delete','Consultancy Income', `${r.client} — ${inr(r.amount)} (${r.type})`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 document.getElementById('csListTypeFilter').addEventListener('change', renderConsultancyIncome);
@@ -4762,6 +5066,167 @@ function renderPnL(){
 /* Shared by the Time-based Profit card and the 5-Year Projection —
    overall business net profit so far, and the average per month it works
    out to since the earliest recorded transaction. */
+/* ---------------- Site Funding (government/subcontract investment) ----------------
+   "Safe surplus" for a site = what it's collected, minus its own cost, minus
+   what it still owes (contractors + udhar) — i.e. money that's genuinely
+   free to move without leaving that site short on its own dues. */
+function siteSafeSurplus(siteId){
+  const received = siteReceived(siteId);
+  const cost = siteCost(siteId);
+  const contractorDue = DATA.workAgreements.filter(ag=>ag.siteId===siteId).reduce((a,ag)=>{
+    const bal = Number(ag.fixedAmount) - computePaidForAgreement(ag);
+    return a + (bal>0?bal:0);
+  },0);
+  const remMap = udharRemainingForEntries(DATA.udhar.filter(u=>u.siteId===siteId));
+  const udharDue = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Math.max(remMap[u.id]||0,0),0);
+  return received - cost - contractorDue - udharDue;
+}
+
+function totalInvestedInSite(siteId){
+  return DATA.siteInvestments.filter(si=>si.siteId===siteId).reduce((a,si)=>a+Number(si.amount),0);
+}
+function totalRaBillReceived(siteId){
+  return DATA.clientPayments.filter(p=>p.siteId===siteId && p.raBillNo).reduce((a,p)=>a+Number(p.amount),0);
+}
+
+function renderSiteFunding(){
+  const govSites = DATA.sites.filter(s=>s.siteType==='government');
+  ['sfSite','siSite'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const cur = el.value;
+    el.innerHTML = govSites.length
+      ? govSites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')
+      : '<option value="">Pehle ek Government/Subcontract site banao</option>';
+    if(cur) el.value = cur;
+  });
+  const srcSel = document.getElementById('siSourceSite');
+  if(srcSel){
+    const cur = srcSel.value;
+    srcSel.innerHTML = DATA.sites.map(s=>`<option value="${s.id}">${s.name}${s.siteType==='government'?' (Govt)':''}</option>`).join('');
+    if(cur) srcSel.value = cur;
+  }
+
+  // Funding history
+  const histBody = document.querySelector('#siteFundingTable tbody');
+  if(histBody){
+    const rows = [...DATA.siteInvestments].sort((a,b)=>b.date.localeCompare(a.date));
+    if(rows.length===0){
+      histBody.innerHTML = `<tr><td colspan="6" class="empty">Abhi koi investment record nahi hai.</td></tr>`;
+    } else {
+      histBody.innerHTML = rows.map(r=>{
+        const src = r.sourceType==='site_diversion' ? `🔁 ${siteName(r.sourceSiteId)} se`
+                  : r.sourceType==='investor' ? `⇧ Investor: ${r.investorName||'—'}`
+                  : `💰 Personal`;
+        return `<tr>
+          <td>${r.date}</td><td>${siteName(r.siteId)}</td><td class="amt">${inr(r.amount)}</td>
+          <td>${src}</td><td>${r.note||'—'}</td>
+          <td><button class="btn-danger-text" onclick="deleteSiteInvestment('${r.id}')">Delete</button></td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  // RA bill / project summary
+  const raBody = document.querySelector('#raBillSummaryTable tbody');
+  if(raBody){
+    if(govSites.length===0){
+      raBody.innerHTML = `<tr><td colspan="5" class="empty">Koi Government/Subcontract site nahi hai.</td></tr>`;
+    } else {
+      raBody.innerHTML = govSites.map(s=>{
+        const invested = totalInvestedInSite(s.id);
+        const received = totalRaBillReceived(s.id);
+        const net = received - invested;
+        return `<tr>
+          <td><strong>${s.name}</strong></td>
+          <td class="amt">${s.contractValue?inr(s.contractValue):'—'}</td>
+          <td class="amt">${inr(invested)}</td>
+          <td class="amt" style="color:var(--good)">${inr(received)}</td>
+          <td class="amt" style="color:${net>=0?'var(--good)':'var(--bad)'}">${net<0?'- ':''}${inr(Math.abs(net))}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+}
+
+document.getElementById('sfSuggestBtn').addEventListener('click', ()=>{
+  const targetSiteId = document.getElementById('sfSite').value;
+  const needed = Number(document.getElementById('sfNeeded').value);
+  const box = document.getElementById('sfSuggestionBox');
+  if(!targetSiteId){ box.innerHTML = '<div class="footnote" style="color:var(--bad)">Pehle site chuno.</div>'; return; }
+  if(!needed || needed<=0){ box.innerHTML = '<div class="footnote" style="color:var(--bad)">Sahi amount daalo.</div>'; return; }
+
+  const candidates = DATA.sites
+    .filter(s=>s.id!==targetSiteId)
+    .map(s=>({ site:s, surplus: siteSafeSurplus(s.id) }))
+    .filter(c=>c.surplus > 0)
+    .sort((a,b)=>b.surplus - a.surplus);
+
+  let remaining = needed;
+  const picks = [];
+  for(const c of candidates){
+    if(remaining <= 0) break;
+    const take = Math.min(c.surplus, remaining);
+    picks.push({ name:c.site.name, available:c.surplus, take });
+    remaining -= take;
+  }
+
+  let html = '';
+  if(picks.length){
+    html += `<div class="table-wrap" style="margin-top:12px"><table style="font-size:12.5px"><thead><tr>
+      <th>Site (Safe Surplus Wali)</th><th>Available Surplus</th><th>Suggested Amount</th>
+    </tr></thead><tbody>
+      ${picks.map(p=>`<tr><td>${p.name}</td><td class="amt">${inr(p.available)}</td><td class="amt" style="color:var(--good);font-weight:700">${inr(p.take)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  }
+  if(remaining > 0){
+    html += `<div class="footnote" style="margin-top:10px;color:var(--amber)">⚠ ${inr(remaining)} kisi bhi site ke surplus se cover nahi ho pa raha (baaki sites ka apna hi pending due zyada hai — unse lena unhe risky bana dega).<br>
+      Ye bacha hua hissa <strong>Personal Investment</strong> ya <strong>Investor Funding</strong> se lena zyada safe rahega.</div>`;
+  }
+  if(picks.length===0 && remaining===needed){
+    html = `<div class="footnote" style="color:var(--amber)">Abhi koi site itna safe surplus nahi rakhti ki isme se paisa diverted kiya ja sake — inn sabka apna pending due (contractor/udhar) already zyada hai. Poora amount Personal ya Investor se lena behtar hoga.</div>`;
+  }
+  box.innerHTML = html;
+});
+
+document.getElementById('siSourceType').addEventListener('change', e=>{
+  document.getElementById('siSourceSiteWrap').style.display = e.target.value==='site_diversion' ? 'block' : 'none';
+  document.getElementById('siInvestorNameWrap').style.display = e.target.value==='investor' ? 'block' : 'none';
+});
+document.getElementById('siDate').value = todayStr();
+
+document.getElementById('siSaveBtn').addEventListener('click', async ()=>{
+  const siteId = document.getElementById('siSite').value;
+  const amount = Number(document.getElementById('siAmount').value);
+  const date = document.getElementById('siDate').value || todayStr();
+  const sourceType = document.getElementById('siSourceType').value;
+  const sourceSiteId = sourceType==='site_diversion' ? document.getElementById('siSourceSite').value : null;
+  const investorName = sourceType==='investor' ? document.getElementById('siInvestorName').value.trim() : null;
+  const note = document.getElementById('siNote').value.trim();
+
+  if(!siteId){ showToast('Pehle government/subcontract site select karo'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+  if(sourceType==='site_diversion' && !sourceSiteId){ showToast('Kis site se le rahe ho, wo select karo'); return; }
+  if(sourceType==='investor' && !investorName){ showToast('Investor ka naam daalo'); return; }
+  if(sourceType==='site_diversion' && sourceSiteId===siteId){ showToast('Source site aur target site alag honi chahiye'); return; }
+
+  try{
+    await db.collection('siteInvestments').add({ siteId, amount, date, sourceType, sourceSiteId, investorName, note });
+    showToast('Investment record ho gaya ✓');
+    logAudit('create','Site Funding', `${inr(amount)} invest kiya ${siteName(siteId)} mein (${sourceType})`);
+    document.getElementById('siAmount').value='';
+    document.getElementById('siInvestorName').value='';
+    document.getElementById('siNote').value='';
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); }
+});
+async function deleteSiteInvestment(id){
+  if(!await uiConfirm('Ye investment record delete karna hai?', 'Haan, delete karo')) return;
+  try{
+    await db.collection('siteInvestments').doc(id).delete();
+    showToast('Record delete ho gaya');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
 function computeBusinessAvgMonthly(){
   const consultancyReceived = DATA.consultancyIncome.filter(r=>r.status==='received').reduce((a,r)=>a+Number(r.amount),0);
   const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0) + consultancyReceived;
@@ -5224,6 +5689,7 @@ function renderDashboard(){
 
   renderMaterialBreakdown(exp, ud);
   renderCharts(exp, ud);
+  renderReminders();
   renderInsights();
 }
 
@@ -5407,6 +5873,146 @@ function renderCharts(exp, ud){
 /* ---------------- Performance insights ----------------
    Computed observations from the numbers already on screen — not a
    financial recommendation, just patterns worth a second look. */
+/* ---------------- Reminders ----------------
+   Pulls together anything overdue or aging, computed fresh from data
+   already on screen — no separate reminder data model needed. */
+function daysBetween(dateStr){
+  const d = new Date(dateStr);
+  if(isNaN(d)) return null;
+  return Math.floor((new Date(todayStr()) - d) / (1000*60*60*24));
+}
+/* ---------------- Global Search ---------------- */
+function buildSearchIndex(){
+  const rows = [];
+  const push = (tab, icon, title, sub, amount) => rows.push({ tab, icon, title, sub, amount });
+
+  DATA.sites.forEach(s=> push('sites','🏗️', s.name, s.location||'Site', null));
+  DATA.expenses.forEach(e=> push('expense','₹', e.contractor, `${e.type}${e.category?' · '+e.category:''} · ${siteName(e.siteId)} · ${e.date}`, e.amount));
+  DATA.udhar.forEach(u=> push('udhar','↺', u.supplier, `${u.material} · ${siteName(u.siteId)} · ${u.date}`, u.amount));
+  DATA.workAgreements.forEach(ag=> push('contractwork','⚒', ag.contractor, `${ag.category} · ${siteName(ag.siteId)}`, ag.fixedAmount));
+  if(currentRole==='owner'){
+    DATA.clientPayments.forEach(p=> push('clientpay','⇩', p.clientName||'Client', `${siteName(p.siteId)} · ${p.date}`, p.amount));
+    DATA.investorLoans.forEach(i=> push('investor','⇧', i.investorName, `${investorLinkName(i.siteId)} · ${i.date}`, i.taken));
+    DATA.officeExpenses.forEach(o=> push('office','⌂', o.paidTo, `${o.category} · ${o.date}`, o.amount));
+    DATA.personalInvestments.forEach(p=> push('personal','💰', p.name, `${p.type} · ${p.date}`, p.amount));
+    DATA.personalLoans.forEach(p=> push('personal','💰', p.personName, `Personal lending · ${p.date}`, p.amount));
+    DATA.projectUnits.forEach(u=> push('projects','🏘️', `${u.project} — ${u.unit}`, u.status, u.ourAmount));
+    DATA.consultancyIncome.forEach(c=> push('consultancy','📐', c.client, `${c.type} · ${c.date}`, c.amount));
+    allVendorNames().forEach(v=> push('udhar','🏪', v, 'Vendor', null));
+  }
+  return rows;
+}
+
+function runGlobalSearch(query){
+  const box = document.getElementById('globalSearchResults');
+  const q = query.trim().toLowerCase();
+  if(q.length < 2){ box.style.display = 'none'; return; }
+
+  const rows = buildSearchIndex().filter(r =>
+    (r.title||'').toLowerCase().includes(q) || (r.sub||'').toLowerCase().includes(q)
+  ).slice(0, 25);
+
+  if(rows.length===0){
+    box.innerHTML = `<div style="padding:14px;font-size:12.5px;color:var(--ink-soft)">Kuch nahi mila "${query}" ke liye.</div>`;
+    box.style.display = 'block';
+    return;
+  }
+  box.innerHTML = rows.map(r=>`
+    <div onclick="jumpToSearchResult('${r.tab}')" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.icon} ${r.title}</div>
+        <div style="font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.sub}</div>
+      </div>
+      ${r.amount!==null ? `<div class="amt" style="font-size:12.5px;flex-shrink:0">${inr(r.amount)}</div>` : ''}
+    </div>`).join('');
+  box.style.display = 'block';
+}
+function jumpToSearchResult(tab){
+  const btn = document.querySelector(`#navTabs button[data-tab="${tab}"]`);
+  if(btn) btn.click();
+  document.getElementById('globalSearchResults').style.display = 'none';
+  document.getElementById('globalSearchBox').value = '';
+}
+document.getElementById('globalSearchBox').addEventListener('input', e=>runGlobalSearch(e.target.value));
+document.addEventListener('click', e=>{
+  if(!e.target.closest('#globalSearchBox') && !e.target.closest('#globalSearchResults')){
+    document.getElementById('globalSearchResults').style.display = 'none';
+  }
+});
+document.getElementById('globalSearchBox').addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){ e.target.value=''; document.getElementById('globalSearchResults').style.display='none'; }
+});
+
+function renderReminders(){
+  const card = document.getElementById('remindersCard');
+  const list = document.getElementById('remindersList');
+  if(!card || !list) return;
+  const items = []; // { urgency: 'high'|'medium', text }
+
+  if(currentRole === 'owner'){
+    // Investor returns past their expected date
+    DATA.investorLoans.forEach(i=>{
+      if(i.status==='returned' || investorRemaining(i)<=0) return;
+      if(!i.expDate) return;
+      const days = daysBetween(i.expDate);
+      if(days !== null && days > 0){
+        items.push({ urgency:'high', text:`<strong>${i.investorName}</strong> ka return ${days} din se overdue hai (${inr(investorRemaining(i))} baaki) — expected date thi ${i.expDate}.` });
+      }
+    });
+
+    // Personal lending past expected return date
+    DATA.personalLoans.forEach(l=>{
+      if(l.status==='returned' || !l.expDate) return;
+      const days = daysBetween(l.expDate);
+      if(days !== null && days > 0){
+        items.push({ urgency:'medium', text:`<strong>${l.personName}</strong> se ${inr(l.amount)} ka personal udhar ${days} din se overdue hai.` });
+      }
+    });
+
+    // Client contract pending a while with no recent payment
+    DATA.sites.filter(s=>Number(s.contractValue)>0).forEach(s=>{
+      const pending = Number(s.contractValue) - siteReceived(s.id);
+      if(pending <= 0) return;
+      const payments = DATA.clientPayments.filter(p=>p.siteId===s.id).sort((a,b)=>b.date.localeCompare(a.date));
+      const lastDate = payments.length ? payments[0].date : s.createdAt;
+      const days = daysBetween(lastDate);
+      if(days !== null && days >= 30){
+        items.push({ urgency:'medium', text:`<strong>${s.name}</strong> mein ${days} din se koi client payment nahi aayi — ${inr(pending)} abhi bhi pending hai.` });
+      }
+    });
+  }
+
+  // Udhar bills pending 30+ days (visible to everyone who can see udhar)
+  const remMap = udharRemainingForEntries(DATA.udhar);
+  DATA.udhar.forEach(u=>{
+    const remaining = remMap[u.id] !== undefined ? remMap[u.id] : Number(u.amount);
+    if(remaining <= 0) return;
+    const days = daysBetween(u.date);
+    if(days !== null && days >= 30){
+      items.push({ urgency: days>=60 ? 'high':'medium', text:`<strong>${u.supplier}</strong> ka udhar bill ${days} din se pending hai — ${inr(remaining)} (${siteName(u.siteId)}, ${u.material}).` });
+    }
+  });
+
+  // Contractor balances outstanding for a while (use site creation as a rough anchor if no better date exists)
+  DATA.workAgreements.forEach(ag=>{
+    const bal = Number(ag.fixedAmount) - computePaidForAgreement(ag);
+    if(bal <= 0) return;
+    const relatedPayments = DATA.expenses.filter(e=>e.type==='labour' && e.siteId===ag.siteId &&
+      (e.contractor||'').trim().toLowerCase()===(ag.contractor||'').trim().toLowerCase())
+      .sort((a,b)=>b.date.localeCompare(a.date));
+    const lastPaidDate = relatedPayments.length ? relatedPayments[0].date : null;
+    const days = lastPaidDate ? daysBetween(lastPaidDate) : null;
+    if(days !== null && days >= 21){
+      items.push({ urgency:'medium', text:`<strong>${ag.contractor}</strong> ko ${inr(bal)} dena baki hai, ${days} din se koi payment nahi hui (${siteName(ag.siteId)}).` });
+    }
+  });
+
+  if(items.length === 0){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  items.sort((a,b)=> (a.urgency==='high'?0:1) - (b.urgency==='high'?0:1));
+  list.innerHTML = items.map(it=>`<li style="color:${it.urgency==='high'?'var(--bad)':'inherit'}">${it.text}</li>`).join('');
+}
+
 function renderInsights(){
   const list = document.getElementById('insightsList');
   if(!list) return;
