@@ -707,8 +707,15 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card">
+        <h2>Vendor Ledger <small>Ek vendor se kayi sites pe udhar liya ho, to yahan se lumpsum payment do — system khud purane bill se shuru karke adjust kar dega (chahe wo kisi bhi site ka ho). Overall udhari yahan se automatic deduct hoti hai.</small></h2>
+        <div class="table-wrap"><table id="vendorLedgerTable"><thead><tr>
+          <th>Vendor</th><th>Total Billed (Sabhi Sites)</th><th>Total Paid</th><th>Outstanding</th><th>Bills</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
         <div class="toolbar">
-          <h2 style="margin:0">All Udhar Entries</h2>
+          <h2 style="margin:0">All Udhar Entries <small style="display:block;font-weight:400;color:var(--ink-soft)">Original billing — jaisi entry ki gayi thi, waisi hi</small></h2>
           <div class="toolbar-left">
             <select id="udListSiteFilter"><option value="all">All Sites</option></select>
             <select id="udListStatusFilter"><option value="all">All Status</option><option value="pending">Pending</option><option value="paid">Paid</option></select>
@@ -716,13 +723,6 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
         <div class="table-wrap"><table id="udharTable"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th>Supplier</th><th>Material</th><th>Qty</th><th data-i18n="th_amount">Amount</th><th data-i18n="th_status">Status</th><th data-i18n="th_note">Note</th><th></th>
-        </tr></thead><tbody></tbody></table></div>
-      </div>
-
-      <div class="card">
-        <h2>Vendor Ledger <small>Ek vendor se kayi sites pe udhar liya ho, to yahan se lumpsum payment do — system khud purane bill se shuru karke adjust kar dega (chahe wo kisi bhi site ka ho)</small></h2>
-        <div class="table-wrap"><table id="vendorLedgerTable"><thead><tr>
-          <th>Vendor</th><th>Total Billed (Sabhi Sites)</th><th>Total Paid</th><th>Outstanding</th><th>Bills</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
     </section>
@@ -1330,6 +1330,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <option value="labour">Labour</option>
           <option value="material">Material</option>
           <option value="other">Other</option>
+          <option value="udhar">Udhar (Credit from Supplier)</option>
         </select>
       </div>
     </div>
@@ -1347,13 +1348,27 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <option>Electrical Material</option><option>Hardware</option><option>Wood / Furniture</option><option>Other</option>
       </select>
     </div>
+    <div class="field" id="qUdharMaterialWrap" style="display:none"><label>Material Type</label>
+      <select id="qUdharMaterial">
+        <option>Cement</option><option>Steel / TMT Bar</option><option>Bricks</option><option>Sand</option>
+        <option>Aggregate / Gitti</option><option>Tiles</option><option>Paint</option><option>Plumbing Material</option>
+        <option>Electrical Material</option><option>Hardware</option><option>Wood / Furniture</option><option>Other</option>
+      </select>
+    </div>
     <div class="field"><label id="qNameLabel">Contractor name</label><input id="qName" list="dl-labour-names" placeholder="Naam likho ya list se chuno"></div>
     <div class="grid cols-2">
       <div class="field"><label data-i18n="lbl_date">Date</label><input id="qDate" type="date"></div>
       <div class="field"><label data-i18n="lbl_amount">Amount (₹)</label><input id="qAmount" type="number" min="0" placeholder="0"></div>
     </div>
+    <div class="grid cols-3" id="qUdharQtyRow" style="display:none">
+      <div class="field"><label>Quantity</label><input id="qQty" type="number" min="0" placeholder="0"></div>
+      <div class="field"><label>Unit</label><input id="qUnit" placeholder="e.g. bags / kg"></div>
+      <div class="field"><label>Status</label>
+        <select id="qUdharStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
+      </div>
+    </div>
     <div class="grid cols-2">
-      <div class="field"><label data-i18n="lbl_paidby">Paid by</label>
+      <div class="field" id="qModeWrap"><label data-i18n="lbl_paidby">Paid by</label>
         <select id="qMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option></select>
       </div>
       <div class="field"><label data-i18n="lbl_note">Note</label><input id="qNote" placeholder="Optional"></div>
@@ -3362,14 +3377,19 @@ async function removeTeam(email){
 const qModal = document.getElementById('quickModal');
 
 document.getElementById('qType').addEventListener('change', e=>{
-  const isLabour = e.target.value==='labour';
-  const isMaterial = e.target.value==='material';
+  const val = e.target.value;
+  const isLabour = val==='labour';
+  const isMaterial = val==='material';
+  const isUdhar = val==='udhar';
   document.getElementById('qCategoryWrap').style.display = isLabour ? 'block' : 'none';
   document.getElementById('qMaterialTypeWrap').style.display = isMaterial ? 'block' : 'none';
+  document.getElementById('qUdharMaterialWrap').style.display = isUdhar ? 'block' : 'none';
+  document.getElementById('qUdharQtyRow').style.display = isUdhar ? 'flex' : 'none';
+  document.getElementById('qModeWrap').style.display = isUdhar ? 'none' : 'block';
   document.getElementById('qNameLabel').textContent =
-    isLabour ? 'Contractor name' : (isMaterial ? 'Vendor / shop name' : 'Paid to');
-  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names' };
-  document.getElementById('qName').setAttribute('list', listMap[e.target.value]);
+    isLabour ? 'Contractor name' : isMaterial ? 'Vendor / shop name' : isUdhar ? 'Supplier name' : 'Paid to';
+  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names', udhar:'dl-suppliers' };
+  document.getElementById('qName').setAttribute('list', listMap[val]);
 });
 
 function openQuickAdd(){
@@ -3408,6 +3428,33 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
 
   const proceed = await checkDuplicatePayment(name, date, null);
   if(!proceed) return;
+
+  if(type === 'udhar'){
+    try{
+      await db.collection('udhar').add({
+        siteId, supplier: name,
+        material: document.getElementById('qUdharMaterial').value,
+        qty: document.getElementById('qQty').value,
+        unit: document.getElementById('qUnit').value.trim(),
+        date, amount,
+        status: document.getElementById('qUdharStatus').value,
+        note: document.getElementById('qNote').value.trim()
+      });
+    }catch(e){ err.textContent = 'Error: ' + e.message; return; }
+    if(document.getElementById('siteDetailBg')){
+      renderSiteDetailLedger(siteId);
+      renderSiteDetailChart(siteId, currentRole==='owner'?siteReceived(siteId):0, siteCost(siteId));
+    }
+    document.getElementById('qSavedHint').textContent = `Saved: ${name} — ${inr(amount)} (${siteName(siteId)}) — Udhar`;
+    document.getElementById('qName').value = '';
+    document.getElementById('qAmount').value = '';
+    document.getElementById('qQty').value = '';
+    document.getElementById('qUnit').value = '';
+    document.getElementById('qNote').value = '';
+    document.getElementById('qName').focus();
+    showToast('Udhar entry save ho gayi ✓');
+    return;
+  }
 
   DATA.expenses.push({
     id: uid(), siteId, type,
