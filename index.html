@@ -562,6 +562,25 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </tr></thead><tbody></tbody></table></div>
         <div class="footnote" id="projectionNote"></div>
       </div>
+
+      <div class="card owner-only">
+        <h2>Key Financial Accounts <small>Business ki 6 sabse important numbers — construction accounting ke standard "Chart of Accounts" se liye gaye</small></h2>
+        <div class="stat-row">
+          <div class="stat" style="border-left-color:#1B4F8C"><div class="lbl">1000 · Est. Cash Position</div><div class="val" id="coaCash" style="color:#1B4F8C">₹0</div></div>
+          <div class="stat" style="border-left-color:#0F7355"><div class="lbl">1200 · Accounts Receivable</div><div class="val" id="coaAR" style="color:#0F7355">₹0</div></div>
+          <div class="stat" style="border-left-color:#B3372C"><div class="lbl">2000 · Accounts Payable</div><div class="val" id="coaAP" style="color:#B3372C">₹0</div></div>
+          <div class="stat" style="border-left-color:#0F7355"><div class="lbl">4000 · Total Revenue</div><div class="val" id="coaRevenue" style="color:#0F7355">₹0</div></div>
+          <div class="stat" style="border-left-color:#E8940C"><div class="lbl">5000 · Total Job Costs (COGS)</div><div class="val" id="coaCogs" style="color:#A66A05">₹0</div></div>
+          <div class="stat" style="border-left-color:#6B4A8A"><div class="lbl">3050 · Retained Earnings</div><div class="val" id="coaRetained" style="color:#6B4A8A">₹0</div></div>
+        </div>
+      </div>
+
+      <div class="card owner-only">
+        <h2>Chart of Accounts <small>Poora account-wise breakdown — standard construction company chart of accounts ke hisaab se. Jahan app mein wo cheez track nahi hoti, wahan "—" dikhega.</small></h2>
+        <div class="table-wrap"><table id="coaTable"><thead><tr>
+          <th>Code</th><th>Account</th><th>Amount</th><th>Source (App mein kahan se aata hai)</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
     </section>
 
     <!-- SITES -->
@@ -601,7 +620,6 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
               <option value="labour">Labour</option>
               <option value="material">Material</option>
               <option value="other">Other</option>
-              <option value="udhar">Udhar (Credit from Supplier)</option>
             </select>
           </div>
           <div class="field" id="expCategoryWrap"><label data-i18n="lbl_labourcat">Labour Category</label>
@@ -640,9 +658,9 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
         <div class="grid cols-2">
           <div class="field" id="expModeWrap"><label data-i18n="lbl_paymode">Payment Mode</label>
-            <select id="expMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option></select>
+            <select id="expMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option><option value="udhar">Udhar (Credit — Baad mein pay karenge)</option></select>
           </div>
-          <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="expNote" placeholder="e.g. 2nd floor slab payment"></div>
+          <div class="field" id="expNoteWrap"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="expNote" placeholder="e.g. 2nd floor slab payment"></div>
         </div>
         <div class="login-error" id="expFormErr" style="margin-bottom:8px"></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1330,7 +1348,6 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <option value="labour">Labour</option>
           <option value="material">Material</option>
           <option value="other">Other</option>
-          <option value="udhar">Udhar (Credit from Supplier)</option>
         </select>
       </div>
     </div>
@@ -1369,7 +1386,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
     </div>
     <div class="grid cols-2">
       <div class="field" id="qModeWrap"><label data-i18n="lbl_paidby">Paid by</label>
-        <select id="qMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option></select>
+        <select id="qMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option><option value="udhar">Udhar (Credit — Baad mein pay karenge)</option></select>
       </div>
       <div class="field"><label data-i18n="lbl_note">Note</label><input id="qNote" placeholder="Optional"></div>
     </div>
@@ -2168,6 +2185,22 @@ function siteCost(siteId){
   const ud = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
   return exp + ud;
 }
+/* Remaining balance per udhar entry, accounting for vendor lumpsum payments —
+   use this anywhere "Credit Pending" is shown instead of the raw status field. */
+function udharRemainingForEntries(entries){
+  const suppliers = new Map();
+  entries.forEach(u=>{
+    const key = vendorNameKey(u.supplier);
+    if(key && !suppliers.has(key)) suppliers.set(key, u.supplier);
+  });
+  const remainingMap = {};
+  suppliers.forEach(supplier=>{
+    const { billRemaining } = computeVendorAllocations(supplier);
+    Object.assign(remainingMap, billRemaining);
+  });
+  return remainingMap;
+}
+
 function siteReceived(siteId){
   return DATA.clientPayments.filter(p=>p.siteId===siteId).reduce((a,p)=>a+Number(p.amount),0);
 }
@@ -2296,16 +2329,27 @@ document.getElementById('expType').addEventListener('change', (e)=>{
   const val = e.target.value;
   const isLabour = val==='labour';
   const isMaterial = val==='material';
-  const isUdhar = val==='udhar';
+  const isUdhar = document.getElementById('expMode').value==='udhar';
   document.getElementById('expCategoryWrap').style.display = isLabour ? 'block' : 'none';
-  document.getElementById('expMaterialTypeWrap').style.display = isMaterial ? 'block' : 'none';
-  document.getElementById('expUdharMaterialWrap').style.display = isUdhar ? 'block' : 'none';
-  document.getElementById('expUdharQtyRow').style.display = isUdhar ? 'flex' : 'none';
-  document.getElementById('expModeWrap').style.display = isUdhar ? 'none' : 'block';
+  document.getElementById('expMaterialTypeWrap').style.display = (isMaterial && !isUdhar) ? 'block' : 'none';
   document.getElementById('expNameLabel').textContent =
-    isLabour ? 'Contractor Name' : isMaterial ? 'Vendor / Shop Name' : isUdhar ? 'Supplier Name' : 'Paid To';
-  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names', udhar:'dl-suppliers' };
-  document.getElementById('expName').setAttribute('list', listMap[val]);
+    isLabour ? 'Contractor Name' : isMaterial ? 'Vendor / Shop Name' : 'Paid To';
+  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names' };
+  document.getElementById('expName').setAttribute('list', isUdhar ? 'dl-suppliers' : listMap[val]);
+});
+document.getElementById('expMode').addEventListener('change', (e)=>{
+  const isUdhar = e.target.value === 'udhar';
+  if(isUdhar){
+    // Udhar only makes sense for material bought on credit — lock Type to Material.
+    document.getElementById('expType').value = 'material';
+    document.getElementById('expType').dispatchEvent(new Event('change'));
+  }
+  document.getElementById('expUdharMaterialWrap').style.display = isUdhar ? 'block' : 'none';
+  document.getElementById('expMaterialTypeWrap').style.display = isUdhar ? 'none' : (document.getElementById('expType').value==='material' ? 'block' : 'none');
+  document.getElementById('expUdharQtyRow').style.display = isUdhar ? 'flex' : 'none';
+  document.getElementById('expNoteWrap').style.display = 'block';
+  document.getElementById('expNameLabel').textContent = isUdhar ? 'Supplier Name' : document.getElementById('expNameLabel').textContent;
+  document.getElementById('expName').setAttribute('list', isUdhar ? 'dl-suppliers' : 'dl-material-names');
 });
 document.getElementById('expDate').value = todayStr();
 
@@ -2369,7 +2413,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   const proceed = await checkDuplicatePayment(contractor, date, editingExpenseId);
   if(!proceed) return;
 
-  if(type === 'udhar'){
+  if(mode === 'udhar'){
     try{
       await db.collection('udhar').add({
         siteId, supplier: contractor,
@@ -3380,16 +3424,25 @@ document.getElementById('qType').addEventListener('change', e=>{
   const val = e.target.value;
   const isLabour = val==='labour';
   const isMaterial = val==='material';
-  const isUdhar = val==='udhar';
+  const isUdhar = document.getElementById('qMode').value==='udhar';
   document.getElementById('qCategoryWrap').style.display = isLabour ? 'block' : 'none';
-  document.getElementById('qMaterialTypeWrap').style.display = isMaterial ? 'block' : 'none';
-  document.getElementById('qUdharMaterialWrap').style.display = isUdhar ? 'block' : 'none';
-  document.getElementById('qUdharQtyRow').style.display = isUdhar ? 'flex' : 'none';
-  document.getElementById('qModeWrap').style.display = isUdhar ? 'none' : 'block';
+  document.getElementById('qMaterialTypeWrap').style.display = (isMaterial && !isUdhar) ? 'block' : 'none';
   document.getElementById('qNameLabel').textContent =
-    isLabour ? 'Contractor name' : isMaterial ? 'Vendor / shop name' : isUdhar ? 'Supplier name' : 'Paid to';
-  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names', udhar:'dl-suppliers' };
-  document.getElementById('qName').setAttribute('list', listMap[val]);
+    isLabour ? 'Contractor name' : isMaterial ? 'Vendor / shop name' : 'Paid to';
+  const listMap = { labour:'dl-labour-names', material:'dl-material-names', other:'dl-other-names' };
+  document.getElementById('qName').setAttribute('list', isUdhar ? 'dl-suppliers' : listMap[val]);
+});
+document.getElementById('qMode').addEventListener('change', e=>{
+  const isUdhar = e.target.value === 'udhar';
+  if(isUdhar){
+    document.getElementById('qType').value = 'material';
+    document.getElementById('qType').dispatchEvent(new Event('change'));
+  }
+  document.getElementById('qUdharMaterialWrap').style.display = isUdhar ? 'block' : 'none';
+  document.getElementById('qMaterialTypeWrap').style.display = isUdhar ? 'none' : (document.getElementById('qType').value==='material' ? 'block' : 'none');
+  document.getElementById('qUdharQtyRow').style.display = isUdhar ? 'flex' : 'none';
+  if(isUdhar) document.getElementById('qNameLabel').textContent = 'Supplier name';
+  document.getElementById('qName').setAttribute('list', isUdhar ? 'dl-suppliers' : 'dl-material-names');
 });
 
 function openQuickAdd(){
@@ -3416,6 +3469,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
   const err = document.getElementById('qErr');
   const siteId = document.getElementById('qSite').value;
   const type = document.getElementById('qType').value;
+  const mode = document.getElementById('qMode').value;
   const name = document.getElementById('qName').value.trim();
   const amount = Number(document.getElementById('qAmount').value);
   const date = document.getElementById('qDate').value || todayStr();
@@ -3429,7 +3483,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
   const proceed = await checkDuplicatePayment(name, date, null);
   if(!proceed) return;
 
-  if(type === 'udhar'){
+  if(mode === 'udhar'){
     try{
       await db.collection('udhar').add({
         siteId, supplier: name,
@@ -4821,6 +4875,126 @@ function renderFiveYearProjection(){
   });
 }
 
+/* ---------------- Chart of Accounts ----------------
+   Maps the numbers we actually track onto a standard construction-company
+   chart of accounts, so the business can be read the way an accountant or
+   bank would expect. Where the app doesn't capture something granular
+   enough (e.g. retainage, fixed assets, insurance as its own line), that
+   account shows "—" rather than a guessed number. */
+function computeChartOfAccounts(){
+  const totalReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const consultReceived = DATA.consultancyIncome.filter(r=>r.status==='received').reduce((a,r)=>a+Number(r.amount),0);
+  const consultPending = DATA.consultancyIncome.filter(r=>r.status==='pending').reduce((a,r)=>a+Number(r.amount),0);
+  const revenue = totalReceived + consultReceived;
+
+  const labourTotal = DATA.expenses.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
+  const materialTotal = DATA.expenses.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
+  const otherTotal = DATA.expenses.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
+  const udharAllTotal = DATA.udhar.reduce((a,u)=>a+Number(u.amount),0);
+  const directMaterials = materialTotal + udharAllTotal;
+
+  const agreementsFixedTotal = DATA.workAgreements.reduce((a,ag)=>a+Number(ag.fixedAmount),0);
+  const contractorBalanceDue = DATA.workAgreements.reduce((a,ag)=>{
+    const bal = Number(ag.fixedAmount) - computePaidForAgreement(ag);
+    return a + (bal>0?bal:0);
+  },0);
+
+  const udharRemMap = udharRemainingForEntries(DATA.udhar);
+  const udharPendingAll = DATA.udhar.reduce((a,u)=>a+Math.max(udharRemMap[u.id]||0,0),0);
+
+  const officeSalary = DATA.officeExpenses.filter(r=>r.category==='Employee Salary').reduce((a,r)=>a+Number(r.amount),0);
+  const officeRentUtil = DATA.officeExpenses.filter(r=>r.category==='Office Rent'||r.category==='Utility Bill').reduce((a,r)=>a+Number(r.amount),0);
+  const officeOtherAdmin = DATA.officeExpenses.filter(r=>!['Employee Salary','Office Rent','Utility Bill'].includes(r.category)).reduce((a,r)=>a+Number(r.amount),0);
+  const totalOffice = DATA.officeExpenses.reduce((a,r)=>a+Number(r.amount),0);
+
+  const contractSites = DATA.sites.filter(s=>Number(s.contractValue)>0);
+  const ar = contractSites.reduce((a,s)=>a+Math.max(Number(s.contractValue)-siteReceived(s.id),0),0) + consultPending;
+
+  const wip = DATA.sites.filter(s=>s.status!=='completed').reduce((a,s)=>a+siteCost(s.id),0);
+
+  const investorTaken = DATA.investorLoans.reduce((a,i)=>a+Number(i.taken),0);
+  const investorReturnDue = DATA.investorLoans.reduce((a,i)=>a+Number(i.returnAmt),0);
+  const investorPaidBack = DATA.investorLoans.reduce((a,i)=>a+investorPaidSoFar(i),0);
+  const investorPendingReturn = DATA.investorLoans.reduce((a,i)=>a+investorRemaining(i),0);
+  const investorInterest = investorReturnDue - investorTaken;
+
+  const personalInvestTotal = DATA.personalInvestments.reduce((a,r)=>a+Number(r.amount),0);
+
+  const totalCogs = labourTotal + directMaterials + agreementsFixedTotal + otherTotal;
+  const totalOverhead = totalOffice;
+  const netIncome = revenue - totalCogs - totalOverhead - (investorInterest>0?investorInterest:0);
+
+  // A rough cash proxy: money actually collected, minus money actually paid
+  // out in cash/bank (i.e. NOT sitting as a payable — udhar and unpaid
+  // contractor balances haven't left the bank yet).
+  const cashPaidOut = (labourTotal + materialTotal + otherTotal - udharPendingAll)
+    + (agreementsFixedTotal - contractorBalanceDue)
+    + totalOffice + investorPaidBack + personalInvestTotal
+    + DATA.personalLoans.filter(l=>l.status!=='returned').reduce((a,l)=>a+Number(l.amount),0);
+  const cashPosition = revenue - Math.max(cashPaidOut,0);
+
+  return [
+    { code:'1000', name:'Cash & Bank Accounts', group:'Assets', amount: cashPosition, source:'Client + consultancy receipts minus everything actually paid out (cash-basis estimate)' },
+    { code:'1200', name:'Accounts Receivable (AR)', group:'Assets', amount: ar, source:'Client Payments tab — Contract Value minus Received, + pending Consultancy Income' },
+    { code:'1220', name:'Retainage / Retention Receivable', group:'Assets', amount: null, source:'Not tracked separately in this app' },
+    { code:'1230', name:'Construction in Progress (WIP)', group:'Assets', amount: wip, source:'Total site cost for all Running (not yet Completed) sites' },
+    { code:'1500', name:'Fixed Assets (Vehicles, Machinery, Tools)', group:'Assets', amount: null, source:'Not tracked in this app' },
+
+    { code:'2000', name:'Accounts Payable (AP)', group:'Liabilities', amount: udharPendingAll + contractorBalanceDue, source:'Vendor Ledger outstanding + Contractor Work balance due' },
+    { code:'2120', name:'Retainage / Retention Payable', group:'Liabilities', amount: null, source:'Not tracked separately in this app' },
+    { code:'2200', name:'Billings in Excess of Costs', group:'Liabilities', amount: null, source:'Not tracked separately in this app' },
+    { code:'2500', name:'Equipment Loans & Notes Payable', group:'Liabilities', amount: investorPendingReturn, source:'Investor Funding — total pending return across all investors' },
+
+    { code:'3010', name:"Owner's Capital / Investment", group:'Equity', amount: personalInvestTotal, source:'Personal Finance → Personal Investments, total invested' },
+    { code:'3020', name:"Owner's Draws", group:'Equity', amount: null, source:'Not tracked separately in this app' },
+    { code:'3050', name:'Retained Earnings', group:'Equity', amount: netIncome, source:'Net Profit/Loss from Profit & Loss tab (all-time)' },
+
+    { code:'4000', name:'Contract / Project Revenue', group:'Revenue', amount: totalReceived, source:'Sum of all Client Payments received' },
+    { code:'4100', name:'Change Order Revenue', group:'Revenue', amount: null, source:'Not tracked separately — record as a normal Client Payment' },
+    { code:'4200', name:'Service & Maintenance Revenue', group:'Revenue', amount: consultReceived, source:'Consultancy tab — received income (Plan & Design, Property Dealing, etc.)' },
+
+    { code:'5000', name:'Direct Labor & Field Wages', group:'Job Costs (COGS)', amount: labourTotal, source:'Add Expense — all Labour type entries, all sites' },
+    { code:'5100', name:'Direct Materials & Supplies', group:'Job Costs (COGS)', amount: directMaterials, source:'Material expense entries + all Udhar Material (cash + credit)' },
+    { code:'5200', name:'Subcontractor Costs', group:'Job Costs (COGS)', amount: agreementsFixedTotal, source:'Contractor Work — total Fixed Amount across all agreements' },
+    { code:'5300', name:'Equipment Rental & Fuel / Permits & Fees', group:'Job Costs (COGS)', amount: otherTotal, source:'Add Expense — "Other" type entries (rental vs. permits not split separately yet)' },
+
+    { code:'7000', name:'Office Salaries & Admin Wages', group:'Overhead', amount: officeSalary, source:'Office Expense — category "Employee Salary"' },
+    { code:'7100', name:'Office Rent & Utilities', group:'Overhead', amount: officeRentUtil, source:'Office Expense — "Office Rent" + "Utility Bill"' },
+    { code:'7200', name:'Insurance', group:'Overhead', amount: null, source:'Not tracked as its own category — logged under Office Expense "Other" if entered' },
+    { code:'7300', name:'Accounting & Legal Fees + Other Admin', group:'Overhead', amount: officeOtherAdmin, source:'Office Expense — remaining categories (Stationery, Travel, Other)' },
+  ];
+}
+
+function renderChartOfAccounts(){
+  const tbody = document.querySelector('#coaTable tbody');
+  if(!tbody) return;
+  const rows = computeChartOfAccounts();
+
+  const fmt = v => v===null ? '<span style="color:var(--ink-soft)">—</span>' : `<span class="amt">${v<0?'- ':''}${inr(Math.abs(v))}</span>`;
+  let html = '';
+  let lastGroup = '';
+  rows.forEach(r=>{
+    if(r.group !== lastGroup){
+      html += `<tr style="background:var(--surface-2)"><td colspan="4" style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft)">${r.group}</td></tr>`;
+      lastGroup = r.group;
+    }
+    html += `<tr><td class="amt" style="color:var(--ink-soft)">${r.code}</td><td>${r.name}</td><td>${fmt(r.amount)}</td><td style="font-size:11.5px;color:var(--ink-soft)">${r.source}</td></tr>`;
+  });
+  tbody.innerHTML = html;
+
+  const get = code => { const r = rows.find(x=>x.code===code); return r && r.amount!==null ? r.amount : 0; };
+  const revenue = get('4000') + get('4200');
+  const cogs = get('5000') + get('5100') + get('5200') + get('5300');
+  document.getElementById('coaCash').textContent = inr(get('1000'));
+  document.getElementById('coaAR').textContent = inr(get('1200'));
+  document.getElementById('coaAP').textContent = inr(get('2000'));
+  document.getElementById('coaRevenue').textContent = inr(revenue);
+  document.getElementById('coaCogs').textContent = inr(cogs);
+  const retained = get('3050');
+  const retEl = document.getElementById('coaRetained');
+  retEl.textContent = (retained<0?'- ':'') + inr(Math.abs(retained));
+}
+
 function renderDashboard(){
   const filter = document.getElementById('dashSiteFilter').value;
   const exp = filter==='all' ? DATA.expenses : DATA.expenses.filter(e=>e.siteId===filter);
@@ -4830,7 +5004,8 @@ function renderDashboard(){
   const materialTotal = exp.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
   const otherTotal = exp.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
   const udharTotal = ud.reduce((a,u)=>a+Number(u.amount),0);
-  const udharPending = ud.filter(u=>u.status==='pending').reduce((a,u)=>a+Number(u.amount),0);
+  const udharRemainingMap = udharRemainingForEntries(ud);
+  const udharPending = ud.reduce((a,u)=>a+Math.max(udharRemainingMap[u.id]||0,0),0);
   const grandTotal = labourTotal + materialTotal + otherTotal + udharTotal;
 
   document.getElementById('statTotal').textContent = inr(grandTotal);
@@ -4861,6 +5036,7 @@ function renderDashboard(){
     if(projShareEl) projShareEl.textContent = (projOurShare<0?'- ':'') + inr(Math.abs(projOurShare));
 
     renderFiveYearProjection();
+    renderChartOfAccounts();
   }
 
   const filteredSites = filter==='all' ? DATA.sites : DATA.sites.filter(s=>s.id===filter);
@@ -5087,7 +5263,8 @@ function renderInsights(){
   },0);
   if(contractorPending > 0) notes.push(`Contractors ko total <strong>${inr(contractorPending)}</strong> dena abhi baki hai.`);
 
-  const udharPendingAll = DATA.udhar.filter(u=>u.status==='pending').reduce((a,u)=>a+Number(u.amount),0);
+  const udharRemMap = udharRemainingForEntries(DATA.udhar);
+  const udharPendingAll = DATA.udhar.reduce((a,u)=>a+Math.max(udharRemMap[u.id]||0,0),0);
   if(udharPendingAll > 0) notes.push(`Suppliers ka udhar <strong>${inr(udharPendingAll)}</strong> abhi pending hai.`);
 
   const thisMonth = todayStr().slice(0,7);
