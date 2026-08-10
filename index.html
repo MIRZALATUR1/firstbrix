@@ -577,6 +577,16 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
       <div class="card owner-only">
         <h2>Chart of Accounts <small>Poora account-wise breakdown — standard construction company chart of accounts ke hisaab se. Jahan app mein wo cheez track nahi hoti, wahan "—" dikhega.</small></h2>
+        <div class="grid cols-2" style="margin-bottom:18px">
+          <div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);font-weight:700;margin-bottom:8px">Balance Sheet — Assets vs Liabilities vs Equity</div>
+            <div style="position:relative;height:220px"><canvas id="chartCoaBalance"></canvas></div>
+          </div>
+          <div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);font-weight:700;margin-bottom:8px">Income Statement — Revenue vs Costs vs Net</div>
+            <div style="position:relative;height:220px"><canvas id="chartCoaIncome"></canvas></div>
+          </div>
+        </div>
         <div class="table-wrap"><table id="coaTable"><thead><tr>
           <th>Code</th><th>Account</th><th>Amount</th><th>Source (App mein kahan se aata hai)</th>
         </tr></thead><tbody></tbody></table></div>
@@ -4993,6 +5003,46 @@ function renderChartOfAccounts(){
   const retained = get('3050');
   const retEl = document.getElementById('coaRetained');
   retEl.textContent = (retained<0?'- ':'') + inr(Math.abs(retained));
+
+  if(typeof Chart === 'undefined') return;
+
+  const totalAssets = get('1000') + get('1200') + get('1230');
+  const totalLiabilities = get('2000') + get('2500');
+  const totalEquity = get('3010') + get('3050');
+  const totalCogs = get('5000') + get('5100') + get('5200') + get('5300');
+  const totalOverhead = get('7000') + get('7100') + get('7300');
+  const netIncome = revenue - totalCogs - totalOverhead;
+
+  killChart('coaBalance'); killChart('coaIncome');
+
+  const balEl = document.getElementById('chartCoaBalance');
+  if(balEl){
+    charts.coaBalance = new Chart(balEl, {
+      type:'bar',
+      data:{ labels:['Assets','Liabilities','Equity'], datasets:[{
+        data:[totalAssets, totalLiabilities, totalEquity],
+        backgroundColor:['#1B4F8C','#B3372C','#6B4A8A']
+      }]},
+      options: Object.assign(chartDefaults(), {
+        plugins:{ legend:{ display:false } },
+        scales:{ y:{ ticks:{ callback:v=>inr(v) } } }
+      })
+    });
+  }
+  const incEl = document.getElementById('chartCoaIncome');
+  if(incEl){
+    charts.coaIncome = new Chart(incEl, {
+      type:'bar',
+      data:{ labels:['Revenue','Job Costs','Overhead','Net Income'], datasets:[{
+        data:[revenue, totalCogs, totalOverhead, netIncome],
+        backgroundColor:[netIncome>=0?'#0F7355':'#0F7355','#E8940C','#5C6B7E', netIncome>=0?'#0F7355':'#B3372C']
+      }]},
+      options: Object.assign(chartDefaults(), {
+        plugins:{ legend:{ display:false } },
+        scales:{ y:{ ticks:{ callback:v=>inr(v) } } }
+      })
+    });
+  }
 }
 
 function renderDashboard(){
