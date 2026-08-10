@@ -529,10 +529,8 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card">
-        <h2><span data-i18n="h2_trend">Trend (15-Din Breakup)</span> <small>Left-right slide/scroll karke kisi bhi period ka data dekho — pehli entry se ab tak</small></h2>
-        <div style="overflow-x:auto;overflow-y:hidden;" id="trendScrollWrap">
-          <div style="position:relative;height:260px" id="trendCanvasWrap"><canvas id="chartTrend"></canvas></div>
-        </div>
+        <h2><span data-i18n="h2_trend">Monthly Trend</span> <small>Bold line = monthly total, halki line = 15-din ka breakup. Cursor kisi bhi point pe rakho, us date ka exact amount dikhega.</small></h2>
+        <div style="position:relative;height:280px"><canvas id="chartTrend"></canvas></div>
       </div>
 
       <div class="card">
@@ -5302,55 +5300,68 @@ function renderCharts(exp, ud){
     });
   }
 
-  // 3) 15-day breakup trend — every fortnight since the very first entry,
-  //    rendered wide so the person can slide/scroll left-right through it.
+  // 3) Monthly Trend — bold monthly line + a light 15-day sub-line, both on
+  //    the same fortnight-resolution x-axis so hovering any point shows the
+  //    exact date-range and its amount.
   const fortnightKey = dateStr => {
     const d = dateStr.slice(0,10);
     const half = Number(d.slice(8,10)) <= 15 ? '1-15' : '16-End';
-    return { key: d.slice(0,7) + (half==='1-15'?'-A':'-B'), label: d.slice(0,7) + ' (' + half + ')' };
+    return { key: d.slice(0,7) + (half==='1-15'?'-A':'-B'), month: d.slice(0,7), label: d.slice(0,7) + ' (' + half + ')' };
   };
   const byFortnight = {};
-  DATA.expenses.forEach(e=>{
-    if(!e.date) return;
-    const { key, label } = fortnightKey(e.date);
+  const monthTotals = {};
+  const addAmt = (dateStr, amt) => {
+    if(!dateStr) return;
+    const { key, month, label } = fortnightKey(dateStr);
     if(!byFortnight[key]) byFortnight[key] = { label, total: 0 };
-    byFortnight[key].total += Number(e.amount);
-  });
-  DATA.udhar.forEach(u=>{
-    if(!u.date) return;
-    const { key, label } = fortnightKey(u.date);
-    if(!byFortnight[key]) byFortnight[key] = { label, total: 0 };
-    byFortnight[key].total += Number(u.amount);
-  });
-  const periodKeys = Object.keys(byFortnight).sort();
+    byFortnight[key].total += amt;
+    monthTotals[month] = (monthTotals[month]||0) + amt;
+  };
+  DATA.expenses.forEach(e=>addAmt(e.date, Number(e.amount)));
+  DATA.udhar.forEach(u=>addAmt(u.date, Number(u.amount)));
+
+  const periodKeys = Object.keys(byFortnight).sort().slice(-12); // last 6 months, 2 points each
   killChart('trend');
   const trendEl = document.getElementById('chartTrend');
-  const scrollWrap = document.getElementById('trendScrollWrap');
-  const canvasWrap = document.getElementById('trendCanvasWrap');
   if(trendEl && periodKeys.length){
-    // Roughly 55px per period so bars stay readable; scroll container caps
-    // the visible width and lets the rest slide into view.
-    const minWidth = Math.max(periodKeys.length * 55, 300);
-    if(canvasWrap) canvasWrap.style.width = minWidth + 'px';
     charts.trend = new Chart(trendEl, {
       type:'line',
-      data:{ labels: periodKeys.map(k=>byFortnight[k].label), datasets:[{
-        label:'Total Expense', data: periodKeys.map(k=>byFortnight[k].total),
-        borderColor:'#1B4F8C', backgroundColor:'rgba(27,79,140,0.12)', fill:true, tension:0.3,
-        pointRadius:3, pointHoverRadius:5
-      }]},
+      data:{
+        labels: periodKeys.map(k=>byFortnight[k].label),
+        datasets:[
+          {
+            label:'Monthly Total',
+            data: periodKeys.map(k=>monthTotals[k.slice(0,7)]||0),
+            borderColor:'#1B4F8C', backgroundColor:'rgba(27,79,140,0.08)',
+            borderWidth:3, fill:true, tension:0.25, stepped:false,
+            pointRadius:4, pointHoverRadius:6, pointBackgroundColor:'#1B4F8C'
+          },
+          {
+            label:'15-Day Amount',
+            data: periodKeys.map(k=>byFortnight[k].total),
+            borderColor:'rgba(232,148,12,0.65)', backgroundColor:'transparent',
+            borderWidth:1.5, borderDash:[4,3], fill:false, tension:0.25,
+            pointRadius:3, pointHoverRadius:5, pointBackgroundColor:'#E8940C'
+          }
+        ]
+      },
       options: Object.assign(chartDefaults(), {
-        plugins:{ legend:{ display:false } },
+        interaction:{ mode:'index', intersect:false },
+        plugins:{
+          legend:{ display:true, position:'top', labels:{ boxWidth:14, font:{ size:11 } } },
+          tooltip:{
+            callbacks:{
+              title: items => items[0] ? items[0].label : '',
+              label: item => `${item.dataset.label}: ${inr(item.parsed.y)}`
+            }
+          }
+        },
         scales:{
-          x:{ ticks:{ maxRotation:45, minRotation:45, autoSkip:false } },
+          x:{ ticks:{ maxRotation:45, minRotation:45, autoSkip:false, font:{ size:10 } } },
           y:{ ticks:{ callback:v=>inr(v) } }
         }
       })
     });
-    // Start scrolled to the most recent period so "now" is visible by default.
-    if(scrollWrap) scrollWrap.scrollLeft = scrollWrap.scrollWidth;
-  } else if(canvasWrap){
-    canvasWrap.style.width = '100%';
   }
 }
 
