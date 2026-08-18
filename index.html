@@ -467,6 +467,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
       <div class="nav-group-label">Tools</div>
       <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> <span data-i18n="slabs">Payment Slabs</span></button>
+      <button data-tab="billgen" class="owner-only"><span class="tab-ico">🧾</span> Bill &amp; Quotation</button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
 
       <div class="nav-group-label owner-only">Admin</div>
@@ -1306,6 +1307,88 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
     </section>
 
+    <!-- BILL & QUOTATION GENERATOR -->
+    <section id="tab-billgen" style="display:none">
+      <h1 class="page-title">Bill &amp; Quotation Generator</h1>
+      <p class="page-sub">Design/Drawing/Turnkey services ke liye Quotation ya Final Bill banao. Save hone ke baad, agar payment mil jaye to seedha Consultancy Income mein bhi record kar sakte ho.</p>
+
+      <div class="card">
+        <h2>Company &amp; Document Type</h2>
+        <div class="grid cols-2">
+          <div class="field"><label>Company</label>
+            <select id="bgCompany">
+              <option value="mirza">Mirza</option>
+              <option value="firstbrix">FirstBrix</option>
+            </select>
+          </div>
+          <div class="field"><label>Document Type</label>
+            <select id="bgDocType">
+              <option value="quotation">Quotation</option>
+              <option value="bill">Final Bill</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Company Name (Letterhead pe)</label><input id="bgCompanyName" placeholder="e.g. Mirza Civil Engineer & Associates"></div>
+          <div class="field"><label>Company Address / Phone</label><input id="bgCompanyAddr" placeholder="e.g. Pune, Maharashtra · 9876543210"></div>
+          <div class="field"><label>Company GSTIN — optional</label><input id="bgCompanyGstin" placeholder="e.g. 27ABCDE1234F1Z5"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Customer &amp; Project Details</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Customer Name</label><input id="bgCustName" list="dl-clients" placeholder="e.g. Mr. Sharma"></div>
+          <div class="field"><label>Customer Phone</label><input id="bgCustPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Site Address</label><input id="bgSiteAddr" placeholder="e.g. Plot 12, Nashik Road"></div>
+        </div>
+        <div class="grid cols-4">
+          <div class="field"><label>Total Built-up Area (sq.ft.)</label><input id="bgBuiltArea" type="number" min="0" placeholder="e.g. 2000"></div>
+          <div class="field"><label>Plot Area (sq.ft.) — 3D ke liye</label><input id="bgPlotArea" type="number" min="0" placeholder="agar built-up se alag ho"></div>
+          <div class="field"><label>GST (%)</label><input id="bgGst" type="number" min="0" max="28" value="18"></div>
+          <div class="field"><label>Advance Paid (₹)</label><input id="bgAdvance" type="number" min="0" placeholder="0"></div>
+        </div>
+        <div class="hint">Built-up Area = sabhi floors ka total (jaise 1000 Ground + 1000 First = 2000). Plot Area sirf tab bharo jab 3D Elevation ka area built-up se alag ho.</div>
+      </div>
+
+      <div class="card">
+        <h2>Select Services</h2>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);margin-bottom:8px">A) Design &amp; Drawing Services <span style="font-weight:400;text-transform:none;letter-spacing:0">— rate Built-up Area pe lagega (3D Elevation sirf Plot Area pe)</span></div>
+        <div id="bgDesignServices" class="grid cols-2"></div>
+
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);margin:16px 0 8px">B) Package Deals</div>
+        <div id="bgPackageServices" class="grid cols-2"></div>
+
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);margin:16px 0 8px">C) Turnkey Construction</div>
+        <div id="bgTurnkeyServices" class="grid cols-2"></div>
+
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-soft);margin:16px 0 8px">D) Other Services</div>
+        <div id="bgCustomServicesList"></div>
+        <button class="btn btn-ghost" id="bgAddCustomBtn" style="padding:7px 12px;font-size:12.5px;margin-top:6px">+ Add Custom Service</button>
+
+        <button class="btn btn-primary" id="bgGenerateBtn" style="margin-top:18px">📄 Generate Document</button>
+      </div>
+
+      <div class="card" id="bgPreviewCard" style="display:none">
+        <div class="toolbar">
+          <h2 style="margin:0">Document Preview</h2>
+          <div class="toolbar-left">
+            <button class="btn btn-steel" id="bgPdfBtn" style="padding:7px 12px;font-size:12.5px">⬇ PDF</button>
+            <button class="btn btn-ghost" id="bgDocBtn" style="padding:7px 12px;font-size:12.5px">⬇ Word</button>
+            <button class="btn btn-primary" id="bgSaveBtn" style="padding:7px 12px;font-size:12.5px">💾 Save to History</button>
+          </div>
+        </div>
+        <div id="bgPreviewBox" style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px;font-size:13px"></div>
+      </div>
+
+      <div class="card">
+        <h2>History</h2>
+        <div class="table-wrap"><table id="bgHistoryTable"><thead><tr>
+          <th>Date</th><th>Doc #</th><th>Customer</th><th>Company</th><th>Type</th><th>Total</th><th>Status</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
     <!-- CONSULTANCY -->
     <section id="tab-consultancy" style="display:none">
       <h1 class="page-title" data-i18n="consultancy_title">Consultancy Income</h1>
@@ -1339,6 +1422,17 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
           <div class="field"><label>Note (optional)</label><input id="csNote" placeholder="e.g. 3BHK plan, ya property naam"></div>
         </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Fund Kaise Handle Ho Raha Hai</label>
+            <select id="csFundMode">
+              <option value="client">Client ke Fund se Directly</option>
+              <option value="staff">Staff ne Apne Account se Diya (Reimbursement Due)</option>
+              <option value="cash">Cash mein</option>
+            </select>
+          </div>
+          <div class="field" id="csStaffNameWrap" style="display:none"><label>Kaunsa Staff</label><input id="csStaffName" placeholder="e.g. Suresh"></div>
+          <div class="field"><label>Site pe Use Ho Raha Hai? — optional</label><select id="csUsedOnSite"><option value="">Nahi, alag rakha hai</option></select></div>
+        </div>
         <button class="btn btn-primary" id="csAddBtn">+ Add Consultancy Income</button>
       </div>
 
@@ -1348,7 +1442,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="toolbar-left"><select id="csListTypeFilter"><option value="all">All Types</option></select></div>
         </div>
         <div class="table-wrap"><table id="csTable"><thead><tr>
-          <th>Date</th><th>Type</th><th>Client</th><th>Amount</th><th>Status</th><th>Note</th><th></th>
+          <th>Date</th><th>Type</th><th>Client</th><th>Amount</th><th>Status</th><th>Fund Handling</th><th>Note</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
     </section>
@@ -1410,12 +1504,14 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label>Source</label>
             <select id="siSourceType">
               <option value="site_diversion">Dusri Site ke Client Payment se Adjust</option>
+              <option value="consultancy">Consultancy Income se</option>
               <option value="personal">Khud (Personal Investment)</option>
               <option value="investor">Investor ka Paisa</option>
             </select>
           </div>
           <div class="field" id="siSourceSiteWrap"><label>Kis Site se Le Rahe Ho</label><select id="siSourceSite"></select></div>
           <div class="field" id="siInvestorNameWrap" style="display:none"><label>Investor ka Naam</label><input id="siInvestorName" list="dl-investors" placeholder="e.g. Mr. Deshmukh"></div>
+          <div class="field" id="siConsultancyWrap" style="display:none"><label>Kaunsi Consultancy Income</label><select id="siConsultancySource"></select></div>
         </div>
         <div class="field"><label>Note (optional)</label><input id="siNote" placeholder="e.g. security deposit / mobilization advance"></div>
         <button class="btn btn-primary" id="siSaveBtn">+ Investment Save Karo</button>
@@ -1682,7 +1778,7 @@ async function logAudit(action, area, summary){
 }
 
 const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments' };
-const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
 /* Snapshot of what the server currently holds, so saveData() can write only
@@ -2095,7 +2191,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -2113,6 +2209,7 @@ function rerenderAll(){
     renderSavedSlabsList();
     renderConsultancyIncome();
     renderSiteFunding();
+    renderBillHistory();
   }
 }
 
@@ -2204,6 +2301,7 @@ async function saveData(){
       sync('paymentSlabs', 'paymentSlabs');
       sync('consultancyIncome', 'consultancyIncome');
       sync('siteInvestments', 'siteInvestments');
+      sync('billQuotations', 'billQuotations');
       const prevFin = serverState.siteFinance || {};
       const seenFin = new Set();
       DATA.sites.forEach(s=>{
@@ -2307,6 +2405,7 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='personal'){ renderPersonalInvestments(); renderPersonalLoans(); }
   if(btn.dataset.tab==='projects') renderProjectUnits();
   if(btn.dataset.tab==='slabs') renderSavedSlabsList();
+  if(btn.dataset.tab==='billgen') renderBillHistory();
   if(btn.dataset.tab==='consultancy') renderConsultancyIncome();
 });
 
@@ -4986,6 +5085,9 @@ document.getElementById('slWordBtn').addEventListener('click', ()=>{
 
 /* ---------------- Consultancy Income ---------------- */
 document.getElementById('csDate').value = todayStr();
+document.getElementById('csFundMode').addEventListener('change', e=>{
+  document.getElementById('csStaffNameWrap').style.display = e.target.value==='staff' ? 'block' : 'none';
+});
 document.getElementById('csAddBtn').addEventListener('click', async ()=>{
   const type = document.getElementById('csType').value;
   const client = document.getElementById('csClient').value.trim();
@@ -4993,17 +5095,22 @@ document.getElementById('csAddBtn').addEventListener('click', async ()=>{
   const amount = Number(document.getElementById('csAmount').value);
   const status = document.getElementById('csStatus').value;
   const note = document.getElementById('csNote').value.trim();
+  const fundMode = document.getElementById('csFundMode').value;
+  const staffName = fundMode==='staff' ? document.getElementById('csStaffName').value.trim() : '';
+  const usedOnSite = document.getElementById('csUsedOnSite').value;
 
   if(!client){ showToast('Client ka naam likho'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
 
-  DATA.consultancyIncome.push({ id: uid(), type, client, date, amount, status, note });
+  DATA.consultancyIncome.push({ id: uid(), type, client, date, amount, status, note, fundMode, staffName, usedOnSite });
   document.getElementById('csClient').value='';
   document.getElementById('csAmount').value='';
   document.getElementById('csNote').value='';
+  document.getElementById('csStaffName').value='';
   await saveData();
   renderConsultancyIncome(); renderDashboard();
   showToast('Consultancy income add ho gaya ✓');
+  logAudit('create','Consultancy', `${client} — ${inr(amount)} (${fundMode})`);
 });
 
 function renderConsultancyIncome(){
@@ -5015,6 +5122,12 @@ function renderConsultancyIncome(){
     const types = ['Plan & Design','Structural Consultancy','Property Dealing (Commission)','Site Supervision','Valuation / Estimation','Other'];
     filterEl.innerHTML = '<option value="all">All Types</option>' + types.map(t=>`<option value="${t}">${t}</option>`).join('');
   }
+  const siteSelEl = document.getElementById('csUsedOnSite');
+  if(siteSelEl){
+    const cur = siteSelEl.value;
+    siteSelEl.innerHTML = '<option value="">Nahi, alag rakha hai</option>' + DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    if(cur) siteSelEl.value = cur;
+  }
 
   let rows = [...DATA.consultancyIncome].sort((a,b)=>b.date.localeCompare(a.date));
   if(filterEl.value !== 'all') rows = rows.filter(r=>r.type===filterEl.value);
@@ -5025,13 +5138,19 @@ function renderConsultancyIncome(){
   document.getElementById('csStatPending').textContent = inr(totalPending);
 
   if(rows.length===0){
-    tbody.innerHTML = `<tr><td colspan="7" class="empty">Abhi koi consultancy income entry nahi hai.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Abhi koi consultancy income entry nahi hai.</td></tr>`;
     return;
   }
+  const fundLabel = r => {
+    if(r.fundMode==='staff') return `👤 Staff (${r.staffName||'—'})${r.usedOnSite?' · '+siteName(r.usedOnSite)+' pe use':''}`;
+    if(r.fundMode==='cash') return `💵 Cash${r.usedOnSite?' · '+siteName(r.usedOnSite)+' pe use':''}`;
+    return `🏦 Client Fund${r.usedOnSite?' · '+siteName(r.usedOnSite)+' pe use':''}`;
+  };
   tbody.innerHTML = rows.map(r=>`<tr>
     <td>${r.date}</td><td><span class="tag other">${r.type}</span></td><td>${r.client}</td>
     <td class="amt">${inr(r.amount)}</td>
     <td><span class="tag ${r.status==='received'?'paid':'pending'}">${r.status}</span></td>
+    <td style="font-size:11.5px">${fundLabel(r)}</td>
     <td>${r.note||'—'}</td>
     <td>
       <button class="btn-danger-text" style="color:var(--blue)" onclick="editConsultancy('${r.id}')">Edit</button>
@@ -5050,6 +5169,11 @@ function editConsultancy(id){
     {key:'date', label:'Date', value:r.date, type:'date'},
     {key:'amount', label:'Amount (₹)', value:r.amount, type:'number'},
     {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'received',label:'Received'},{value:'pending',label:'Pending'}]},
+    {key:'fundMode', label:'Fund Handling', value:r.fundMode||'client', type:'select', options:[
+      {value:'client',label:'Client ke Fund se'},{value:'staff',label:'Staff ne Apne Account se'},{value:'cash',label:'Cash mein'}
+    ]},
+    {key:'staffName', label:'Staff Name (agar staff wala mode hai)', value:r.staffName},
+    {key:'usedOnSite', label:'Site pe Use Ho Raha Hai', value:r.usedOnSite||'', type:'select', options:[{value:'',label:'Nahi'}].concat(DATA.sites.map(s=>({value:s.id,label:s.name})))},
     {key:'note', label:'Note', value:r.note}
   ], async v=>{ await db.collection('consultancyIncome').doc(id).update(v); });
 }
@@ -5063,6 +5187,297 @@ async function deleteConsultancy(id){
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 document.getElementById('csListTypeFilter').addEventListener('change', renderConsultancyIncome);
+
+/* ---------------- Bill & Quotation Generator ---------------- */
+const BG_DESIGN_SERVICES = [
+  {key:'plan2d', label:'2D Floor Plan', areaBasis:'built', defaultRate:8},
+  {key:'elev3d', label:'3D Elevation', areaBasis:'plot', defaultRate:15},
+  {key:'rcc', label:'RCC Structural Drawing', areaBasis:'built', defaultRate:10},
+  {key:'submission', label:'Submission Plan', areaBasis:'built', defaultRate:6},
+  {key:'detail2d', label:'2D Detail Plan', areaBasis:'built', defaultRate:5},
+  {key:'interior', label:'Interior Room Design', areaBasis:'built', defaultRate:20},
+  {key:'costEstimate', label:'Cost Estimate', areaBasis:'built', defaultRate:3},
+];
+const BG_PACKAGE_SERVICES = [
+  {key:'pkg2d3d', label:'2D Plan + 3D Elevation', areaBasis:'built', defaultRate:20},
+  {key:'pkg2d3drcc', label:'2D + 3D + RCC Drawing', areaBasis:'built', defaultRate:28},
+];
+const BG_TURNKEY_SERVICES = [
+  {key:'turnkey', label:"Turnkey 'With Material' Project", areaBasis:'built', defaultRate:1800},
+];
+const BG_TERMS = [
+  'This document is valid for 30 days.',
+  '50% advance payment is required to start the work.',
+  'Remaining 50% payment to be made before delivery of final drawings/documents.',
+  'Site Visit Charges: Rs. 2000 per visit (within 10km). Travelling allowance to be paid by customer for visits beyond 10km.',
+  'Any additional work not mentioned in this document will be charged extra.',
+  'Material prices are subject to market fluctuations (for Turnkey projects).'
+];
+
+function bgRenderServiceGroup(containerId, services){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.innerHTML = services.map(s=>`
+    <div class="field" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <input type="checkbox" id="bg_chk_${s.key}" style="width:auto;accent-color:var(--blue);flex-shrink:0">
+      <label for="bg_chk_${s.key}" style="margin:0;flex:1;cursor:pointer;text-transform:none;font-weight:500;color:var(--ink);font-size:13px">${s.label}</label>
+      <input type="number" id="bg_rate_${s.key}" value="${s.defaultRate}" min="0" style="width:90px;flex-shrink:0" placeholder="Rate">
+    </div>`).join('');
+}
+bgRenderServiceGroup('bgDesignServices', BG_DESIGN_SERVICES);
+bgRenderServiceGroup('bgPackageServices', BG_PACKAGE_SERVICES);
+bgRenderServiceGroup('bgTurnkeyServices', BG_TURNKEY_SERVICES);
+
+document.getElementById('bgAddCustomBtn').addEventListener('click', ()=>{
+  const div = document.createElement('div');
+  div.className = 'bg-custom-row';
+  div.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;align-items:center';
+  div.innerHTML = `
+    <input class="bg-custom-desc" placeholder="e.g. Site Visit" style="flex:2">
+    <input class="bg-custom-amt" type="number" min="0" placeholder="Amount (₹)" style="flex:1">
+    <button class="btn-danger-text" type="button" onclick="this.parentElement.remove()">Remove</button>`;
+  document.getElementById('bgCustomServicesList').appendChild(div);
+});
+
+document.getElementById('bgCompany').addEventListener('change', e=>{
+  const nameEl = document.getElementById('bgCompanyName');
+  if(!nameEl.value.trim() || nameEl.dataset.auto==='1'){
+    nameEl.value = e.target.value==='mirza' ? 'Mirza Civil Engineer & Associates' : 'FirstBrix Infratech Pvt. Ltd.';
+    nameEl.dataset.auto = '1';
+  }
+});
+document.getElementById('bgDate') && (document.getElementById('bgDate').value = todayStr());
+
+let currentBillDoc = null;
+
+document.getElementById('bgGenerateBtn').addEventListener('click', ()=>{
+  const builtArea = Number(document.getElementById('bgBuiltArea').value) || 0;
+  const plotAreaInput = Number(document.getElementById('bgPlotArea').value);
+  const plotArea = plotAreaInput > 0 ? plotAreaInput : builtArea;
+  const gstPct = Number(document.getElementById('bgGst').value) || 0;
+  const advance = Number(document.getElementById('bgAdvance').value) || 0;
+  const custName = document.getElementById('bgCustName').value.trim();
+
+  if(!custName){ showToast('Customer ka naam daalo'); return; }
+
+  const lineItems = [];
+  [...BG_DESIGN_SERVICES, ...BG_PACKAGE_SERVICES, ...BG_TURNKEY_SERVICES].forEach(s=>{
+    const chk = document.getElementById('bg_chk_'+s.key);
+    if(chk && chk.checked){
+      const rate = Number(document.getElementById('bg_rate_'+s.key).value) || 0;
+      const area = s.areaBasis==='plot' ? plotArea : builtArea;
+      lineItems.push({ description:s.label, area, rate, amount: area*rate });
+    }
+  });
+  document.querySelectorAll('#bgCustomServicesList .bg-custom-row').forEach(row=>{
+    const desc = row.querySelector('.bg-custom-desc').value.trim();
+    const amt = Number(row.querySelector('.bg-custom-amt').value) || 0;
+    if(desc && amt>0) lineItems.push({ description:desc, area:null, rate:null, amount:amt });
+  });
+
+  if(lineItems.length===0){ showToast('Kam se kam ek service select karo ya custom service add karo'); return; }
+
+  const subtotal = lineItems.reduce((a,i)=>a+i.amount,0);
+  const gstAmount = subtotal * gstPct/100;
+  const grandTotal = subtotal + gstAmount;
+  const amountDue = grandTotal - advance;
+  const company = document.getElementById('bgCompany').value;
+
+  currentBillDoc = {
+    docNumber: (document.getElementById('bgDocType').value==='bill'?'BILL-':'QT-') + Date.now().toString().slice(-6),
+    date: todayStr(),
+    docType: document.getElementById('bgDocType').value,
+    company,
+    companyName: document.getElementById('bgCompanyName').value.trim() || (company==='mirza'?'Mirza Civil Engineer & Associates':'FirstBrix Infratech Pvt. Ltd.'),
+    companyAddr: document.getElementById('bgCompanyAddr').value.trim(),
+    companyGstin: document.getElementById('bgCompanyGstin').value.trim(),
+    customerName: custName,
+    customerPhone: document.getElementById('bgCustPhone').value.trim(),
+    siteAddress: document.getElementById('bgSiteAddr').value.trim(),
+    builtArea, plotArea, gstPct, advance,
+    lineItems, subtotal, gstAmount, grandTotal, amountDue,
+    status: 'pending'
+  };
+  renderBillPreview(currentBillDoc);
+});
+
+function renderBillPreview(d){
+  const box = document.getElementById('bgPreviewBox');
+  const title = d.docType==='bill' ? 'Final Bill' : 'Quotation';
+  box.innerHTML = `
+    <div style="text-align:center;margin-bottom:16px;border-bottom:2px solid #1B4F8C;padding-bottom:12px">
+      <div style="font-size:20px;font-weight:700;color:#1B4F8C">${d.companyName}</div>
+      <div style="font-size:11px;color:#666;margin-top:3px">${d.companyAddr||''}${d.companyGstin?' · GSTIN: '+d.companyGstin:''}</div>
+    </div>
+    <h2 style="text-align:center;margin:10px 0;color:#101823">${title}</h2>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:12px">
+      <div><strong>Date:</strong> ${d.date}</div>
+      <div><strong>Number #:</strong> ${d.docNumber}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:12px;gap:20px">
+      <div><strong>Bill To:</strong><br>${d.customerName}<br>${d.customerPhone||''}</div>
+      <div style="text-align:right"><strong>Site Address:</strong><br>${d.siteAddress||'—'}</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">
+      <thead><tr style="background:#f0f0f0">
+        <th style="border:1px solid #ccc;padding:6px">Sr.</th>
+        <th style="border:1px solid #ccc;padding:6px;text-align:left">Service Description</th>
+        <th style="border:1px solid #ccc;padding:6px">Area (sq.ft.)</th>
+        <th style="border:1px solid #ccc;padding:6px">Rate</th>
+        <th style="border:1px solid #ccc;padding:6px">Amount (₹)</th>
+      </tr></thead>
+      <tbody>
+        ${d.lineItems.map((it,i)=>`<tr>
+          <td style="border:1px solid #ccc;padding:6px;text-align:center">${i+1}</td>
+          <td style="border:1px solid #ccc;padding:6px">${it.description}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:center">${it.area||'—'}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:right">${it.rate?inr(it.rate):'—'}</td>
+          <td style="border:1px solid #ccc;padding:6px;text-align:right">${inr(it.amount)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="max-width:300px;margin-left:auto;font-size:12.5px">
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Subtotal</span><span>${inr(d.subtotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>GST (${d.gstPct}%)</span><span>${inr(d.gstAmount)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0;font-weight:700;border-top:1px solid #ccc"><span>Grand Total</span><span>${inr(d.grandTotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Advance Paid</span><span>${inr(d.advance)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700"><span>Amount Due</span><span>${inr(d.amountDue)}</span></div>
+    </div>
+    <div style="margin-top:20px;font-size:11px;color:#555">
+      <strong>Terms &amp; Conditions</strong>
+      <ul style="margin:6px 0;padding-left:18px;line-height:1.6">
+        ${BG_TERMS.map(t=>`<li>${t}</li>`).join('')}
+      </ul>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:12px;color:#888">Thank you for your business!<br>Powered by ${d.companyName}</div>
+  `;
+  document.getElementById('bgPreviewCard').style.display = 'block';
+  document.getElementById('bgPreviewCard').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+document.getElementById('bgPdfBtn').addEventListener('click', ()=>{
+  if(!currentBillDoc){ showToast('Pehle Generate Document dabao'); return; }
+  const d = currentBillDoc;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(16); doc.text(pdfSafe(d.companyName), 105, 15, {align:'center'});
+  doc.setFontSize(9); doc.text(pdfSafe(d.companyAddr||''), 105, 21, {align:'center'});
+  doc.setFontSize(14); doc.text(d.docType==='bill'?'FINAL BILL':'QUOTATION', 105, 30, {align:'center'});
+  doc.setFontSize(10);
+  doc.text(`Date: ${d.date}`, 14, 40);
+  doc.text(`Number #: ${d.docNumber}`, 150, 40);
+  doc.text(`Bill To: ${pdfSafe(d.customerName)}${d.customerPhone?' ('+pdfSafe(d.customerPhone)+')':''}`, 14, 47);
+  doc.text(`Site: ${pdfSafe(d.siteAddress||'-')}`, 14, 53);
+
+  doc.autoTable({
+    startY: 60,
+    head: [['Sr.','Service Description','Area','Rate','Amount']],
+    body: d.lineItems.map((it,i)=>[String(i+1), pdfSafe(it.description), it.area||'-', it.rate?pdfMoney(it.rate):'-', pdfMoney(it.amount)]),
+    headStyles:{fillColor:[27,79,140]}, styles:{fontSize:9, cellPadding:2.5}
+  });
+  let y = doc.lastAutoTable.finalY + 10;
+  [['Subtotal',d.subtotal],[`GST (${d.gstPct}%)`,d.gstAmount],['Grand Total',d.grandTotal],['Advance Paid',d.advance],['Amount Due',d.amountDue]].forEach(([label,val])=>{
+    doc.setFont('helvetica', label==='Grand Total'||label==='Amount Due' ? 'bold':'normal');
+    doc.text(`${label}: ${pdfMoney(val)}`, 196, y, {align:'right'}); y+=6;
+  });
+  y+=8;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('Terms & Conditions', 14, y); y+=5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8);
+  BG_TERMS.forEach(t=>{
+    const lines = doc.splitTextToSize('- '+t, 180);
+    lines.forEach(l=>{ doc.text(l, 14, y); y+=4.5; });
+  });
+
+  saveBlob(doc.output('blob'), `${d.docType}_${d.docNumber}.pdf`);
+  showToast('PDF taiyar ✓');
+});
+
+document.getElementById('bgDocBtn').addEventListener('click', ()=>{
+  if(!currentBillDoc){ showToast('Pehle Generate Document dabao'); return; }
+  const d = currentBillDoc;
+  const rowsHtml = d.lineItems.map((it,i)=>`<tr>
+    <td>${i+1}</td><td>${it.description}</td><td>${it.area||'-'}</td>
+    <td>${it.rate?('Rs. '+it.rate.toLocaleString('en-IN')):'-'}</td>
+    <td>Rs. ${it.amount.toLocaleString('en-IN')}</td>
+  </tr>`).join('');
+  const html = `<html><head><meta charset="utf-8"><title>${d.docNumber}</title>
+    <style>table,th,td{border:1px solid #000;border-collapse:collapse;padding:6px;font-family:Arial,sans-serif;font-size:12px} th{background:#f2f2f2}</style>
+    </head><body>
+    <h2 style="text-align:center">${d.companyName}</h2>
+    <p style="text-align:center">${d.companyAddr||''}${d.companyGstin?' · GSTIN: '+d.companyGstin:''}</p>
+    <h3 style="text-align:center">${d.docType==='bill'?'FINAL BILL':'QUOTATION'}</h3>
+    <p><strong>Date:</strong> ${d.date} &nbsp;&nbsp; <strong>Number #:</strong> ${d.docNumber}</p>
+    <p><strong>Bill To:</strong> ${d.customerName} (${d.customerPhone||''})<br><strong>Site Address:</strong> ${d.siteAddress||'-'}</p>
+    <table style="width:100%">
+      <tr><th>Sr.</th><th>Service Description</th><th>Area</th><th>Rate</th><th>Amount</th></tr>
+      ${rowsHtml}
+    </table>
+    <p style="text-align:right;margin-top:10px">
+      Subtotal: Rs. ${d.subtotal.toLocaleString('en-IN')}<br>
+      GST (${d.gstPct}%): Rs. ${d.gstAmount.toLocaleString('en-IN')}<br>
+      <strong>Grand Total: Rs. ${d.grandTotal.toLocaleString('en-IN')}</strong><br>
+      Advance Paid: Rs. ${d.advance.toLocaleString('en-IN')}<br>
+      <strong>Amount Due: Rs. ${d.amountDue.toLocaleString('en-IN')}</strong>
+    </p>
+    <p><strong>Terms &amp; Conditions</strong></p>
+    <ul>${BG_TERMS.map(t=>`<li>${t}</li>`).join('')}</ul>
+    <p style="text-align:center">Thank you for your business!<br>Powered by ${d.companyName}</p>
+    </body></html>`;
+  const blob = new Blob(['\ufeff', html], {type:'application/msword'});
+  saveBlob(blob, `${d.docType}_${d.docNumber}.doc`);
+  showToast('Word file taiyar ✓');
+});
+
+document.getElementById('bgSaveBtn').addEventListener('click', async ()=>{
+  if(!currentBillDoc){ showToast('Pehle Generate Document dabao'); return; }
+  try{
+    await db.collection('billQuotations').add(currentBillDoc);
+    showToast('Save ho gaya ✓ — History mein dikh jayega');
+    logAudit('create','Bill/Quotation', `${currentBillDoc.docType} — ${currentBillDoc.customerName} — ${inr(currentBillDoc.grandTotal)}`);
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); }
+});
+
+function renderBillHistory(){
+  const tbody = document.querySelector('#bgHistoryTable tbody');
+  if(!tbody) return;
+  const rows = [...DATA.billQuotations].sort((a,b)=>b.date.localeCompare(a.date));
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Koi document save nahi hua abhi.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.date}</td><td>${r.docNumber}</td><td>${r.customerName}</td>
+    <td>${r.company==='mirza'?'Mirza':'FirstBrix'}</td>
+    <td><span class="tag other">${r.docType==='bill'?'Bill':'Quotation'}</span></td>
+    <td class="amt">${inr(r.grandTotal)}</td>
+    <td><span class="tag ${r.status==='completed'?'paid':'pending'}">${r.status}</span></td>
+    <td>
+      ${!r.linkedConsultancyId ? `<button class="btn-danger-text" style="color:var(--good)" onclick="linkBillToConsultancy('${r.id}')">💰 Record as Income</button>&nbsp;·&nbsp;` : '<span style="color:var(--good);font-size:11px">✓ Linked</span>&nbsp;·&nbsp;'}
+      <button class="btn-danger-text" onclick="deleteBillDoc('${r.id}')">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+
+async function linkBillToConsultancy(id){
+  const r = DATA.billQuotations.find(x=>x.id===id);
+  if(!r) return;
+  if(!await uiConfirm(`"${r.customerName}" ka ${inr(r.grandTotal)} Consultancy Income mein record karna hai?`, 'Haan, record karo')) return;
+  try{
+    const csRef = await db.collection('consultancyIncome').add({
+      type:'Plan & Design', client:r.customerName, date:r.date, amount:r.grandTotal, status:'received',
+      note:`${r.docType==='bill'?'Bill':'Quotation'} ${r.docNumber}`, fundMode:'client', staffName:'', usedOnSite:''
+    });
+    await db.collection('billQuotations').doc(id).update({ linkedConsultancyId: csRef.id, status:'completed' });
+    showToast('Consultancy Income mein record ho gaya ✓');
+    logAudit('create','Consultancy', `Bill ${r.docNumber} se link kiya — ${inr(r.grandTotal)}`);
+  }catch(e){ showToast('Link nahi hua — dobara try karo'); }
+}
+async function deleteBillDoc(id){
+  if(!await uiConfirm('Ye document delete karna hai?', 'Haan, delete karo')) return;
+  try{ await db.collection('billQuotations').doc(id).delete(); showToast('Delete ho gaya'); }
+  catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
 
 /* ---------------- Profit & Loss tab ---------------- */
 function renderPnL(){
@@ -5175,6 +5590,7 @@ function renderSiteFunding(){
       histBody.innerHTML = rows.map(r=>{
         const src = r.sourceType==='site_diversion' ? `🔁 ${siteName(r.sourceSiteId)} se`
                   : r.sourceType==='investor' ? `⇧ Investor: ${r.investorName||'—'}`
+                  : r.sourceType==='consultancy' ? `📐 Consultancy: ${(DATA.consultancyIncome.find(c=>c.id===r.consultancySourceId)||{}).client||'—'}`
                   : `💰 Personal`;
         return `<tr>
           <td>${r.date}</td><td>${siteName(r.siteId)}</td><td class="amt">${inr(r.amount)}</td>
@@ -5250,6 +5666,14 @@ document.getElementById('sfSuggestBtn').addEventListener('click', ()=>{
 document.getElementById('siSourceType').addEventListener('change', e=>{
   document.getElementById('siSourceSiteWrap').style.display = e.target.value==='site_diversion' ? 'block' : 'none';
   document.getElementById('siInvestorNameWrap').style.display = e.target.value==='investor' ? 'block' : 'none';
+  document.getElementById('siConsultancyWrap').style.display = e.target.value==='consultancy' ? 'block' : 'none';
+  if(e.target.value==='consultancy'){
+    const sel = document.getElementById('siConsultancySource');
+    const available = DATA.consultancyIncome.filter(c=>c.status==='received');
+    sel.innerHTML = available.length
+      ? available.map(c=>`<option value="${c.id}">${c.client} — ${inr(c.amount)} (${c.date})</option>`).join('')
+      : '<option value="">Koi received consultancy income nahi hai</option>';
+  }
 });
 document.getElementById('siDate').value = todayStr();
 
@@ -5260,16 +5684,18 @@ document.getElementById('siSaveBtn').addEventListener('click', async ()=>{
   const sourceType = document.getElementById('siSourceType').value;
   const sourceSiteId = sourceType==='site_diversion' ? document.getElementById('siSourceSite').value : null;
   const investorName = sourceType==='investor' ? document.getElementById('siInvestorName').value.trim() : null;
+  const consultancySourceId = sourceType==='consultancy' ? document.getElementById('siConsultancySource').value : null;
   const note = document.getElementById('siNote').value.trim();
 
   if(!siteId){ showToast('Pehle government/subcontract site select karo'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
   if(sourceType==='site_diversion' && !sourceSiteId){ showToast('Kis site se le rahe ho, wo select karo'); return; }
   if(sourceType==='investor' && !investorName){ showToast('Investor ka naam daalo'); return; }
+  if(sourceType==='consultancy' && !consultancySourceId){ showToast('Consultancy income select karo'); return; }
   if(sourceType==='site_diversion' && sourceSiteId===siteId){ showToast('Source site aur target site alag honi chahiye'); return; }
 
   try{
-    await db.collection('siteInvestments').add({ siteId, amount, date, sourceType, sourceSiteId, investorName, note });
+    await db.collection('siteInvestments').add({ siteId, amount, date, sourceType, sourceSiteId, investorName, consultancySourceId, note });
     showToast('Investment record ho gaya ✓');
     logAudit('create','Site Funding', `${inr(amount)} invest kiya ${siteName(siteId)} mein (${sourceType})`);
     document.getElementById('siAmount').value='';
