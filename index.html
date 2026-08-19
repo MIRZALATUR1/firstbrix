@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -468,6 +469,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="nav-group-label">Tools</div>
       <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> <span data-i18n="slabs">Payment Slabs</span></button>
       <button data-tab="billgen" class="owner-only"><span class="tab-ico">🧾</span> Bill &amp; Quotation</button>
+      <button data-tab="letterhead" class="owner-only"><span class="tab-ico">📜</span> Letterhead / Letter</button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
 
       <div class="nav-group-label owner-only">Admin</div>
@@ -1389,6 +1391,80 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
     </section>
 
+    <!-- LETTERHEAD / LETTER GENERATOR -->
+    <section id="tab-letterhead" style="display:none">
+      <h1 class="page-title">Letterhead / Letter Generator</h1>
+      <p class="page-sub">Kisi bhi kaam ke liye — quotation, letter, notice, kuch bhi — apni company ke letterhead pe format karo. Excel/Word/PDF se data import karo, ya khud type karo.</p>
+
+      <div class="card">
+        <h2>Company Profile <small>Ek baar set karo, har letter mein use hoga</small></h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Company Name</label><input id="lhCompanyName" placeholder="e.g. FIRSTBRIX INFRATECH PVT. LTD."></div>
+          <div class="field"><label>CIN — optional</label><input id="lhCin" placeholder="e.g. U41001MH2025PTC455485"></div>
+          <div class="field"><label>Address</label><input id="lhAddress" placeholder="e.g. Huseniya Colony, India Nagar, Latur-413512"></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Phone</label><input id="lhPhone" placeholder="e.g. +91 9975797167"></div>
+          <div class="field"><label>Email</label><input id="lhEmail" placeholder="e.g. mirzalatur@gmail.com"></div>
+          <div class="field"><label>Website</label><input id="lhWebsite" placeholder="e.g. www.firstbrix.com"></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Signatory Name</label><input id="lhSignName" placeholder="e.g. Salaman S. Mirza"></div>
+          <div class="field"><label>Signatory Title</label><input id="lhSignTitle" placeholder="e.g. Director"></div>
+          <div></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Logo</label><input id="lhLogoFile" type="file" accept="image/*"><div class="footnote" id="lhLogoPreview"></div></div>
+          <div class="field"><label>Signature Image — optional</label><input id="lhSignFile" type="file" accept="image/*"><div class="footnote" id="lhSignPreview"></div></div>
+          <div class="field"><label>Stamp / Seal — optional</label><input id="lhStampFile" type="file" accept="image/*"><div class="footnote" id="lhStampPreview"></div></div>
+        </div>
+        <button class="btn btn-primary" id="lhSaveProfileBtn">💾 Company Profile Save Karo</button>
+      </div>
+
+      <div class="card">
+        <h2>Compose Letter / Quotation</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>To</label><input id="lhTo" placeholder="e.g. Mr. Sharma, Nashik Road"></div>
+          <div class="field"><label>Date</label><input id="lhDate" type="date"></div>
+          <div class="field"><label>Subject — optional</label><input id="lhSubject" placeholder="e.g. Quotation for Interior Work"></div>
+        </div>
+        <div class="field"><label>Content</label>
+          <textarea id="lhBody" rows="10" placeholder="Yahan likho — quotation details, letter content, kuch bhi. Ya neeche se file import karo, uska text yahan aa jayega jise edit kar sakte ho."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <label class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px;cursor:pointer">📊 Import Excel<input type="file" id="lhImportExcel" accept=".xlsx,.xls,.csv" style="display:none"></label>
+          <label class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px;cursor:pointer">📝 Import Word<input type="file" id="lhImportWord" accept=".docx" style="display:none"></label>
+          <label class="btn btn-ghost" style="padding:7px 12px;font-size:12.5px;cursor:pointer">📄 Import PDF<input type="file" id="lhImportPdf" accept=".pdf" style="display:none"></label>
+          <span class="footnote" id="lhImportStatus" style="margin:0"></span>
+        </div>
+        <div id="lhTableWrap" style="display:none;margin-top:12px">
+          <div class="hint">Excel se import kiya table — chaho to letter ke saath is table ko bhi include karo:</div>
+          <div class="table-wrap" style="max-height:220px;overflow-y:auto"><table id="lhImportedTable"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <button class="btn btn-primary" id="lhGenerateBtn" style="margin-top:14px">📄 Generate Preview</button>
+      </div>
+
+      <div class="card" id="lhPreviewCard" style="display:none">
+        <div class="toolbar">
+          <h2 style="margin:0">Preview</h2>
+          <div class="toolbar-left">
+            <button class="btn btn-steel" id="lhPdfBtn" style="padding:7px 12px;font-size:12.5px">⬇ PDF</button>
+            <button class="btn btn-ghost" id="lhDocBtn" style="padding:7px 12px;font-size:12.5px">⬇ Word</button>
+            <button class="btn btn-ghost" id="lhExcelBtn" style="padding:7px 12px;font-size:12.5px;display:none">⬇ Excel</button>
+            <button class="btn btn-primary" id="lhSaveBtn" style="padding:7px 12px;font-size:12.5px">💾 Save to History</button>
+          </div>
+        </div>
+        <div id="lhPreviewBox" style="background:#fff;border:1px solid var(--line);border-radius:4px;overflow:hidden"></div>
+      </div>
+
+      <div class="card">
+        <h2>History</h2>
+        <div class="table-wrap"><table id="lhHistoryTable"><thead><tr>
+          <th>Date</th><th>To</th><th>Subject</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
     <!-- CONSULTANCY -->
     <section id="tab-consultancy" style="display:none">
       <h1 class="page-title" data-i18n="consultancy_title">Consultancy Income</h1>
@@ -1778,7 +1854,7 @@ async function logAudit(action, area, summary){
 }
 
 const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments' };
-const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations', letterheadDocs:'letterheadDocs' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
 /* Snapshot of what the server currently holds, so saveData() can write only
@@ -2191,7 +2267,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -2210,6 +2286,7 @@ function rerenderAll(){
     renderConsultancyIncome();
     renderSiteFunding();
     renderBillHistory();
+    renderLetterheadHistory();
   }
 }
 
@@ -2302,6 +2379,7 @@ async function saveData(){
       sync('consultancyIncome', 'consultancyIncome');
       sync('siteInvestments', 'siteInvestments');
       sync('billQuotations', 'billQuotations');
+      sync('letterheadDocs', 'letterheadDocs');
       const prevFin = serverState.siteFinance || {};
       const seenFin = new Set();
       DATA.sites.forEach(s=>{
@@ -2406,6 +2484,7 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='projects') renderProjectUnits();
   if(btn.dataset.tab==='slabs') renderSavedSlabsList();
   if(btn.dataset.tab==='billgen') renderBillHistory();
+  if(btn.dataset.tab==='letterhead') renderLetterheadHistory();
   if(btn.dataset.tab==='consultancy') renderConsultancyIncome();
 });
 
@@ -5478,6 +5557,349 @@ async function deleteBillDoc(id){
   catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 
+/* ---------------- Letterhead / Letter Generator ---------------- */
+let lhProfile = { companyName:'', cin:'', address:'', phone:'', email:'', website:'', signName:'', signTitle:'', logoData:'', signData:'', stampData:'' };
+let lhImportedRows = null; // [[header...],[row...],...] from excel import
+
+function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+async function loadLetterheadProfile(){
+  try{
+    const d = await db.collection('meta').doc('letterheadProfile').get();
+    if(d.exists) lhProfile = Object.assign(lhProfile, d.data());
+  }catch(e){}
+  document.getElementById('lhCompanyName').value = lhProfile.companyName||'';
+  document.getElementById('lhCin').value = lhProfile.cin||'';
+  document.getElementById('lhAddress').value = lhProfile.address||'';
+  document.getElementById('lhPhone').value = lhProfile.phone||'';
+  document.getElementById('lhEmail').value = lhProfile.email||'';
+  document.getElementById('lhWebsite').value = lhProfile.website||'';
+  document.getElementById('lhSignName').value = lhProfile.signName||'';
+  document.getElementById('lhSignTitle').value = lhProfile.signTitle||'';
+  if(lhProfile.logoData) document.getElementById('lhLogoPreview').innerHTML = `<img src="${lhProfile.logoData}" style="height:36px;margin-top:4px">`;
+  if(lhProfile.signData) document.getElementById('lhSignPreview').innerHTML = `<img src="${lhProfile.signData}" style="height:36px;margin-top:4px">`;
+  if(lhProfile.stampData) document.getElementById('lhStampPreview').innerHTML = `<img src="${lhProfile.stampData}" style="height:36px;margin-top:4px">`;
+}
+
+['lhLogoFile','lhSignFile','lhStampFile'].forEach(id=>{
+  const previewId = { lhLogoFile:'lhLogoPreview', lhSignFile:'lhSignPreview', lhStampFile:'lhStampPreview' }[id];
+  const dataKey = { lhLogoFile:'logoData', lhSignFile:'signData', lhStampFile:'stampData' }[id];
+  document.getElementById(id).addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const dataUrl = await fileToBase64(file);
+    lhProfile[dataKey] = dataUrl;
+    document.getElementById(previewId).innerHTML = `<img src="${dataUrl}" style="height:36px;margin-top:4px">`;
+  });
+});
+
+document.getElementById('lhSaveProfileBtn').addEventListener('click', async ()=>{
+  lhProfile.companyName = document.getElementById('lhCompanyName').value.trim();
+  lhProfile.cin = document.getElementById('lhCin').value.trim();
+  lhProfile.address = document.getElementById('lhAddress').value.trim();
+  lhProfile.phone = document.getElementById('lhPhone').value.trim();
+  lhProfile.email = document.getElementById('lhEmail').value.trim();
+  lhProfile.website = document.getElementById('lhWebsite').value.trim();
+  lhProfile.signName = document.getElementById('lhSignName').value.trim();
+  lhProfile.signTitle = document.getElementById('lhSignTitle').value.trim();
+  try{
+    await db.collection('meta').doc('letterheadProfile').set(lhProfile);
+    showToast('Company profile save ho gaya ✓');
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); }
+});
+
+document.getElementById('lhDate') && (document.getElementById('lhDate').value = todayStr());
+
+document.getElementById('lhImportExcel').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('lhImportStatus');
+  statusEl.textContent = 'Excel padhi ja rahi hai…';
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''}).filter(r=>r.some(c=>String(c).trim()!==''));
+    if(rows.length===0){ statusEl.textContent = 'Excel mein data nahi mila.'; return; }
+    lhImportedRows = rows;
+    const thead = document.querySelector('#lhImportedTable thead');
+    const tbody = document.querySelector('#lhImportedTable tbody');
+    thead.innerHTML = `<tr>${rows[0].map(h=>`<th>${h}</th>`).join('')}</tr>`;
+    tbody.innerHTML = rows.slice(1).map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+    document.getElementById('lhTableWrap').style.display = 'block';
+    statusEl.textContent = `✓ ${rows.length-1} rows import hui — neeche table check karo, "Generate Preview" dabate hi letter ke saath jud jayegi.`;
+  }catch(err){ statusEl.textContent = 'Excel read nahi ho payi — file check karo.'; }
+});
+
+document.getElementById('lhImportWord').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('lhImportStatus');
+  statusEl.textContent = 'Word file se text nikala ja raha hai…';
+  try{
+    const buf = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({arrayBuffer: buf});
+    const bodyEl = document.getElementById('lhBody');
+    bodyEl.value = (bodyEl.value ? bodyEl.value + '\n\n' : '') + result.value.trim();
+    statusEl.textContent = '✓ Word file ka text content box mein aa gaya hai — edit kar sakte ho.';
+  }catch(err){ statusEl.textContent = 'Word file read nahi ho payi.'; }
+});
+
+document.getElementById('lhImportPdf').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('lhImportStatus');
+  statusEl.textContent = 'PDF se text nikala ja raha hai…';
+  try{
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+    let text = '';
+    for(let p=1; p<=pdf.numPages; p++){
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      text += content.items.map(it=>it.str).join(' ') + '\n';
+    }
+    const bodyEl = document.getElementById('lhBody');
+    bodyEl.value = (bodyEl.value ? bodyEl.value + '\n\n' : '') + text.trim();
+    statusEl.textContent = '✓ PDF ka text content box mein aa gaya hai — edit kar sakte ho.';
+  }catch(err){ statusEl.textContent = 'PDF read nahi ho payi.'; }
+});
+
+let currentLetterDoc = null;
+
+document.getElementById('lhGenerateBtn').addEventListener('click', ()=>{
+  const to = document.getElementById('lhTo').value.trim();
+  const date = document.getElementById('lhDate').value || todayStr();
+  const subject = document.getElementById('lhSubject').value.trim();
+  const body = document.getElementById('lhBody').value;
+
+  if(!to){ showToast('"To" field bharo'); return; }
+  if(!body.trim() && !lhImportedRows){ showToast('Kuch content likho ya file import karo'); return; }
+
+  currentLetterDoc = { to, date, subject, body, table: lhImportedRows, profile: {...lhProfile} };
+  renderLetterheadPreview(currentLetterDoc);
+});
+
+function renderLetterheadPreview(d){
+  const p = d.profile;
+  const box = document.getElementById('lhPreviewBox');
+  const bodyParas = d.body.split(/\n{2,}/).map(para=>`<p style="margin:0 0 10px">${para.replace(/\n/g,'<br>')}</p>`).join('');
+  const tableHtml = d.table ? `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin:14px 0">
+      <thead><tr style="background:#f0f0f0">${d.table[0].map(h=>`<th style="border:1px solid #ccc;padding:5px">${h}</th>`).join('')}</tr></thead>
+      <tbody>${d.table.slice(1).map(r=>`<tr>${r.map(c=>`<td style="border:1px solid #ccc;padding:5px">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>` : '';
+
+  box.innerHTML = `
+    <div style="background:linear-gradient(135deg,#6B0F0F,#8A1414);padding:18px 24px;color:#fff;position:relative">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        ${p.logoData?`<img src="${p.logoData}" style="height:44px;background:#fff;border-radius:4px;padding:2px">`:''}
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:19px;font-weight:800;letter-spacing:0.4px">${p.companyName||'Company Name'}</div>
+          ${p.cin?`<div style="font-size:10.5px;opacity:0.9;margin-top:2px">CIN: ${p.cin}</div>`:''}
+        </div>
+        <div style="font-size:10.5px;text-align:right;line-height:1.6">
+          ${p.phone?`<div>📞 ${p.phone}</div>`:''}
+          ${p.email?`<div>✉ ${p.email}</div>`:''}
+          ${p.website?`<div>🌐 ${p.website}</div>`:''}
+        </div>
+      </div>
+      ${p.address?`<div style="text-align:center;font-size:10.5px;margin-top:10px;border-top:1px solid rgba(255,255,255,0.3);padding-top:8px">${p.address}</div>`:''}
+    </div>
+    <div style="padding:26px 30px">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:20px">
+        <div><strong>To:</strong> ${d.to}</div>
+        <div>${d.date}</div>
+      </div>
+      ${d.subject?`<div style="font-size:13px;font-weight:700;margin-bottom:14px;text-decoration:underline">Subject: ${d.subject}</div>`:''}
+      <div style="font-size:13px;line-height:1.7;color:#1a1a1a">${bodyParas}</div>
+      ${tableHtml}
+      <div style="margin-top:50px;display:flex;justify-content:flex-end">
+        <div style="text-align:center">
+          <div style="font-size:12.5px;margin-bottom:6px">Sincerely,</div>
+          ${p.signData?`<img src="${p.signData}" style="height:44px;margin-bottom:2px">`:'<div style="height:44px"></div>'}
+          <div style="font-size:13px;font-weight:700">${p.signName||''}</div>
+          <div style="font-size:11.5px;color:#555">${p.signTitle||''}</div>
+          ${p.stampData?`<img src="${p.stampData}" style="height:70px;margin-top:6px;opacity:0.85">`:''}
+        </div>
+      </div>
+    </div>
+    <div style="background:var(--surface-2);padding:12px 24px;display:flex;justify-content:space-between;font-size:10.5px;color:#444;border-top:3px solid #6B0F0F;flex-wrap:wrap;gap:8px">
+      <div>${p.phone?('📞 '+p.phone):''} &nbsp; ${p.email?('✉ '+p.email):''}</div>
+      <div>${p.address?('📍 '+p.address):''} &nbsp; ${p.website?('🌐 '+p.website):''}</div>
+    </div>
+  `;
+  document.getElementById('lhPreviewCard').style.display = 'block';
+  document.getElementById('lhExcelBtn').style.display = d.table ? 'inline-flex' : 'none';
+  document.getElementById('lhPreviewCard').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+document.getElementById('lhPdfBtn').addEventListener('click', ()=>{
+  if(!currentLetterDoc){ showToast('Pehle Generate Preview dabao'); return; }
+  const d = currentLetterDoc, p = d.profile;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // Header band
+  doc.setFillColor(107,15,15);
+  doc.rect(0, 0, pageWidth, 32, 'F');
+  if(p.logoData){ try{ doc.addImage(p.logoData, 0, 8, 8, 18, 18, undefined, 'FAST'); }catch(e){} }
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(15); doc.setFont('helvetica','bold');
+  doc.text(pdfSafe(p.companyName||'Company Name'), p.logoData?32:14, 15);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  if(p.cin) doc.text(`CIN: ${pdfSafe(p.cin)}`, p.logoData?32:14, 20);
+  doc.setFontSize(8);
+  let ry = 12;
+  [p.phone, p.email, p.website].filter(Boolean).forEach(line=>{ doc.text(pdfSafe(line), pageWidth-14, ry, {align:'right'}); ry += 4; });
+  if(p.address){ doc.setFontSize(7.5); doc.text(pdfSafe(p.address), pageWidth/2, 28, {align:'center'}); }
+
+  doc.setTextColor(0,0,0);
+  let y = 42;
+  doc.setFontSize(10);
+  doc.text(`To: ${pdfSafe(d.to)}`, 14, y);
+  doc.text(d.date, pageWidth-14, y, {align:'right'});
+  y += 8;
+  if(d.subject){ doc.setFont('helvetica','bold'); doc.text(`Subject: ${pdfSafe(d.subject)}`, 14, y); doc.setFont('helvetica','normal'); y += 8; }
+
+  doc.setFontSize(10.5);
+  const bodyLines = doc.splitTextToSize(pdfSafe(d.body), pageWidth - 28);
+  bodyLines.forEach(line=>{
+    if(y > 265){ doc.addPage(); y = 20; }
+    doc.text(line, 14, y); y += 5.5;
+  });
+
+  if(d.table){
+    doc.autoTable({
+      startY: y+6,
+      head: [d.table[0].map(h=>pdfSafe(String(h)))],
+      body: d.table.slice(1).map(r=>r.map(c=>pdfSafe(String(c)))),
+      headStyles:{fillColor:[107,15,15]}, styles:{fontSize:8, cellPadding:2}
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  } else {
+    y += 10;
+  }
+
+  if(y > 240){ doc.addPage(); y = 20; }
+  y += 20;
+  doc.setFontSize(10);
+  doc.text('Sincerely,', pageWidth-70, y);
+  if(p.signData){ try{ doc.addImage(p.signData, pageWidth-70, y+2, 40, 16, undefined, 'FAST'); }catch(e){} }
+  doc.setFont('helvetica','bold');
+  doc.text(pdfSafe(p.signName||''), pageWidth-70, y+22);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text(pdfSafe(p.signTitle||''), pageWidth-70, y+27);
+  if(p.stampData){ try{ doc.addImage(p.stampData, pageWidth-45, y+30, 28, 28, undefined, 'FAST'); }catch(e){} }
+
+  const pageHeight = doc.internal.pageSize.getHeight();
+  doc.setFillColor(240,240,240);
+  doc.rect(0, pageHeight-16, pageWidth, 16, 'F');
+  doc.setDrawColor(107,15,15); doc.setLineWidth(1); doc.line(0, pageHeight-16, pageWidth, pageHeight-16);
+  doc.setTextColor(60,60,60); doc.setFontSize(7.5);
+  doc.text([p.phone,p.email].filter(Boolean).join('   ·   '), 14, pageHeight-8);
+  doc.text([p.address,p.website].filter(Boolean).join('   ·   '), pageWidth-14, pageHeight-8, {align:'right'});
+
+  saveBlob(doc.output('blob'), `Letter_${d.to.replace(/[^a-zA-Z0-9]/g,'_')}_${d.date}.pdf`);
+  showToast('PDF taiyar ✓');
+});
+
+document.getElementById('lhDocBtn').addEventListener('click', ()=>{
+  if(!currentLetterDoc){ showToast('Pehle Generate Preview dabao'); return; }
+  const d = currentLetterDoc, p = d.profile;
+  const bodyHtml = d.body.split(/\n{2,}/).map(para=>`<p>${para.replace(/\n/g,'<br>')}</p>`).join('');
+  const tableHtml = d.table ? `<table style="width:100%;border-collapse:collapse"><tr>${d.table[0].map(h=>`<th style="border:1px solid #000;padding:5px">${h}</th>`).join('')}</tr>${d.table.slice(1).map(r=>`<tr>${r.map(c=>`<td style="border:1px solid #000;padding:5px">${c}</td>`).join('')}</tr>`).join('')}</table>` : '';
+  const html = `<html><head><meta charset="utf-8"><title>Letter</title></head><body style="font-family:Arial">
+    <div style="background:#6B0F0F;color:#fff;padding:16px">
+      <h2 style="margin:0">${p.companyName||''}</h2>
+      <p style="margin:2px 0;font-size:11px">${p.cin?('CIN: '+p.cin):''}</p>
+      <p style="margin:2px 0;font-size:11px">${[p.phone,p.email,p.website].filter(Boolean).join(' | ')}</p>
+      <p style="margin:2px 0;font-size:11px">${p.address||''}</p>
+    </div>
+    <div style="padding:20px">
+      <p><strong>To:</strong> ${d.to} &nbsp;&nbsp;&nbsp; <strong>Date:</strong> ${d.date}</p>
+      ${d.subject?`<p><strong>Subject:</strong> ${d.subject}</p>`:''}
+      ${bodyHtml}
+      ${tableHtml}
+      <br><br>
+      <p>Sincerely,<br><br><strong>${p.signName||''}</strong><br>${p.signTitle||''}</p>
+    </div>
+    </body></html>`;
+  const blob = new Blob(['\ufeff', html], {type:'application/msword'});
+  saveBlob(blob, `Letter_${d.to.replace(/[^a-zA-Z0-9]/g,'_')}_${d.date}.doc`);
+  showToast('Word file taiyar ✓');
+});
+
+document.getElementById('lhExcelBtn').addEventListener('click', ()=>{
+  if(!currentLetterDoc || !currentLetterDoc.table) return;
+  const ws = XLSX.utils.aoa_to_sheet(currentLetterDoc.table);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  XLSX.writeFile(wb, `Letter_Table_${currentLetterDoc.date}.xlsx`);
+  showToast('Excel taiyar ✓');
+});
+
+document.getElementById('lhSaveBtn').addEventListener('click', async ()=>{
+  if(!currentLetterDoc){ showToast('Pehle Generate Preview dabao'); return; }
+  try{
+    const { profile, ...toSave } = currentLetterDoc;
+    await db.collection('letterheadDocs').add(toSave);
+    showToast('History mein save ho gaya ✓');
+    logAudit('create','Letterhead', `Letter to ${currentLetterDoc.to}`);
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); }
+});
+
+function renderLetterheadHistory(){
+  const tbody = document.querySelector('#lhHistoryTable tbody');
+  if(!tbody) return;
+  const rows = [...DATA.letterheadDocs].sort((a,b)=>b.date.localeCompare(a.date));
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">Koi letter save nahi hua abhi.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.date}</td><td>${r.to}</td><td>${r.subject||'—'}</td>
+    <td>
+      <button class="btn-danger-text" style="color:var(--blue)" onclick="reopenLetterDoc('${r.id}')">Reopen</button>
+      &nbsp;·&nbsp;
+      <button class="btn-danger-text" onclick="deleteLetterDoc('${r.id}')">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+function reopenLetterDoc(id){
+  const r = DATA.letterheadDocs.find(x=>x.id===id);
+  if(!r) return;
+  document.getElementById('lhTo').value = r.to;
+  document.getElementById('lhDate').value = r.date;
+  document.getElementById('lhSubject').value = r.subject||'';
+  document.getElementById('lhBody').value = r.body;
+  lhImportedRows = r.table || null;
+  if(r.table){
+    const thead = document.querySelector('#lhImportedTable thead');
+    const tbody = document.querySelector('#lhImportedTable tbody');
+    thead.innerHTML = `<tr>${r.table[0].map(h=>`<th>${h}</th>`).join('')}</tr>`;
+    tbody.innerHTML = r.table.slice(1).map(row=>`<tr>${row.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+    document.getElementById('lhTableWrap').style.display = 'block';
+  }
+  currentLetterDoc = { to:r.to, date:r.date, subject:r.subject, body:r.body, table:r.table, profile:{...lhProfile} };
+  renderLetterheadPreview(currentLetterDoc);
+  showToast('Document form mein load ho gaya — edit karke dobara generate karo');
+}
+async function deleteLetterDoc(id){
+  if(!await uiConfirm('Ye letter delete karna hai?', 'Haan, delete karo')) return;
+  try{ await db.collection('letterheadDocs').doc(id).delete(); showToast('Delete ho gaya'); }
+  catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
 
 /* ---------------- Profit & Loss tab ---------------- */
 function renderPnL(){
@@ -6918,6 +7340,7 @@ async function init(){
       lastBackupDate = d.exists ? d.data().date : null;
     }catch(e){ lastBackupDate = null; }
     renderReminders();
+    await loadLetterheadProfile();
   }
   await maybeRunAutoReport(false);
 }
