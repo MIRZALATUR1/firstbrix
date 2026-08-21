@@ -642,6 +642,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field" style="flex:2"><label data-i18n="lbl_sitename">Site Name</label><input id="newSiteName" placeholder="e.g. Nashik Road Bungalow"></div>
           <div class="field" style="flex:2"><label data-i18n="lbl_location_opt">Location (optional)</label><input id="newSiteLocation" list="dl-sites-location" placeholder="e.g. Nashik, Maharashtra"></div>
           <div class="field owner-only" style="flex:1.4"><label data-i18n="lbl_contractvalue">Contract / Project Value (₹)</label><input id="newSiteContract" type="number" min="0" placeholder="Total project value"></div>
+          <div class="field owner-only" style="flex:1"><label>Client Phone — optional</label><input id="newSiteClientPhone" placeholder="e.g. 9876543210"></div>
           <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="addSiteBtn">+ <span data-i18n="btn_addsite">Add Site</span></button></div>
         </div>
         <div class="field owner-only" style="max-width:420px">
@@ -845,8 +846,9 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
         <div class="grid cols-2">
           <div class="field"><label data-i18n="lbl_fixedamount">Fixed Work Amount (₹)</label><input id="agAmount" type="number" min="0" placeholder="Total kaam kitne mein fix hua hai"></div>
-          <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="agNote" placeholder="e.g. agreement / scope details"></div>
+          <div class="field"><label>Contractor Phone — optional</label><input id="agContractorPhone" placeholder="e.g. 9876543210"></div>
         </div>
+        <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="agNote" placeholder="e.g. agreement / scope details"></div>
         <button class="btn btn-primary" id="addAgreementBtn">+ <span data-i18n="btn_addagreement">Add Work Agreement</span></button>
         <div class="hint">"Paid Till Date" apne aap Labour Expense entries se calculate hoti hai (usi Site + usi Contractor Name + usi Category ki entries se).</div>
       </div>
@@ -952,7 +954,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="card">
         <h2><span data-i18n="h2_clientbalance">Site-wise Client Balance</span></h2>
         <div class="table-wrap"><table id="clientBalanceTable"><thead><tr>
-          <th data-i18n="th_site">Site</th><th>Contract Value</th><th>Received</th><th>Pending</th>
+          <th data-i18n="th_site">Site</th><th>Contract Value</th><th>Received</th><th>Pending</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
 
@@ -1658,8 +1660,9 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <button class="btn btn-steel" id="genReportBtn">Generate Report</button>
           <button class="btn btn-primary" id="downloadExcelBtn">⬇ <span data-i18n="btn_downloadexcel">Download Excel</span></button>
           <button class="btn btn-primary" id="downloadPdfBtn" style="background:var(--charcoal-2)">⬇ <span data-i18n="btn_downloadpdf">Download PDF</span></button>
+          <button class="btn btn-ghost" id="shareReportWhatsAppBtn" style="color:#25D366">📱 Share Summary via WhatsApp</button>
         </div>
-        <div class="footnote">Report preview neeche dikhega. Download button se .xlsx file banegi.</div>
+        <div class="footnote">Report preview neeche dikhega. Download button se .xlsx file banegi. WhatsApp share sirf text-summary bhejta hai (free) — file khud attach karni hogi agar file bhi bhejni ho.</div>
       </div>
 
       <div class="card">
@@ -2332,6 +2335,7 @@ function applySiteFinance(){
     s.gstin = fin.gstin || '';
     s.gstRate = fin.gstRate !== undefined ? fin.gstRate : 18;
     s.hsn = fin.hsn || '';
+    s.clientPhone = fin.clientPhone || '';
   });
 }
 
@@ -2389,7 +2393,8 @@ async function saveData(){
           gstApplicable: !!s.gstApplicable,
           gstin: s.gstin || '',
           gstRate: s.gstRate !== undefined ? Number(s.gstRate) : 18,
-          hsn: s.hsn || ''
+          hsn: s.hsn || '',
+          clientPhone: s.clientPhone || ''
         };
         seenFin.add(s.id);
         if(prevFin[s.id] !== JSON.stringify(body)){
@@ -2566,6 +2571,15 @@ function previewFifoAllocation(supplier, amount){
   return { preview, leftover: left };
 }
 
+/* Free WhatsApp click-to-chat (wa.me) — no API, no cost. Opens WhatsApp
+   Web/App with the message pre-filled; person still hits Send themselves. */
+function openWhatsApp(phone, message){
+  let digits = (phone||'').replace(/\D/g,'');
+  if(!digits){ showToast('Phone number nahi mila — pehle contractor/client ka number add karo'); return; }
+  if(digits.length===10) digits = '91'+digits; // default India country code
+  window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, '_blank');
+}
+
 function siteCost(siteId){
   const exp = DATA.expenses.filter(e=>e.siteId===siteId).reduce((a,e)=>a+Number(e.amount),0);
   const ud = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
@@ -2644,11 +2658,13 @@ document.getElementById('addSiteBtn').addEventListener('click', async ()=>{
   const gstin = document.getElementById('newSiteGstin').value.trim();
   const gstRate = Number(document.getElementById('newSiteGstRate').value) || 18;
   const hsn = document.getElementById('newSiteHsn').value.trim();
+  const clientPhone = document.getElementById('newSiteClientPhone').value.trim();
   if(!name){ showToast('Site ka naam daalo'); return; }
-  DATA.sites.push({ id: uid(), name, location: loc, contractValue, siteType, gstApplicable, gstin, gstRate, hsn, createdAt: todayStr() });
+  DATA.sites.push({ id: uid(), name, location: loc, contractValue, siteType, gstApplicable, gstin, gstRate, hsn, clientPhone, createdAt: todayStr() });
   document.getElementById('newSiteName').value='';
   document.getElementById('newSiteLocation').value='';
   document.getElementById('newSiteContract').value='';
+  document.getElementById('newSiteClientPhone').value='';
   document.getElementById('newSiteType').value='private';
   document.getElementById('newSiteTypeHint').style.display='none';
   document.getElementById('newSiteGstApplicable').checked = false;
@@ -2676,7 +2692,8 @@ function editSite(id){
     ]},
     {key:'gstin', label:'Client GSTIN', value:s.gstin},
     {key:'gstRate', label:'GST Rate (%)', value:s.gstRate!==undefined?s.gstRate:18, type:'number'},
-    {key:'hsn', label:'HSN/SAC Code', value:s.hsn}
+    {key:'hsn', label:'HSN/SAC Code', value:s.hsn},
+    {key:'clientPhone', label:'Client Phone (WhatsApp ke liye)', value:s.clientPhone}
   ], async v=>{
     await db.collection('sites').doc(id).update({ name:v.name, location:v.location });
     await db.collection('siteFinance').doc(id).set({
@@ -2685,7 +2702,8 @@ function editSite(id){
       gstApplicable: v.gstApplicable === 'yes',
       gstin: v.gstin,
       gstRate: Number(v.gstRate)||18,
-      hsn: v.hsn
+      hsn: v.hsn,
+      clientPhone: v.clientPhone
     });
     logAudit('update','Site', `"${v.name}" ke details edit kiye`);
   });
@@ -3497,16 +3515,18 @@ document.getElementById('addAgreementBtn').addEventListener('click', async ()=>{
   const category = document.getElementById('agCategory').value;
   const amount = Number(document.getElementById('agAmount').value);
   const note = document.getElementById('agNote').value.trim();
+  const contractorPhone = document.getElementById('agContractorPhone').value.trim();
 
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
   if(isSiteLockedForMe(siteId)){ showToast('Ye site complete ho chuki hai — sirf owner isme naya work agreement add kar sakta hai'); return; }
   if(!contractor){ showToast('Contractor ka naam daalo'); return; }
   if(!amount || amount<=0){ showToast('Sahi fixed amount daalo'); return; }
 
-  DATA.workAgreements.push({ id: uid(), siteId, contractor, category, fixedAmount: amount, note });
+  DATA.workAgreements.push({ id: uid(), siteId, contractor, category, fixedAmount: amount, note, contractorPhone });
   document.getElementById('agContractor').value='';
   document.getElementById('agAmount').value='';
   document.getElementById('agNote').value='';
+  document.getElementById('agContractorPhone').value='';
   await saveData();
   renderAgreementsTable(); renderDashboard();
   showToast('Work agreement add ho gaya ✓');
@@ -3535,11 +3555,20 @@ function renderAgreementsTable(){
       <td class="amt">${inr(paid)}</td>
       <td class="amt" style="color:${balance>0?'var(--bad)':'var(--good)'}">${balance<0?'Extra Paid ':''}${inr(Math.abs(balance))}</td>
       <td>${r.note||'—'}</td>
-      <td><button class="btn-danger-text" style="color:var(--blue)" onclick="editAgreement('${r.id}')">Edit</button>&nbsp;·&nbsp;<button class="btn-danger-text" onclick="deleteAgreement('${r.id}')">Delete</button></td>
+      <td><button class="btn-danger-text" style="color:var(--blue)" onclick="editAgreement('${r.id}')">Edit</button>&nbsp;·&nbsp;<button class="btn-danger-text" style="color:#25D366" onclick="sendContractorWhatsApp('${r.id}')">📱 WhatsApp</button>&nbsp;·&nbsp;<button class="btn-danger-text" onclick="deleteAgreement('${r.id}')">Delete</button></td>
     </tr>`;
   }).join('');
   document.getElementById('agTotalLine').textContent = `Total Fixed: ${inr(totalFixed)} · Total Paid: ${inr(totalPaid)} · Total Balance Due: ${inr(totalBalance)}`;
 }
+function sendContractorWhatsApp(agId){
+  const ag = DATA.workAgreements.find(x=>x.id===agId);
+  if(!ag) return;
+  const paid = computePaidForAgreement(ag);
+  const balance = Number(ag.fixedAmount) - paid;
+  const msg = `Namaste ${ag.contractor} ji,\n\n*${siteName(ag.siteId)}* site ke kaam (${ag.category}) ka payment update:\n\n✅ Ab tak Diya Gaya: ₹${paid.toLocaleString('en-IN')}\n📋 Total Fixed Amount: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ Baaki Amount: ₹${balance>0?balance.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nDhanyawad,\nFirstBrix Infratech`;
+  openWhatsApp(ag.contractorPhone, msg);
+}
+
 async function deleteAgreement(id){
   const r = DATA.workAgreements.find(x=>x.id===id);
   try{
@@ -3557,6 +3586,7 @@ function editAgreement(id){
     {key:'contractor', label:'Contractor Name', value:r.contractor},
     {key:'category', label:'Work Category', value:r.category, type:'select', options:cats.map(c=>({value:c,label:c==='All'?'All / Mixed Work':c}))},
     {key:'fixedAmount', label:'Fixed Work Amount (₹)', value:r.fixedAmount, type:'number'},
+    {key:'contractorPhone', label:'Contractor Phone', value:r.contractorPhone},
     {key:'note', label:'Note', value:r.note}
   ], async v=>{ await db.collection('agreements').doc(id).update(v); });
 }
@@ -4175,16 +4205,26 @@ document.getElementById('addClientPayBtn').addEventListener('click', async ()=>{
 function renderClientBalanceTable(){
   const tbody = document.querySelector('#clientBalanceTable tbody');
   if(DATA.sites.length===0){
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">Koi site nahi hai.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Koi site nahi hai.</td></tr>`;
     return;
   }
   tbody.innerHTML = DATA.sites.map(s=>{
     const received = siteReceived(s.id);
     const contract = Number(s.contractValue)||0;
     const pending = contract - received;
-    return `<tr><td><strong>${s.name}</strong></td><td class="amt">${contract?inr(contract):'—'}</td><td class="amt">${inr(received)}</td><td class="amt">${contract?inr(pending):'—'}</td></tr>`;
+    return `<tr><td><strong>${s.name}</strong></td><td class="amt">${contract?inr(contract):'—'}</td><td class="amt">${inr(received)}</td><td class="amt">${contract?inr(pending):'—'}</td>
+      <td><button class="btn-danger-text" style="color:#25D366" onclick="sendClientWhatsApp('${s.id}')">📱 WhatsApp</button></td></tr>`;
   }).join('');
   renderGstSummary();
+}
+function sendClientWhatsApp(siteId){
+  const site = DATA.sites.find(s=>s.id===siteId);
+  if(!site) return;
+  const received = siteReceived(siteId);
+  const contract = Number(site.contractValue)||0;
+  const pending = contract - received;
+  const msg = `Namaste,\n\n*${site.name}* project ka payment update:\n\n✅ Ab tak Received: ₹${received.toLocaleString('en-IN')}\n📋 Total Contract Value: ₹${contract?contract.toLocaleString('en-IN'):'—'}\n⏳ Pending Amount: ₹${pending>0?pending.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nDhanyawad,\nFirstBrix Infratech`;
+  openWhatsApp(site.clientPhone, msg);
 }
 
 function renderGstSummary(){
@@ -7235,6 +7275,28 @@ document.getElementById('downloadPdfBtn').addEventListener('click', ()=>{
   const doc = buildPdfDoc([{ title: document.getElementById('repTitle').textContent.split('(')[0].trim(), cols: currentReportCols, rows: currentReportRows, total }]);
   saveBlob(doc.output('blob'), `FirstBrix_${currentReportType}_report_${todayStr()}.pdf`);
   showToast('PDF taiyar ✓');
+});
+
+document.getElementById('shareReportWhatsAppBtn').addEventListener('click', ()=>{
+  if(currentReportRows.length===0) generateReport();
+  if(currentReportRows.length===0){ showToast('Share karne ke liye koi entry nahi hai'); return; }
+  const title = document.getElementById('repTitle').textContent.split('(')[0].trim();
+  const total = currentReportRows.reduce((a,r)=>a+Number(r.Amount||0),0);
+  const siteFilter = document.getElementById('repSite').value;
+  const siteLine = siteFilter && siteFilter!=='all' ? `Site: ${siteName(siteFilter)}\n` : '';
+  let msg = `📊 *${title}*\n${siteLine}Date: ${new Date().toLocaleDateString('en-IN')}\n\n`;
+  msg += `Total Entries: ${currentReportRows.length}\nTotal Amount: ₹${total.toLocaleString('en-IN')}\n\n`;
+  msg += currentReportRows.slice(0,15).map(r=>{
+    const name = r.Name || r.Contractor || r.Supplier || r.Client || r['Investor Name'] || '';
+    const amt = Number(r.Amount||0).toLocaleString('en-IN');
+    return `• ${name} — ₹${amt}`;
+  }).join('\n');
+  if(currentReportRows.length > 15) msg += `\n… aur ${currentReportRows.length-15} entries (poori detail ke liye PDF/Excel download karo)`;
+  msg += `\n\n— FirstBrix Infratech`;
+
+  // No specific phone — opens WhatsApp share picker so any contact can be chosen.
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  showToast('WhatsApp khul raha hai — contact chuno aur send karo. Agar file bhi bhejni ho to pehle Download karke attach kar do.');
 });
 
 /* ---------------- 15-day Automatic Report ---------------- */
