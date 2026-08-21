@@ -2901,7 +2901,10 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
       });
       showToast('Udhar entry add ho gayi ✓');
       if(supplierPhone){
-        const msg = `Namaste,\n\n*${siteName(siteId)}* site ke liye material udhar liya:\n\n📦 Material: ${document.getElementById('expUdharMaterial').value}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+        const matVal = document.getElementById('expUdharMaterial').value;
+        const enMsg = `Hello,\n\nMaterial taken on credit for *${siteName(siteId)}* site:\n\n📦 Material: ${matVal}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
+        const mrMsg = `नमस्कार,\n\n*${siteName(siteId)}* साइटसाठी उधारीवर घेतलेले साहित्य:\n\n📦 साहित्य: ${matVal}\n💰 रक्कम: ₹${amount.toLocaleString('en-IN')}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+        const msg = bilingualMsg(enMsg, mrMsg);
         offerWhatsAppPrompt(contractor, supplierPhone, msg);
       }
     }catch(e){ errEl.textContent = 'Error: ' + e.message; return; }
@@ -3258,7 +3261,10 @@ function openPayVendorModal(supplier){
       logAudit('create','Vendor Payment', `${supplier} ko ${inr(amount)} paid on ${date}`);
       const { billRemaining } = computeVendorAllocations(supplier);
       const outstanding = Object.values(billRemaining).reduce((a,v)=>a+Math.max(v,0),0);
-      const msg = `Namaste,\n\n*${supplier}* ko payment diya:\n\n✅ Abhi Diya: ₹${amount.toLocaleString('en-IN')}\n⏳ Outstanding Balance: ₹${outstanding>0?outstanding.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+      const outStr = outstanding>0 ? '₹'+outstanding.toLocaleString('en-IN') : '0 (Fully Paid)';
+      const enMsg = `Hello,\n\nPayment made to *${supplier}*:\n\n✅ Paid Now: ₹${amount.toLocaleString('en-IN')}\n⏳ Outstanding Balance: ${outStr}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
+      const mrMsg = `नमस्कार,\n\n*${supplier}* यांना केलेले पेमेंट:\n\n✅ आत्ता दिलेली रक्कम: ₹${amount.toLocaleString('en-IN')}\n⏳ शिल्लक रक्कम: ${outStr}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+      const msg = bilingualMsg(enMsg, mrMsg);
       offerWhatsAppPrompt(supplier, vendorPhone(supplier), msg);
     }catch(e){ errEl.textContent = 'Error: ' + e.message; }
   };
@@ -3604,6 +3610,11 @@ function maybeOfferContractorWhatsApp(siteId, contractorName, type){
 }
 /* Generic popup — used by contractor, investor, vendor, and personal
    lending flows. Send opens WhatsApp AND closes the popup; Skip just closes. */
+/* Every WhatsApp message goes out bilingual — English on top, Marathi below. */
+function bilingualMsg(en, mr){
+  return `${en}\n\n───────────\n\n${mr}`;
+}
+
 function offerWhatsAppPrompt(name, phone, message){
   if(!phone) return;
   const bg = document.createElement('div');
@@ -3630,7 +3641,10 @@ function offerWhatsAppPrompt(name, phone, message){
 function openContractorWhatsAppPrompt(ag){
   const paid = computePaidForAgreement(ag);
   const balance = Number(ag.fixedAmount) - paid;
-  const msg = `Namaste ${ag.contractor} ji,\n\n*${siteName(ag.siteId)}* site ke kaam (${ag.category}) ka payment update:\n\n✅ Ab tak Diya Gaya: ₹${paid.toLocaleString('en-IN')}\n📋 Total Fixed Amount: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ Baaki Amount: ₹${balance>0?balance.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nDhanyawad,\nFirstBrix Infratech`;
+  const balanceStr = balance>0 ? '₹'+balance.toLocaleString('en-IN') : '0 (Fully Paid)';
+  const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n✅ Paid So Far: ₹${paid.toLocaleString('en-IN')}\n📋 Total Fixed Amount: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ Balance Due: ${balanceStr}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n✅ आतापर्यंत दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}\n📋 एकूण ठरलेली रक्कम: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ शिल्लक रक्कम: ${balanceStr}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const msg = bilingualMsg(enMsg, mrMsg);
   offerWhatsAppPrompt(ag.contractor, ag.contractorPhone, msg);
 }
 
@@ -3639,7 +3653,10 @@ function sendContractorWhatsApp(agId){
   if(!ag) return;
   const paid = computePaidForAgreement(ag);
   const balance = Number(ag.fixedAmount) - paid;
-  const msg = `Namaste ${ag.contractor} ji,\n\n*${siteName(ag.siteId)}* site ke kaam (${ag.category}) ka payment update:\n\n✅ Ab tak Diya Gaya: ₹${paid.toLocaleString('en-IN')}\n📋 Total Fixed Amount: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ Baaki Amount: ₹${balance>0?balance.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nDhanyawad,\nFirstBrix Infratech`;
+  const balanceStr = balance>0 ? '₹'+balance.toLocaleString('en-IN') : '0 (Fully Paid)';
+  const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n✅ Paid So Far: ₹${paid.toLocaleString('en-IN')}\n📋 Total Fixed Amount: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ Balance Due: ${balanceStr}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n✅ आतापर्यंत दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}\n📋 एकूण ठरलेली रक्कम: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ शिल्लक रक्कम: ${balanceStr}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const msg = bilingualMsg(enMsg, mrMsg);
   openWhatsApp(ag.contractorPhone, msg);
 }
 
@@ -4152,7 +4169,10 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
         supplierPhone
       });
       if(supplierPhone){
-        const msg = `Namaste,\n\n*${siteName(siteId)}* site ke liye material udhar liya:\n\n📦 Material: ${document.getElementById('qUdharMaterial').value}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+        const matVal = document.getElementById('qUdharMaterial').value;
+        const enMsg = `Hello,\n\nMaterial taken on credit for *${siteName(siteId)}* site:\n\n📦 Material: ${matVal}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
+        const mrMsg = `नमस्कार,\n\n*${siteName(siteId)}* साइटसाठी उधारीवर घेतलेले साहित्य:\n\n📦 साहित्य: ${matVal}\n💰 रक्कम: ₹${amount.toLocaleString('en-IN')}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+        const msg = bilingualMsg(enMsg, mrMsg);
         offerWhatsAppPrompt(name, supplierPhone, msg);
       }
     }catch(e){ err.textContent = 'Error: ' + e.message; return; }
@@ -4286,7 +4306,11 @@ document.getElementById('addClientPayBtn').addEventListener('click', async ()=>{
     const received = siteReceived(siteId);
     const contract = Number(site.contractValue)||0;
     const pending = contract - received;
-    const msg = `Namaste,\n\n*${site.name}* project ka payment receipt:\n\n✅ Abhi Received: ₹${amount.toLocaleString('en-IN')}\n📊 Ab Tak Kul Received: ₹${received.toLocaleString('en-IN')}\n📋 Total Contract Value: ₹${contract?contract.toLocaleString('en-IN'):'—'}\n⏳ Pending: ₹${pending>0?pending.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+    const contractStr = contract ? '₹'+contract.toLocaleString('en-IN') : '—';
+    const pendingStr = pending>0 ? '₹'+pending.toLocaleString('en-IN') : '0 (Fully Paid)';
+    const enMsg = `Hello,\n\nPayment receipt for *${site.name}* project:\n\n✅ Received Now: ₹${amount.toLocaleString('en-IN')}\n📊 Total Received So Far: ₹${received.toLocaleString('en-IN')}\n📋 Total Contract Value: ${contractStr}\n⏳ Pending: ${pendingStr}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
+    const mrMsg = `नमस्कार,\n\n*${site.name}* प्रकल्पासाठी पेमेंट पावती:\n\n✅ आत्ता मिळालेली रक्कम: ₹${amount.toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण मिळालेली रक्कम: ₹${received.toLocaleString('en-IN')}\n📋 एकूण कराराची रक्कम: ${contractStr}\n⏳ शिल्लक रक्कम: ${pendingStr}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+    const msg = bilingualMsg(enMsg, mrMsg);
     offerWhatsAppPrompt(clientName||site.name, site.clientPhone, msg);
   }
 });
@@ -4312,7 +4336,11 @@ function sendClientWhatsApp(siteId){
   const received = siteReceived(siteId);
   const contract = Number(site.contractValue)||0;
   const pending = contract - received;
-  const msg = `Namaste,\n\n*${site.name}* project ka payment update:\n\n✅ Ab tak Received: ₹${received.toLocaleString('en-IN')}\n📋 Total Contract Value: ₹${contract?contract.toLocaleString('en-IN'):'—'}\n⏳ Pending Amount: ₹${pending>0?pending.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nDhanyawad,\nFirstBrix Infratech`;
+  const contractStr = contract ? '₹'+contract.toLocaleString('en-IN') : '—';
+  const pendingStr = pending>0 ? '₹'+pending.toLocaleString('en-IN') : '0 (Fully Paid)';
+  const enMsg = `Hello,\n\nPayment update for *${site.name}* project:\n\n✅ Total Received: ₹${received.toLocaleString('en-IN')}\n📋 Total Contract Value: ${contractStr}\n⏳ Pending Amount: ${pendingStr}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार,\n\n*${site.name}* प्रकल्पाची पेमेंट माहिती:\n\n✅ एकूण मिळालेली रक्कम: ₹${received.toLocaleString('en-IN')}\n📋 एकूण कराराची रक्कम: ${contractStr}\n⏳ शिल्लक रक्कम: ${pendingStr}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const msg = bilingualMsg(enMsg, mrMsg);
   openWhatsApp(site.clientPhone, msg);
 }
 
@@ -4491,7 +4519,10 @@ function openInvestorPaymentModal(loanId){
       close();
       showToast('Payment record ho gaya ✓');
       const paidSoFarNow = payments.reduce((a,p)=>a+Number(p.amount),0);
-      const msg = `Namaste ${loan.investorName} ji,\n\nAapko diye gaye payment ka update:\n\n✅ Abhi Diya: ₹${amount.toLocaleString('en-IN')}\n📊 Ab Tak Kul Diya: ₹${paidSoFarNow.toLocaleString('en-IN')}\n📋 Total Return Due: ₹${Number(loan.returnAmt).toLocaleString('en-IN')}\n⏳ Baaki: ₹${newRemaining>0?newRemaining.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+      const remStr = newRemaining>0 ? '₹'+newRemaining.toLocaleString('en-IN') : '0 (Fully Paid)';
+      const enMsg = `Hello ${loan.investorName},\n\nUpdate on the payment made to you:\n\n✅ Paid Now: ₹${amount.toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${paidSoFarNow.toLocaleString('en-IN')}\n📋 Total Return Due: ₹${Number(loan.returnAmt).toLocaleString('en-IN')}\n⏳ Balance: ${remStr}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
+      const mrMsg = `नमस्कार ${loan.investorName},\n\nतुम्हाला केलेल्या पेमेंटची माहिती:\n\n✅ आत्ता दिलेली रक्कम: ₹${amount.toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${paidSoFarNow.toLocaleString('en-IN')}\n📋 एकूण परतफेड रक्कम: ₹${Number(loan.returnAmt).toLocaleString('en-IN')}\n⏳ शिल्लक रक्कम: ${remStr}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+      const msg = bilingualMsg(enMsg, mrMsg);
       offerWhatsAppPrompt(loan.investorName, loan.investorPhone, msg);
     }catch(e){ errEl.textContent = 'Error: ' + e.message; }
   };
@@ -4726,7 +4757,9 @@ document.getElementById('plAddBtn').addEventListener('click', async ()=>{
   renderPersonalLoans(); renderDashboard();
   showToast('Lending entry add ho gayi ✓');
   if(personPhone){
-    const msg = `Namaste ${personName} ji,\n\nAapko ₹${amount.toLocaleString('en-IN')} diye hain.\n${expDate?`Return date: ${expDate}\n`:''}\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+    const enMsg = `Hello ${personName},\n\nYou have been given ₹${amount.toLocaleString('en-IN')}.\n${expDate?`Return date: ${expDate}\n`:''}\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
+    const mrMsg = `नमस्कार ${personName},\n\nतुम्हाला ₹${amount.toLocaleString('en-IN')} दिले आहेत.\n${expDate?`परतफेड दिनांक: ${expDate}\n`:''}\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+    const msg = bilingualMsg(enMsg, mrMsg);
     offerWhatsAppPrompt(personName, personPhone, msg);
   }
 });
@@ -7385,16 +7418,18 @@ document.getElementById('shareReportWhatsAppBtn').addEventListener('click', ()=>
   const title = document.getElementById('repTitle').textContent.split('(')[0].trim();
   const total = currentReportRows.reduce((a,r)=>a+Number(r.Amount||0),0);
   const siteFilter = document.getElementById('repSite').value;
-  const siteLine = siteFilter && siteFilter!=='all' ? `Site: ${siteName(siteFilter)}\n` : '';
-  let msg = `📊 *${title}*\n${siteLine}Date: ${new Date().toLocaleDateString('en-IN')}\n\n`;
-  msg += `Total Entries: ${currentReportRows.length}\nTotal Amount: ₹${total.toLocaleString('en-IN')}\n\n`;
-  msg += currentReportRows.slice(0,15).map(r=>{
-    const name = r.Name || r.Contractor || r.Supplier || r.Client || r['Investor Name'] || '';
-    const amt = Number(r.Amount||0).toLocaleString('en-IN');
-    return `• ${name} — ₹${amt}`;
-  }).join('\n');
-  if(currentReportRows.length > 15) msg += `\n… aur ${currentReportRows.length-15} entries (poori detail ke liye PDF/Excel download karo)`;
-  msg += `\n\n— FirstBrix Infratech`;
+  const dateStr = new Date().toLocaleDateString('en-IN');
+  const nameOf = r => r.Name || r.Contractor || r.Supplier || r.Client || r['Investor Name'] || '';
+  const listItems = currentReportRows.slice(0,15).map(r=>`• ${nameOf(r)} — ₹${Number(r.Amount||0).toLocaleString('en-IN')}`).join('\n');
+  const moreLine = currentReportRows.length > 15 ? `\n… and ${currentReportRows.length-15} more entries (download PDF/Excel for full detail)` : '';
+  const moreLineMr = currentReportRows.length > 15 ? `\n… आणखी ${currentReportRows.length-15} नोंदी (पूर्ण तपशीलासाठी PDF/Excel डाउनलोड करा)` : '';
+
+  const siteLineEn = siteFilter && siteFilter!=='all' ? `Site: ${siteName(siteFilter)}\n` : '';
+  const siteLineMr = siteFilter && siteFilter!=='all' ? `साइट: ${siteName(siteFilter)}\n` : '';
+
+  const enMsg = `📊 *${title}*\n${siteLineEn}Date: ${dateStr}\n\nTotal Entries: ${currentReportRows.length}\nTotal Amount: ₹${total.toLocaleString('en-IN')}\n\n${listItems}${moreLine}\n\n— FirstBrix Infratech`;
+  const mrMsg = `📊 *${title}*\n${siteLineMr}दिनांक: ${dateStr}\n\nएकूण नोंदी: ${currentReportRows.length}\nएकूण रक्कम: ₹${total.toLocaleString('en-IN')}\n\n${listItems}${moreLineMr}\n\n— फर्स्टब्रिक्स इन्फ्राटेक`;
+  const msg = bilingualMsg(enMsg, mrMsg);
 
   // No specific phone — opens WhatsApp share picker so any contact can be chosen.
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
