@@ -721,6 +721,9 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
             <select id="expUdharStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
           </div>
         </div>
+        <div class="grid cols-3" id="expUdharPhoneRow" style="display:none">
+          <div class="field"><label>Supplier Phone — optional</label><input id="expUdharPhone" placeholder="e.g. 9876543210"></div>
+        </div>
         <div class="grid cols-3">
           <div class="field"><label id="expNameLabel">Contractor Name</label><input id="expName" list="dl-labour-names" placeholder="e.g. Ramesh Kumar"></div>
           <div class="field"><label data-i18n="lbl_date">Date</label><input id="expDate" type="date"></div>
@@ -789,8 +792,9 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label data-i18n="lbl_status">Status</label>
             <select id="udStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
           </div>
-          <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="udNote" placeholder="e.g. bill no. / remarks"></div>
+          <div class="field"><label>Supplier Phone — optional</label><input id="udSupplierPhone" placeholder="e.g. 9876543210"></div>
         </div>
+        <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="udNote" placeholder="e.g. bill no. / remarks"></div>
         <button class="btn btn-primary" id="addUdharBtn">+ <span data-i18n="btn_addudhar">Add Udhar Entry</span></button>
       </div>
 
@@ -988,9 +992,10 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
       <div class="card">
         <h2><span data-i18n="h2_newinvestor">New Investor Entry</span></h2>
-        <div class="grid cols-3">
+        <div class="grid cols-4">
           <div class="field"><label>Kis ke liye liya (Site / Personal Investment)</label><select id="invSite"><option value="general">General (koi specific site/investment nahi)</option></select></div>
           <div class="field"><label data-i18n="lbl_investorname">Investor Name</label><input id="invName" list="dl-investors" placeholder="e.g. Mr. Deshmukh"></div>
+          <div class="field"><label>Investor Phone — optional</label><input id="invPhone" placeholder="e.g. 9876543210"></div>
           <div class="field"><label data-i18n="lbl_datetaken">Date Taken</label><input id="invDate" type="date"></div>
         </div>
         <div class="grid cols-4">
@@ -1148,11 +1153,12 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label>Date Given</label><input id="plDate" type="date"></div>
           <div class="field"><label>Amount Given (₹)</label><input id="plAmount" type="number" min="0" placeholder="0"></div>
         </div>
-        <div class="grid cols-3">
+        <div class="grid cols-4">
           <div class="field"><label>Expected Return Date</label><input id="plExpDate" type="date"></div>
           <div class="field"><label>Status</label>
             <select id="plStatus"><option value="pending">Pending</option><option value="returned">Returned</option></select>
           </div>
+          <div class="field"><label>Person Phone — optional</label><input id="plPhone" placeholder="e.g. 9876543210"></div>
           <div class="field"><label>Note (optional)</label><input id="plNote" placeholder="e.g. reason / agreement"></div>
         </div>
         <button class="btn btn-primary" id="plAddBtn">+ Add Lending Entry</button>
@@ -1723,6 +1729,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="field"><label>Status</label>
         <select id="qUdharStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
       </div>
+      <div class="field"><label>Supplier Phone — optional</label><input id="qUdharPhone" placeholder="e.g. 9876543210"></div>
     </div>
     <div class="grid cols-2">
       <div class="field" id="qModeWrap"><label data-i18n="lbl_paidby">Paid by</label>
@@ -1797,9 +1804,12 @@ function openEditModal(title, fields, onSave){
     const safeVal = String(val).replace(/"/g,'&quot;');
     return `<div class="field"><label>${f.label}</label><input id="em_${f.key}" type="${f.type||'text'}" value="${safeVal}"></div>`;
   };
-  bg.innerHTML = `<div class="modal">
+  const wide = fields.length > 5;
+  bg.innerHTML = `<div class="modal" style="width:${wide?'520px':'360px'};max-width:96vw">
     <h3>Edit ${title}</h3>
-    ${fields.map(fieldHtml).join('')}
+    <div style="${wide?'display:grid;grid-template-columns:1fr 1fr;gap:0 14px':''}">
+      ${fields.map(fieldHtml).join('')}
+    </div>
     <div class="login-error" id="emErr"></div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" id="emCancel" style="flex:1;justify-content:center">Cancel</button>
@@ -2538,6 +2548,13 @@ function computeVendorAllocations(supplier){
   return { bills, payments, billRemaining, billPaid, paymentAllocations };
 }
 
+function vendorPhone(supplier){
+  const key = vendorNameKey(supplier);
+  const withPhone = DATA.udhar.filter(u=>vendorNameKey(u.supplier)===key && u.supplierPhone)
+    .sort((a,b)=>b.date.localeCompare(a.date));
+  return withPhone.length ? withPhone[0].supplierPhone : '';
+}
+
 function allVendorNames(){
   const seen = new Map();
   DATA.udhar.forEach(u=>{
@@ -2803,6 +2820,7 @@ document.getElementById('expMode').addEventListener('change', (e)=>{
   document.getElementById('expUdharMaterialWrap').style.display = isUdhar ? 'block' : 'none';
   document.getElementById('expMaterialTypeWrap').style.display = isUdhar ? 'none' : (document.getElementById('expType').value==='material' ? 'block' : 'none');
   document.getElementById('expUdharQtyRow').style.display = isUdhar ? 'flex' : 'none';
+  document.getElementById('expUdharPhoneRow').style.display = isUdhar ? 'flex' : 'none';
   document.getElementById('expNoteWrap').style.display = 'block';
   document.getElementById('expNameLabel').textContent = isUdhar ? 'Supplier Name' : document.getElementById('expNameLabel').textContent;
   document.getElementById('expName').setAttribute('list', isUdhar ? 'dl-suppliers' : 'dl-material-names');
@@ -2870,6 +2888,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   if(!proceed) return;
 
   if(mode === 'udhar'){
+    const supplierPhone = document.getElementById('expUdharPhone').value.trim();
     try{
       await db.collection('udhar').add({
         siteId, supplier: contractor,
@@ -2878,18 +2897,24 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
         unit: document.getElementById('expUnit').value.trim(),
         date, amount,
         status: document.getElementById('expUdharStatus').value,
-        note
+        note, supplierPhone
       });
       showToast('Udhar entry add ho gayi ✓');
+      if(supplierPhone){
+        const msg = `Namaste,\n\n*${siteName(siteId)}* site ke liye material udhar liya:\n\n📦 Material: ${document.getElementById('expUdharMaterial').value}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+        offerWhatsAppPrompt(contractor, supplierPhone, msg);
+      }
     }catch(e){ errEl.textContent = 'Error: ' + e.message; return; }
     document.getElementById('expName').value='';
     document.getElementById('expAmount').value='';
     document.getElementById('expQty').value='';
     document.getElementById('expUnit').value='';
+    document.getElementById('expUdharPhone').value='';
     document.getElementById('expNote').value='';
     return;
   }
 
+  let isNewLabourEntry = false;
   if(editingExpenseId){
     const item = DATA.expenses.find(e=>e.id===editingExpenseId);
     if(item) Object.assign(item, { siteId, type, category, contractor, date, amount, mode, note });
@@ -2898,12 +2923,14 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   } else {
     DATA.expenses.push({ id: uid(), siteId, type, category, contractor, date, amount, mode, note });
     showToast('Expense add ho gaya ✓');
+    isNewLabourEntry = true;
   }
   document.getElementById('expName').value='';
   document.getElementById('expAmount').value='';
   document.getElementById('expNote').value='';
   await saveData();
   renderExpenseTable(); renderDashboard(); renderSitesTable();
+  if(isNewLabourEntry) maybeOfferContractorWhatsApp(siteId, contractor, type);
 });
 
 function editExpense(id){
@@ -3007,14 +3034,16 @@ document.getElementById('addUdharBtn').addEventListener('click', async ()=>{
   const amount = Number(document.getElementById('udAmount').value);
   const status = document.getElementById('udStatus').value;
   const note = document.getElementById('udNote').value.trim();
+  const supplierPhone = document.getElementById('udSupplierPhone').value.trim();
 
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
   if(isSiteLockedForMe(siteId)){ showToast('Ye site complete ho chuki hai — sirf owner isme naya udhar add kar sakta hai'); return; }
   if(!supplier || !material){ showToast('Supplier aur material ka naam daalo'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
 
-  DATA.udhar.push({ id: uid(), siteId, supplier, material, qty, unit, date, amount, status, note });
+  DATA.udhar.push({ id: uid(), siteId, supplier, material, qty, unit, date, amount, status, note, supplierPhone });
   document.getElementById('udSupplier').value='';
+  document.getElementById('udSupplierPhone').value='';
   document.getElementById('udMaterial').value='';
   document.getElementById('udQty').value='';
   document.getElementById('udUnit').value='';
@@ -3227,6 +3256,10 @@ function openPayVendorModal(supplier){
       close();
       showToast(`${supplier} ko payment record ho gaya ✓`);
       logAudit('create','Vendor Payment', `${supplier} ko ${inr(amount)} paid on ${date}`);
+      const { billRemaining } = computeVendorAllocations(supplier);
+      const outstanding = Object.values(billRemaining).reduce((a,v)=>a+Math.max(v,0),0);
+      const msg = `Namaste,\n\n*${supplier}* ko payment diya:\n\n✅ Abhi Diya: ₹${amount.toLocaleString('en-IN')}\n⏳ Outstanding Balance: ₹${outstanding>0?outstanding.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+      offerWhatsAppPrompt(supplier, vendorPhone(supplier), msg);
     }catch(e){ errEl.textContent = 'Error: ' + e.message; }
   };
 }
@@ -3560,6 +3593,47 @@ function renderAgreementsTable(){
   }).join('');
   document.getElementById('agTotalLine').textContent = `Total Fixed: ${inr(totalFixed)} · Total Paid: ${inr(totalPaid)} · Total Balance Due: ${inr(totalBalance)}`;
 }
+/* Auto-offered right after a labour expense is saved — only fires if the
+   contractor has a matching Work Agreement with a saved phone number. */
+function maybeOfferContractorWhatsApp(siteId, contractorName, type){
+  if(type !== 'labour') return;
+  const key = vendorNameKey(contractorName);
+  const ag = DATA.workAgreements.find(a => a.siteId===siteId && vendorNameKey(a.contractor)===key && a.contractorPhone);
+  if(!ag) return;
+  openContractorWhatsAppPrompt(ag);
+}
+/* Generic popup — used by contractor, investor, vendor, and personal
+   lending flows. Send opens WhatsApp AND closes the popup; Skip just closes. */
+function offerWhatsAppPrompt(name, phone, message){
+  if(!phone) return;
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal">
+    <h3>📱 WhatsApp Bhejna Hai?</h3>
+    <p>${name} ko update bhej sakte ho:</p>
+    <div style="background:var(--surface-2);border-radius:6px;padding:10px;font-size:12.5px;white-space:pre-wrap;margin:10px 0;max-height:220px;overflow-y:auto">${message}</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" id="waSkip" style="flex:1;justify-content:center">Skip</button>
+      <button class="btn btn-primary" id="waSend" style="flex:1;justify-content:center;background:#25D366">📱 WhatsApp Bhejo</button>
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  const close = ()=>bg.remove();
+  bg.addEventListener('click', e=>{ if(e.target===bg) close(); });
+  bg.querySelector('#waSkip').onclick = close;
+  bg.querySelector('#waSend').onclick = ()=>{
+    openWhatsApp(phone, message);
+    close(); // popup band ho jaata hai message bhejne ke baad
+  };
+}
+
+function openContractorWhatsAppPrompt(ag){
+  const paid = computePaidForAgreement(ag);
+  const balance = Number(ag.fixedAmount) - paid;
+  const msg = `Namaste ${ag.contractor} ji,\n\n*${siteName(ag.siteId)}* site ke kaam (${ag.category}) ka payment update:\n\n✅ Ab tak Diya Gaya: ₹${paid.toLocaleString('en-IN')}\n📋 Total Fixed Amount: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ Baaki Amount: ₹${balance>0?balance.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nDhanyawad,\nFirstBrix Infratech`;
+  offerWhatsAppPrompt(ag.contractor, ag.contractorPhone, msg);
+}
+
 function sendContractorWhatsApp(agId){
   const ag = DATA.workAgreements.find(x=>x.id===agId);
   if(!ag) return;
@@ -4065,6 +4139,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
   if(!proceed) return;
 
   if(mode === 'udhar'){
+    const supplierPhone = document.getElementById('qUdharPhone').value.trim();
     try{
       await db.collection('udhar').add({
         siteId, supplier: name,
@@ -4073,8 +4148,13 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
         unit: document.getElementById('qUnit').value.trim(),
         date, amount,
         status: document.getElementById('qUdharStatus').value,
-        note: document.getElementById('qNote').value.trim()
+        note: document.getElementById('qNote').value.trim(),
+        supplierPhone
       });
+      if(supplierPhone){
+        const msg = `Namaste,\n\n*${siteName(siteId)}* site ke liye material udhar liya:\n\n📦 Material: ${document.getElementById('qUdharMaterial').value}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+        offerWhatsAppPrompt(name, supplierPhone, msg);
+      }
     }catch(e){ err.textContent = 'Error: ' + e.message; return; }
     if(document.getElementById('siteDetailBg')){
       renderSiteDetailLedger(siteId);
@@ -4085,6 +4165,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
     document.getElementById('qAmount').value = '';
     document.getElementById('qQty').value = '';
     document.getElementById('qUnit').value = '';
+    document.getElementById('qUdharPhone').value = '';
     document.getElementById('qNote').value = '';
     document.getElementById('qName').focus();
     showToast('Udhar entry save ho gayi ✓');
@@ -4105,6 +4186,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
     renderSiteDetailLedger(siteId);
     renderSiteDetailChart(siteId, currentRole==='owner'?siteReceived(siteId):0, siteCost(siteId));
   }
+  maybeOfferContractorWhatsApp(siteId, name, type);
 
   // Keep the modal open so several entries can be logged in a row.
   document.getElementById('qSavedHint').textContent = `Saved: ${name} — ${inr(amount)} (${siteName(siteId)})`;
@@ -4200,6 +4282,13 @@ document.getElementById('addClientPayBtn').addEventListener('click', async ()=>{
   await saveData();
   renderClientBalanceTable(); renderClientPayTable(); renderSitesTable(); renderDashboard();
   showToast('Client payment add ho gayi ✓');
+  if(site && site.clientPhone){
+    const received = siteReceived(siteId);
+    const contract = Number(site.contractValue)||0;
+    const pending = contract - received;
+    const msg = `Namaste,\n\n*${site.name}* project ka payment receipt:\n\n✅ Abhi Received: ₹${amount.toLocaleString('en-IN')}\n📊 Ab Tak Kul Received: ₹${received.toLocaleString('en-IN')}\n📋 Total Contract Value: ₹${contract?contract.toLocaleString('en-IN'):'—'}\n⏳ Pending: ₹${pending>0?pending.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+    offerWhatsAppPrompt(clientName||site.name, site.clientPhone, msg);
+  }
 });
 
 function renderClientBalanceTable(){
@@ -4299,13 +4388,15 @@ document.getElementById('addInvestorBtn').addEventListener('click', async ()=>{
   const expDate = document.getElementById('invExpDate').value;
   const status = document.getElementById('invStatus').value;
   const note = document.getElementById('invNote').value.trim();
+  const investorPhone = document.getElementById('invPhone').value.trim();
 
   if(!investorName){ showToast('Investor ka naam daalo'); return; }
   if(!taken || taken<=0){ showToast('Sahi amount daalo jo liya hai'); return; }
   if(!returnAmt || returnAmt<=0) returnAmt = taken;
 
-  DATA.investorLoans.push({ id: uid(), siteId, investorName, date, taken, returnAmt, expDate, status, note });
+  DATA.investorLoans.push({ id: uid(), siteId, investorName, investorPhone, date, taken, returnAmt, expDate, status, note });
   document.getElementById('invName').value='';
+  document.getElementById('invPhone').value='';
   document.getElementById('invTaken').value='';
   document.getElementById('invReturn').value='';
   document.getElementById('invExpDate').value='';
@@ -4399,6 +4490,9 @@ function openInvestorPaymentModal(loanId){
       });
       close();
       showToast('Payment record ho gaya ✓');
+      const paidSoFarNow = payments.reduce((a,p)=>a+Number(p.amount),0);
+      const msg = `Namaste ${loan.investorName} ji,\n\nAapko diye gaye payment ka update:\n\n✅ Abhi Diya: ₹${amount.toLocaleString('en-IN')}\n📊 Ab Tak Kul Diya: ₹${paidSoFarNow.toLocaleString('en-IN')}\n📋 Total Return Due: ₹${Number(loan.returnAmt).toLocaleString('en-IN')}\n⏳ Baaki: ₹${newRemaining>0?newRemaining.toLocaleString('en-IN'):'0 (Fully Paid ✓)'}\n\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+      offerWhatsAppPrompt(loan.investorName, loan.investorPhone, msg);
     }catch(e){ errEl.textContent = 'Error: ' + e.message; }
   };
 }
@@ -4448,6 +4542,7 @@ function editInvestor(id){
     .concat(DATA.personalInvestments.map(p=>({value:'personal:'+p.id, label:'🏠 '+p.name})));
   openEditModal('Investor Entry', [
     {key:'investorName', label:'Investor Name', value:r.investorName},
+    {key:'investorPhone', label:'Investor Phone', value:r.investorPhone},
     {key:'siteId', label:'Linked To', value:r.siteId||'general', type:'select', options:linkOptions},
     {key:'date', label:'Date Taken', value:r.date, type:'date'},
     {key:'taken', label:'Amount Taken (₹)', value:r.taken, type:'number'},
@@ -4616,18 +4711,24 @@ document.getElementById('plAddBtn').addEventListener('click', async ()=>{
   const expDate = document.getElementById('plExpDate').value;
   const status = document.getElementById('plStatus').value;
   const note = document.getElementById('plNote').value.trim();
+  const personPhone = document.getElementById('plPhone').value.trim();
 
   if(!personName){ showToast('Naam likho'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
 
-  DATA.personalLoans.push({ id: uid(), personName, date, amount, expDate, status, note });
+  DATA.personalLoans.push({ id: uid(), personName, personPhone, date, amount, expDate, status, note });
   document.getElementById('plName').value='';
+  document.getElementById('plPhone').value='';
   document.getElementById('plAmount').value='';
   document.getElementById('plExpDate').value='';
   document.getElementById('plNote').value='';
   await saveData();
   renderPersonalLoans(); renderDashboard();
   showToast('Lending entry add ho gayi ✓');
+  if(personPhone){
+    const msg = `Namaste ${personName} ji,\n\nAapko ₹${amount.toLocaleString('en-IN')} diye hain.\n${expDate?`Return date: ${expDate}\n`:''}\nDate: ${date}\n\nDhanyawad,\nFirstBrix Infratech`;
+    offerWhatsAppPrompt(personName, personPhone, msg);
+  }
 });
 
 function renderPersonalLoans(){
@@ -4660,6 +4761,7 @@ function editPersonalLoan(id){
   if(!r) return;
   openEditModal('Personal Lending', [
     {key:'personName', label:'Person Name', value:r.personName},
+    {key:'personPhone', label:'Person Phone', value:r.personPhone},
     {key:'date', label:'Date Given', value:r.date, type:'date'},
     {key:'amount', label:'Amount Given (₹)', value:r.amount, type:'number'},
     {key:'expDate', label:'Expected Return Date', value:r.expDate, type:'date'},
