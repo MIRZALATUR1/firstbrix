@@ -854,6 +854,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label data-i18n="lbl_fixedamount">Fixed Work Amount (₹)</label><input id="agAmount" type="number" min="0" placeholder="Total kaam kitne mein fix hua hai"></div>
           <div class="field"><label>Contractor Phone — optional</label><input id="agContractorPhone" placeholder="e.g. 9876543210"></div>
         </div>
+        <div class="grid cols-2">
+          <div class="field"><label>Uska Aadmi / Sub-contractor Naam — optional</label><input id="agAltName" placeholder="e.g. Suresh (site supervisor)"></div>
+          <div class="field"><label>Uska Aadmi ka Phone — optional</label><input id="agAltPhone" placeholder="e.g. 9123456780"></div>
+        </div>
+        <div class="hint" style="margin-top:-6px">Agar payment ka message contractor ki jagah uske aadmi/sub-contractor ko bhejna ho (jaise wo khud site pe nahi hota), to yahan uska naam aur number daal do — WhatsApp bhejte waqt dono mein se chunne ka option milega.</div>
         <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="agNote" placeholder="e.g. agreement / scope details"></div>
         <button class="btn btn-primary" id="addAgreementBtn">+ <span data-i18n="btn_addagreement">Add Work Agreement</span></button>
         <div class="hint">"Paid Till Date" apne aap Labour Expense entries se calculate hoti hai (usi Site + usi Contractor Name + usi Category ki entries se).</div>
@@ -1520,6 +1525,26 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="table-wrap" style="margin-top:14px"><table id="ldTable"><thead><tr>
           <th>Name</th><th>Phone</th><th>Firm</th><th>Type</th><th>Note</th><th></th>
         </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>⚡ Quick Send <small>Kisi bhi number pe seedha bhejo — directory mein add karne ki zaroorat nahi</small></h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Name — optional</label><input id="qsName" placeholder="e.g. Suresh"></div>
+          <div class="field"><label>Phone Number</label><input id="qsPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Firm (contact details ke liye)</label><select id="qsFirm"><option value="firm1">Firm 1</option><option value="firm2">Firm 2</option></select></div>
+        </div>
+        <div class="field"><label>Message (English)</label><textarea id="qsMsgEn" rows="3" placeholder="Apna message likho..."></textarea></div>
+        <div class="field"><label>Message (Marathi) — optional</label><textarea id="qsMsgMr" rows="3" placeholder="तेच मराठीत (ऐच्छिक)..."></textarea></div>
+        <div class="field" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="qsIncludeContact" checked style="width:auto;accent-color:var(--blue)">
+          <label for="qsIncludeContact" style="margin:0;text-transform:none;font-weight:500;cursor:pointer">Firm ka contact detail bhi jodo</label>
+        </div>
+        <div class="field" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="qsSaveToDirectory" style="width:auto;accent-color:var(--blue)">
+          <label for="qsSaveToDirectory" style="margin:0;text-transform:none;font-weight:500;cursor:pointer">Isko Leads Directory mein bhi save karo (agli baar dobara type na karna pade)</label>
+        </div>
+        <button class="btn btn-primary" id="qsSendBtn" style="background:#25D366">📱 Abhi Bhejo</button>
       </div>
 
       <div class="card">
@@ -2428,6 +2453,21 @@ function attachListeners(){
   };
 
   Object.entries(PUBLIC_COLS).forEach(([k,p])=>listen(k,p));
+
+  // Live-syncs whichever greeting/custom-message was last generated, so
+  // every logged-in device (owner or staff) sees the SAME draft instantly —
+  // no more "generate it again on this PC too".
+  unsubs.push(db.collection('meta').doc('activeGreetingDraft').onSnapshot(doc=>{
+    if(!doc.exists) return;
+    currentGreeting = doc.data();
+    const box = document.getElementById('gcPreviewBox');
+    if(box && currentGreeting){
+      box.textContent = buildGreetingMessage('[Client Name]');
+      box.style.display = 'block';
+      document.getElementById('gcSendCard').style.display = 'block';
+      renderGreetingSendList();
+    }
+  }, err=>console.warn('listen activeGreetingDraft', err.code)));
 
   if(currentRole === 'owner'){
     Object.entries(PRIVATE_COLS).forEach(([k,p])=>listen(k,p));
@@ -3668,17 +3708,21 @@ document.getElementById('addAgreementBtn').addEventListener('click', async ()=>{
   const amount = Number(document.getElementById('agAmount').value);
   const note = document.getElementById('agNote').value.trim();
   const contractorPhone = document.getElementById('agContractorPhone').value.trim();
+  const altName = document.getElementById('agAltName').value.trim();
+  const altPhone = document.getElementById('agAltPhone').value.trim();
 
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
   if(isSiteLockedForMe(siteId)){ showToast('Ye site complete ho chuki hai — sirf owner isme naya work agreement add kar sakta hai'); return; }
   if(!contractor){ showToast('Contractor ka naam daalo'); return; }
   if(!amount || amount<=0){ showToast('Sahi fixed amount daalo'); return; }
 
-  DATA.workAgreements.push({ id: uid(), siteId, contractor, category, fixedAmount: amount, note, contractorPhone });
+  DATA.workAgreements.push({ id: uid(), siteId, contractor, category, fixedAmount: amount, note, contractorPhone, altName, altPhone });
   document.getElementById('agContractor').value='';
   document.getElementById('agAmount').value='';
   document.getElementById('agNote').value='';
   document.getElementById('agContractorPhone').value='';
+  document.getElementById('agAltName').value='';
+  document.getElementById('agAltPhone').value='';
   await saveData();
   renderAgreementsTable(); renderDashboard();
   showToast('Work agreement add ho gaya ✓');
@@ -3728,27 +3772,29 @@ function bilingualMsg(en, mr){
   return `${en}\n\n───────────\n\n${mr}`;
 }
 
-function offerWhatsAppPrompt(name, phone, message){
-  if(!phone) return;
+function offerWhatsAppPrompt(name, phone, message, altRecipient){
+  if(!phone && !(altRecipient && altRecipient.phone)) return;
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
+  const hasAlt = altRecipient && altRecipient.phone;
   bg.innerHTML = `<div class="modal">
     <h3>📱 WhatsApp Bhejna Hai?</h3>
-    <p>${name} ko update bhej sakte ho:</p>
+    <p>${hasAlt ? 'Kise bhejna hai, chuno:' : `${name} ko update bhej sakte ho:`}</p>
     <div style="background:var(--surface-2);border-radius:6px;padding:10px;font-size:12.5px;white-space:pre-wrap;margin:10px 0;max-height:220px;overflow-y:auto">${message}</div>
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-ghost" id="waSkip" style="flex:1;justify-content:center">Skip</button>
-      <button class="btn btn-primary" id="waSend" style="flex:1;justify-content:center;background:#25D366">📱 WhatsApp Bhejo</button>
+      ${phone ? `<button class="btn btn-primary" id="waSendMain" style="flex:1;justify-content:center;background:#25D366">📱 ${hasAlt?name:'WhatsApp Bhejo'}</button>` : ''}
+      ${hasAlt ? `<button class="btn btn-primary" id="waSendAlt" style="flex:1;justify-content:center;background:#128C7E">📱 ${altRecipient.name}</button>` : ''}
     </div>
   </div>`;
   document.body.appendChild(bg);
   const close = ()=>bg.remove();
   bg.addEventListener('click', e=>{ if(e.target===bg) close(); });
   bg.querySelector('#waSkip').onclick = close;
-  bg.querySelector('#waSend').onclick = ()=>{
-    openWhatsApp(phone, message);
-    close(); // popup band ho jaata hai message bhejne ke baad
-  };
+  const mainBtn = bg.querySelector('#waSendMain');
+  if(mainBtn) mainBtn.onclick = ()=>{ openWhatsApp(phone, message); close(); };
+  const altBtn = bg.querySelector('#waSendAlt');
+  if(altBtn) altBtn.onclick = ()=>{ openWhatsApp(altRecipient.phone, message); close(); };
 }
 
 /* Fixed/final amount is only our internal, approximate figure until final
@@ -3765,7 +3811,8 @@ function openContractorWhatsAppPrompt(ag, amountPaidNow){
   const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n${todayLine}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
   const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n${todayLineMr}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
   const msg = bilingualMsg(enMsg, mrMsg);
-  offerWhatsAppPrompt(ag.contractor, ag.contractorPhone, msg);
+  const altRecipient = ag.altPhone ? { name: ag.altName || 'Uska Aadmi', phone: ag.altPhone } : null;
+  offerWhatsAppPrompt(ag.contractor, ag.contractorPhone, msg, altRecipient);
 }
 
 function sendContractorWhatsApp(agId){
@@ -3775,7 +3822,11 @@ function sendContractorWhatsApp(agId){
   const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n📊 Total Paid So Far: ₹${paid.toLocaleString('en-IN')}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
   const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
   const msg = bilingualMsg(enMsg, mrMsg);
-  openWhatsApp(ag.contractorPhone, msg);
+  if(ag.altPhone){
+    offerWhatsAppPrompt(ag.contractor, ag.contractorPhone, msg, { name: ag.altName || 'Uska Aadmi', phone: ag.altPhone });
+  } else {
+    openWhatsApp(ag.contractorPhone, msg);
+  }
 }
 
 async function deleteAgreement(id){
@@ -3796,6 +3847,8 @@ function editAgreement(id){
     {key:'category', label:'Work Category', value:r.category, type:'select', options:cats.map(c=>({value:c,label:c==='All'?'All / Mixed Work':c}))},
     {key:'fixedAmount', label:'Fixed Work Amount (₹)', value:r.fixedAmount, type:'number'},
     {key:'contractorPhone', label:'Contractor Phone', value:r.contractorPhone},
+    {key:'altName', label:'Uska Aadmi / Sub-contractor Naam', value:r.altName},
+    {key:'altPhone', label:'Uska Aadmi ka Phone', value:r.altPhone},
     {key:'note', label:'Note', value:r.note}
   ], async v=>{ await db.collection('agreements').doc(id).update(v); });
 }
@@ -6508,6 +6561,42 @@ async function deleteCurrentAttachment(){
   renderAttachmentStatus();
 }
 
+document.getElementById('qsSendBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('qsName').value.trim() || 'there';
+  const phone = document.getElementById('qsPhone').value.trim();
+  const firmKey = document.getElementById('qsFirm').value;
+  const firm = fgFirmProfiles[firmKey] || {};
+  const msgEn = document.getElementById('qsMsgEn').value.trim();
+  const msgMr = document.getElementById('qsMsgMr').value.trim();
+  const includeContact = document.getElementById('qsIncludeContact').checked;
+
+  if(!phone){ showToast('Phone number daalo'); return; }
+  if(!msgEn && !msgMr){ showToast('Pehle message likho'); return; }
+
+  const contactBits = [
+    firm.phone ? `📞 ${firm.phone}` : '',
+    firm.address ? `📍 ${firm.address}` : '',
+    firm.mapsLink ? `🗺️ ${firm.mapsLink}` : ''
+  ].filter(Boolean).join('\n');
+
+  const enBlock = [`Hello ${name},`, '', msgEn].filter(x=>x!=='').join('\n');
+  const mrBlock = msgMr ? [`नमस्कार ${name},`, '', msgMr].filter(x=>x!=='').join('\n') : '';
+  const signOff = firm.name ? (contactBits ? `— *${firm.name}*\n${contactBits}` : `— *${firm.name}*`) : contactBits;
+  const finalMsg = [enBlock, mrBlock ? '───────────' : '', mrBlock, includeContact ? signOff : '']
+    .filter(Boolean).join('\n\n');
+
+  openWhatsApp(phone, finalMsg);
+
+  if(document.getElementById('qsSaveToDirectory').checked && document.getElementById('qsName').value.trim()){
+    try{
+      await db.collection('leads').add({ name: document.getElementById('qsName').value.trim(), phone, firm: firmKey, type:'lead', note:'' });
+      showToast('WhatsApp khul gaya aur directory mein bhi save ho gaya ✓');
+    }catch(e){ showToast('WhatsApp khul gaya, lekin directory mein save nahi hua'); }
+  } else {
+    showToast('WhatsApp khul gaya ✓');
+  }
+});
+
 document.getElementById('gcMode').addEventListener('change', e=>{
   const isCustom = e.target.value === 'custom';
   document.getElementById('gcOccasionWrap').style.display = isCustom ? 'none' : 'block';
@@ -6569,6 +6658,10 @@ document.getElementById('gcGenerateBtn').addEventListener('click', ()=>{
   box.style.display = 'block';
   document.getElementById('gcSendCard').style.display = 'block';
   renderGreetingSendList();
+
+  // Save the draft so any other logged-in device/user sees the SAME
+  // generated message immediately, instead of only living in this browser.
+  db.collection('meta').doc('activeGreetingDraft').set(currentGreeting).catch(()=>{});
 });
 
 function renderGreetingSendList(){
