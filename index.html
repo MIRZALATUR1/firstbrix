@@ -1393,8 +1393,10 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
             <button class="btn btn-steel" id="bgPdfBtn" style="padding:7px 12px;font-size:12.5px">⬇ PDF</button>
             <button class="btn btn-ghost" id="bgDocBtn" style="padding:7px 12px;font-size:12.5px">⬇ Word</button>
             <button class="btn btn-primary" id="bgSaveBtn" style="padding:7px 12px;font-size:12.5px">💾 Save to History</button>
+            <button class="btn btn-primary" id="bgWhatsAppBtn" style="padding:7px 12px;font-size:12.5px;background:#25D366">📱 WhatsApp Bhejo</button>
           </div>
         </div>
+        <div class="hint" id="bgWhatsAppHint" style="margin-top:-4px">"📱 WhatsApp Bhejo" dabate hi PDF automatic bane ga, upload hoga, aur uska link message mein chala jayega — recipient link pe click karke seedha PDF khol/download kar lega. (WhatsApp free tareeke se file seedha "attach" nahi kar sakta, ye link hi sabse close tareeka hai. Storage Firebase mein setup hona chahiye — agar nahi hai to bata dena.)</div>
         <div id="bgPreviewBox" style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px;font-size:13px"></div>
       </div>
 
@@ -5807,9 +5809,7 @@ function renderBillPreview(d){
   document.getElementById('bgPreviewCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-document.getElementById('bgPdfBtn').addEventListener('click', ()=>{
-  if(!currentBillDoc){ showToast('Pehle Generate Document dabao'); return; }
-  const d = currentBillDoc;
+function buildBillPdfDoc(d){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   doc.setFontSize(16); doc.text(pdfSafe(d.companyName), 105, 15, {align:'center'});
@@ -5839,7 +5839,13 @@ document.getElementById('bgPdfBtn').addEventListener('click', ()=>{
     const lines = doc.splitTextToSize('- '+t, 180);
     lines.forEach(l=>{ doc.text(l, 14, y); y+=4.5; });
   });
+  return doc;
+}
 
+document.getElementById('bgPdfBtn').addEventListener('click', ()=>{
+  if(!currentBillDoc){ showToast('Pehle Generate Document dabao'); return; }
+  const d = currentBillDoc;
+  const doc = buildBillPdfDoc(d);
   saveBlob(doc.output('blob'), `${d.docType}_${d.docNumber}.pdf`);
   showToast('PDF taiyar ✓');
 });
@@ -5889,6 +5895,46 @@ document.getElementById('bgSaveBtn').addEventListener('click', async ()=>{
   }catch(e){ showToast('Save nahi hua — dobara try karo'); }
 });
 
+document.getElementById('bgWhatsAppBtn').addEventListener('click', async ()=>{
+  if(!currentBillDoc){ showToast('Pehle Generate Document dabao'); return; }
+  const d = currentBillDoc;
+  if(!d.customerPhone){ showToast('Pehle "Customer Phone" field bharo'); return; }
+  if(!isValidPhone10(d.customerPhone)){ showToast('Customer phone 10 digit ka hona chahiye'); return; }
+
+  const btn = document.getElementById('bgWhatsAppBtn');
+  btn.disabled = true; btn.textContent = 'PDF taiyar ho raha hai…';
+
+  let pdfUrl = '';
+  try{
+    const doc = buildBillPdfDoc(d);
+    const blob = doc.output('blob');
+    const path = `billAttachments/${d.docNumber}.pdf`;
+    const ref = storage.ref().child(path);
+    await ref.put(blob, { contentType: 'application/pdf' });
+    pdfUrl = await ref.getDownloadURL();
+  }catch(e){
+    showToast('PDF link nahi bana (Storage set up hai check karo) — text message hi bhej raha hoon.');
+  }
+  btn.disabled = false; btn.textContent = '📱 WhatsApp Bhejo';
+
+  const title = d.docType === 'bill' ? 'Final Bill' : 'Quotation';
+  const dueOrTotalEn = d.docType==='bill'
+    ? `💰 Total Amount: ${inr(d.grandTotal)}\n✅ Advance Paid: ${inr(d.advance)}\n⏳ Amount Due: ${inr(d.amountDue)}`
+    : `💰 Total Amount: ${inr(d.grandTotal)}`;
+  const dueOrTotalMr = d.docType==='bill'
+    ? `💰 एकूण रक्कम: ${inr(d.grandTotal)}\n✅ आगाऊ भरलेली रक्कम: ${inr(d.advance)}\n⏳ शिल्लक रक्कम: ${inr(d.amountDue)}`
+    : `💰 एकूण रक्कम: ${inr(d.grandTotal)}`;
+  const pdfLineEn = pdfUrl ? `\n📎 PDF: ${pdfUrl}` : '';
+  const pdfLineMr = pdfUrl ? `\n📎 PDF: ${pdfUrl}` : '';
+
+  const enMsg = `Hello ${d.customerName},\n\nYour ${title} (${d.docNumber}) from *${d.companyName}* is ready.\n\n${dueOrTotalEn}\n\nDate: ${d.date}${pdfLineEn}`;
+  const mrMsg = `नमस्कार ${d.customerName},\n\n*${d.companyName}* कडून तुमचे ${title==='Final Bill'?'बिल':'कोटेशन'} (${d.docNumber}) तयार आहे.\n\n${dueOrTotalMr}\n\nदिनांक: ${d.date}${pdfLineMr}`;
+  const msg = bilingualMsg(enMsg, mrMsg);
+
+  openWhatsApp(d.customerPhone, msg);
+  showToast(pdfUrl ? 'WhatsApp khul gaya — PDF link message mein hai, click karte hi khul jayega ✓' : 'WhatsApp khul gaya (PDF link nahi bana, sirf text gaya)');
+});
+
 function renderBillHistory(){
   const tbody = document.querySelector('#bgHistoryTable tbody');
   if(!tbody) return;
@@ -5905,9 +5951,16 @@ function renderBillHistory(){
     <td><span class="tag ${r.status==='completed'?'paid':'pending'}">${r.status}</span></td>
     <td>
       ${!r.linkedConsultancyId ? `<button class="btn-danger-text" style="color:var(--good)" onclick="linkBillToConsultancy('${r.id}')">💰 Record as Income</button>&nbsp;·&nbsp;` : '<span style="color:var(--good);font-size:11px">✓ Linked</span>&nbsp;·&nbsp;'}
+      ${r.customerPhone ? `<button class="btn-danger-text" style="color:#25D366" onclick="resendBillWhatsApp('${r.id}')">📱 WhatsApp</button>&nbsp;·&nbsp;` : ''}
       <button class="btn-danger-text" onclick="deleteBillDoc('${r.id}')">Delete</button>
     </td>
   </tr>`).join('');
+}
+function resendBillWhatsApp(id){
+  const r = DATA.billQuotations.find(x=>x.id===id);
+  if(!r) return;
+  currentBillDoc = r;
+  document.getElementById('bgWhatsAppBtn').click();
 }
 
 async function linkBillToConsultancy(id){
