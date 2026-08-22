@@ -470,6 +470,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> <span data-i18n="slabs">Payment Slabs</span></button>
       <button data-tab="billgen" class="owner-only"><span class="tab-ico">🧾</span> Bill &amp; Quotation</button>
       <button data-tab="letterhead" class="owner-only"><span class="tab-ico">📜</span> Letterhead / Letter</button>
+      <button data-tab="greetings" class="owner-only"><span class="tab-ico">🎉</span> Festival Greetings</button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
 
       <div class="nav-group-label owner-only">Admin</div>
@@ -1473,6 +1474,86 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
     </section>
 
+    <!-- FESTIVAL GREETINGS -->
+    <section id="tab-greetings" style="display:none">
+      <h1 class="page-title">Festival Greetings</h1>
+      <p class="page-sub">Indian tyoharon ke hisaab se apne clients/leads ko WhatsApp pe branded greeting bhejo — kisi bhi firm ke naam se, address/map/contact ke saath. Chaho to construction offer bhi jod sakte ho.</p>
+
+      <div class="card">
+        <h2>🔄 Auto-Update <small>App khud ek free public holidays source se naye saal ka calendar khींch leta hai — koi cost, koi API key nahi</small></h2>
+        <div id="fgUpdateStatus" class="footnote"></div>
+        <button class="btn btn-ghost" id="fgRefreshBtn" style="margin-top:8px">🔄 Abhi Check Karo</button>
+        <div class="hint">Ye sirf major fixed/national holidays auto-fetch karta hai. Diwali/Holi jaise "chalte" tyoharon ke liye — agar API mein na aaye — neeche se "Add Custom Occasion" karo.</div>
+      </div>
+
+      <div class="card">
+        <h2>Firm Profiles <small>Dono firms ki details — greeting mein jo bhi firm chunoge, uski details use hongi</small></h2>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <select id="fgFirmEdit"><option value="firm1">Firm 1</option><option value="firm2">Firm 2</option></select>
+          </div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label>Firm Name</label><input id="fgName" placeholder="e.g. FIRSTBRIX INFRATECH PVT. LTD."></div>
+          <div class="field"><label>Phone</label><input id="fgPhone" placeholder="e.g. +91 9975797167"></div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label>Email</label><input id="fgEmail" placeholder="e.g. mirzalatur@gmail.com"></div>
+          <div class="field"><label>Website</label><input id="fgWebsite" placeholder="e.g. www.firstbrix.com"></div>
+        </div>
+        <div class="field"><label>Address</label><input id="fgAddress" placeholder="e.g. Huseniya Colony, India Nagar, Latur-413512"></div>
+        <div class="field"><label>Google Maps Link — optional</label><input id="fgMapsLink" placeholder="e.g. https://maps.app.goo.gl/xxxxx"></div>
+        <button class="btn btn-primary" id="fgSaveFirmBtn">💾 Is Firm Ki Details Save Karo</button>
+      </div>
+
+      <div class="card">
+        <h2>Clients / Leads Directory</h2>
+        <div class="grid cols-4">
+          <div class="field"><label>Name</label><input id="ldName" placeholder="e.g. Mr. Sharma"></div>
+          <div class="field"><label>Phone</label><input id="ldPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Firm</label><select id="ldFirm"><option value="firm1">Firm 1</option><option value="firm2">Firm 2</option></select></div>
+          <div class="field"><label>Type</label><select id="ldType"><option value="client">Client</option><option value="lead">Lead</option></select></div>
+        </div>
+        <div class="field"><label>Note — optional</label><input id="ldNote" placeholder="e.g. interested in interior work"></div>
+        <button class="btn btn-primary" id="ldAddBtn">+ Add to Directory</button>
+        <div class="table-wrap" style="margin-top:14px"><table id="ldTable"><thead><tr>
+          <th>Name</th><th>Phone</th><th>Firm</th><th>Type</th><th>Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>Compose Greeting</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Firm</label><select id="gcFirm"><option value="firm1">Firm 1</option><option value="firm2">Firm 2</option></select></div>
+          <div class="field"><label>Occasion</label><select id="gcOccasion"></select></div>
+          <div></div>
+        </div>
+        <div class="field"><label>Construction Offer — optional</label><input id="gcOffer" placeholder="e.g. Book now — 10% off on RCC work this festive season!"></div>
+        <button class="btn btn-primary" id="gcGenerateBtn">✨ Generate Greeting</button>
+        <div id="gcPreviewBox" style="display:none;margin-top:14px;background:var(--surface-2);border-radius:8px;padding:14px;font-size:12.5px;white-space:pre-wrap"></div>
+      </div>
+
+      <div class="card">
+        <h2>Add Custom Occasion to Calendar <small>Diwali/Holi/Eid jaise "chalte" (lunar) tyohar har saal date badalte hain — jaise hi agle saal ki date pata chale, yahan se add kar do, permanently save ho jayega</small></h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Occasion Name</label><input id="cfName" placeholder="e.g. Diwali 2027"></div>
+          <div class="field"><label>Date</label><input id="cfDate" type="date"></div>
+          <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-ghost" id="cfAddBtn">+ Add to Calendar</button></div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label>Greeting (English)</label><input id="cfEn" placeholder="e.g. Happy Diwali!"></div>
+          <div class="field"><label>Greeting (Marathi)</label><input id="cfMr" placeholder="e.g. दिवाळीच्या हार्दिक शुभेच्छा!"></div>
+        </div>
+      </div>
+
+      <div class="card" id="gcSendCard" style="display:none">
+        <h2>Send To <small>Har naam ke aage "Send" dabao — WhatsApp khulega us insaan ke naam se personalize message ke saath</small></h2>
+        <div class="table-wrap"><table id="gcSendTable"><thead><tr>
+          <th>Name</th><th>Phone</th><th>Type</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
     <!-- CONSULTANCY -->
     <section id="tab-consultancy" style="display:none">
       <h1 class="page-title" data-i18n="consultancy_title">Consultancy Income</h1>
@@ -1867,7 +1948,7 @@ async function logAudit(action, area, summary){
 }
 
 const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments' };
-const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations', letterheadDocs:'letterheadDocs' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations', letterheadDocs:'letterheadDocs', leads:'leads', customFestivals:'customFestivals' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
 /* Snapshot of what the server currently holds, so saveData() can write only
@@ -2280,7 +2361,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -2300,6 +2381,8 @@ function rerenderAll(){
     renderSiteFunding();
     renderBillHistory();
     renderLetterheadHistory();
+    renderLeadsTable();
+    populateOccasionDropdown();
   }
 }
 
@@ -2394,6 +2477,8 @@ async function saveData(){
       sync('siteInvestments', 'siteInvestments');
       sync('billQuotations', 'billQuotations');
       sync('letterheadDocs', 'letterheadDocs');
+      sync('leads', 'leads');
+      sync('customFestivals', 'customFestivals');
       const prevFin = serverState.siteFinance || {};
       const seenFin = new Set();
       DATA.sites.forEach(s=>{
@@ -2500,6 +2585,7 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='slabs') renderSavedSlabsList();
   if(btn.dataset.tab==='billgen') renderBillHistory();
   if(btn.dataset.tab==='letterhead') renderLetterheadHistory();
+  if(btn.dataset.tab==='greetings') renderLeadsTable();
   if(btn.dataset.tab==='consultancy') renderConsultancyIncome();
 });
 
@@ -2933,7 +3019,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   document.getElementById('expNote').value='';
   await saveData();
   renderExpenseTable(); renderDashboard(); renderSitesTable();
-  if(isNewLabourEntry) maybeOfferContractorWhatsApp(siteId, contractor, type);
+  if(isNewLabourEntry) maybeOfferContractorWhatsApp(siteId, contractor, type, amount);
 });
 
 function editExpense(id){
@@ -3601,12 +3687,12 @@ function renderAgreementsTable(){
 }
 /* Auto-offered right after a labour expense is saved — only fires if the
    contractor has a matching Work Agreement with a saved phone number. */
-function maybeOfferContractorWhatsApp(siteId, contractorName, type){
+function maybeOfferContractorWhatsApp(siteId, contractorName, type, amountPaidNow){
   if(type !== 'labour') return;
   const key = vendorNameKey(contractorName);
   const ag = DATA.workAgreements.find(a => a.siteId===siteId && vendorNameKey(a.contractor)===key && a.contractorPhone);
   if(!ag) return;
-  openContractorWhatsAppPrompt(ag);
+  openContractorWhatsAppPrompt(ag, amountPaidNow);
 }
 /* Generic popup — used by contractor, investor, vendor, and personal
    lending flows. Send opens WhatsApp AND closes the popup; Skip just closes. */
@@ -3638,12 +3724,19 @@ function offerWhatsAppPrompt(name, phone, message){
   };
 }
 
-function openContractorWhatsAppPrompt(ag){
+/* Fixed/final amount is only our internal, approximate figure until final
+   measurement — it never goes into a contractor-facing message. Only the
+   actual amount paid (today's + running total) is shown. */
+function openContractorWhatsAppPrompt(ag, amountPaidNow){
   const paid = computePaidForAgreement(ag);
-  const balance = Number(ag.fixedAmount) - paid;
-  const balanceStr = balance>0 ? '₹'+balance.toLocaleString('en-IN') : '0 (Fully Paid)';
-  const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n✅ Paid So Far: ₹${paid.toLocaleString('en-IN')}\n📋 Total Fixed Amount: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ Balance Due: ${balanceStr}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
-  const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n✅ आतापर्यंत दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}\n📋 एकूण ठरलेली रक्कम: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ शिल्लक रक्कम: ${balanceStr}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const todayLine = amountPaidNow
+    ? `✅ Paid Today: ₹${Number(amountPaidNow).toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${paid.toLocaleString('en-IN')}`
+    : `📊 Total Paid So Far: ₹${paid.toLocaleString('en-IN')}`;
+  const todayLineMr = amountPaidNow
+    ? `✅ आज दिलेली रक्कम: ₹${Number(amountPaidNow).toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}`
+    : `📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}`;
+  const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n${todayLine}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n${todayLineMr}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
   const msg = bilingualMsg(enMsg, mrMsg);
   offerWhatsAppPrompt(ag.contractor, ag.contractorPhone, msg);
 }
@@ -3652,10 +3745,8 @@ function sendContractorWhatsApp(agId){
   const ag = DATA.workAgreements.find(x=>x.id===agId);
   if(!ag) return;
   const paid = computePaidForAgreement(ag);
-  const balance = Number(ag.fixedAmount) - paid;
-  const balanceStr = balance>0 ? '₹'+balance.toLocaleString('en-IN') : '0 (Fully Paid)';
-  const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n✅ Paid So Far: ₹${paid.toLocaleString('en-IN')}\n📋 Total Fixed Amount: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ Balance Due: ${balanceStr}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
-  const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n✅ आतापर्यंत दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}\n📋 एकूण ठरलेली रक्कम: ₹${Number(ag.fixedAmount).toLocaleString('en-IN')}\n⏳ शिल्लक रक्कम: ${balanceStr}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n📊 Total Paid So Far: ₹${paid.toLocaleString('en-IN')}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
   const msg = bilingualMsg(enMsg, mrMsg);
   openWhatsApp(ag.contractorPhone, msg);
 }
@@ -4206,7 +4297,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
     renderSiteDetailLedger(siteId);
     renderSiteDetailChart(siteId, currentRole==='owner'?siteReceived(siteId):0, siteCost(siteId));
   }
-  maybeOfferContractorWhatsApp(siteId, name, type);
+  maybeOfferContractorWhatsApp(siteId, name, type, amount);
 
   // Keep the modal open so several entries can be logged in a row.
   document.getElementById('qSavedHint').textContent = `Saved: ${name} — ${inr(amount)} (${siteName(siteId)})`;
@@ -6075,6 +6166,340 @@ async function deleteLetterDoc(id){
   catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 
+/* ---------------- Festival Greetings ---------------- */
+/* 2026 dates, verified — lunar-calendar festivals (Holi, Eid, Diwali, etc.)
+   shift every year, so this list will need a refresh for 2027 onward. */
+/* Fixed-date observances (same month/day every year) — computed for ANY
+   year automatically, so this list never needs updating. Mix of Indian
+   national days + worldwide observances + a few relevant to construction. */
+const FIXED_OBSERVANCES = [
+  { month:1, day:1, name:"New Year's Day", en:'Happy New Year!', mr:'नवीन वर्षाच्या हार्दिक शुभेच्छा!' },
+  { month:1, day:15, name:'Army Day', en:'Happy Army Day! Saluting our brave soldiers.', mr:'सैन्य दिनाच्या हार्दिक शुभेच्छा! आपल्या शूर जवानांना सलाम.' },
+  { month:1, day:24, name:'National Girl Child Day', en:'Happy National Girl Child Day!', mr:'राष्ट्रीय मुलगी दिनाच्या हार्दिक शुभेच्छा!' },
+  { month:1, day:26, name:'Republic Day', en:'Happy Republic Day!', mr:'प्रजासत्ताक दिनाच्या हार्दिक शुभेच्छा!' },
+  { month:2, day:4, name:'World Cancer Day', en:'World Cancer Day — stay healthy, stay aware.', mr:'जागतिक कर्करोग दिन — निरोगी रहा, जागरूक रहा.' },
+  { month:2, day:14, name:"Valentine's Day", en:"Happy Valentine's Day!", mr:'व्हॅलेंटाईन डेच्या हार्दिक शुभेच्छा!' },
+  { month:3, day:8, name:"International Women's Day", en:"Happy Women's Day! Saluting the strength of every woman.", mr:'आंतरराष्ट्रीय महिला दिनाच्या हार्दिक शुभेच्छा!' },
+  { month:3, day:15, name:'World Consumer Rights Day', en:'Happy World Consumer Rights Day!', mr:'जागतिक ग्राहक हक्क दिनाच्या शुभेच्छा!' },
+  { month:3, day:22, name:'World Water Day', en:"World Water Day — let's conserve every drop.", mr:'जागतिक जल दिन — पाण्याचा प्रत्येक थेंब वाचवूया.' },
+  { month:4, day:7, name:'World Health Day', en:'Happy World Health Day! Stay healthy, stay happy.', mr:'जागतिक आरोग्य दिनाच्या शुभेच्छा!' },
+  { month:4, day:14, name:'Ambedkar Jayanti', en:'Happy Ambedkar Jayanti!', mr:'आंबेडकर जयंतीच्या हार्दिक शुभेच्छा!' },
+  { month:4, day:22, name:'Earth Day', en:"Happy Earth Day! Let's build a greener future together.", mr:'वसुंधरा दिनाच्या शुभेच्छा! चला हरित भविष्य घडवूया.' },
+  { month:5, day:1, name:'Labour Day', en:'Happy Labour Day! Honoring every hardworking hand that builds our world.', mr:'कामगार दिनाच्या हार्दिक शुभेच्छा! जग घडवणाऱ्या प्रत्येक कष्टकऱ्याला सलाम.' },
+  { month:6, day:5, name:'World Environment Day', en:'Happy World Environment Day!', mr:'जागतिक पर्यावरण दिनाच्या शुभेच्छा!' },
+  { month:6, day:21, name:'International Yoga Day', en:'Happy International Yoga Day!', mr:'आंतरराष्ट्रीय योग दिनाच्या शुभेच्छा!' },
+  { month:7, day:1, name:"Doctor's Day", en:"Happy Doctor's Day! Thank you for your service.", mr:'डॉक्टर दिनाच्या हार्दिक शुभेच्छा!' },
+  { month:8, day:15, name:'Independence Day', en:'Happy Independence Day!', mr:'स्वातंत्र्य दिनाच्या हार्दिक शुभेच्छा!' },
+  { month:9, day:5, name:"Teacher's Day", en:"Happy Teacher's Day!", mr:'शिक्षक दिनाच्या हार्दिक शुभेच्छा!' },
+  { month:9, day:15, name:'Engineers Day', en:'Happy Engineers Day! Celebrating the builders and innovators.', mr:'अभियंता दिनाच्या हार्दिक शुभेच्छा! जग घडवणाऱ्या अभियंत्यांना सलाम.' },
+  { month:9, day:27, name:'World Tourism Day', en:'Happy World Tourism Day!', mr:'जागतिक पर्यटन दिनाच्या शुभेच्छा!' },
+  { month:10, day:2, name:'Gandhi Jayanti', en:'Happy Gandhi Jayanti!', mr:'गांधी जयंतीच्या हार्दिक शुभेच्छा!' },
+  { month:10, day:31, name:'National Unity Day', en:'Happy National Unity Day!', mr:'राष्ट्रीय एकता दिनाच्या शुभेच्छा!' },
+  { month:11, day:14, name:"Children's Day", en:"Happy Children's Day!", mr:'बालदिनाच्या हार्दिक शुभेच्छा!' },
+  { month:11, day:26, name:'Constitution Day', en:'Happy Constitution Day!', mr:'संविधान दिनाच्या हार्दिक शुभेच्छा!' },
+  { month:12, day:25, name:'Christmas', en:'Merry Christmas!', mr:'ख्रिसमसच्या हार्दिक शुभेच्छा!' },
+  { month:12, day:31, name:"New Year's Eve", en:'Happy New Year\'s Eve! See you in the new year.', mr:'नववर्ष पूर्वसंध्येच्या शुभेच्छा!' },
+];
+
+/* Weekday-based observances (e.g. "2nd Sunday of May") — still 100%
+   calculable for any year with plain date maths, no lunar calendar needed. */
+const WEEKDAY_OBSERVANCES = [
+  { month:5, weekday:0, nth:2, name:"Mother's Day", en:"Happy Mother's Day!", mr:'मातृदिनाच्या हार्दिक शुभेच्छा!' },
+  { month:6, weekday:0, nth:3, name:"Father's Day", en:"Happy Father's Day!", mr:'पितृदिनाच्या हार्दिक शुभेच्छा!' },
+  { month:8, weekday:0, nth:1, name:'Friendship Day', en:'Happy Friendship Day!', mr:'मैत्री दिनाच्या हार्दिक शुभेच्छा!' },
+  { month:10, weekday:1, nth:1, name:'World Habitat Day', en:'Happy World Habitat Day! Building better homes, better lives.', mr:'जागतिक निवास दिनाच्या शुभेच्छा! उत्तम घरे, उत्तम आयुष्य.' },
+];
+function nthWeekdayOfMonth(year, month, weekday, nth){
+  const d = new Date(year, month-1, 1);
+  let count = 0;
+  while(d.getMonth() === month-1){
+    if(d.getDay() === weekday){ count++; if(count===nth) return d.toISOString().slice(0,10); }
+    d.setDate(d.getDate()+1);
+  }
+  return null;
+}
+
+/* Lunar-calendar festivals (Diwali, Holi, Eid, Ganesh Chaturthi, etc.) shift
+   every year — these are stored per-year, verified where possible, and can
+   be extended any time from the "Custom Occasion" flow below (so the list
+   keeps working correctly for future years without needing a code update). */
+const LUNAR_FESTIVALS_BY_YEAR = {
+  2026: [
+    { date:'2026-01-14', name:'Makar Sankranti', en:'Happy Makar Sankranti!', mr:'मकर संक्रांतीच्या हार्दिक शुभेच्छा!' },
+    { date:'2026-03-04', name:'Holi', en:'Happy Holi!', mr:'होळीच्या हार्दिक शुभेच्छा!' },
+    { date:'2026-03-19', name:'Gudi Padwa', en:'Happy Gudi Padwa! Wishing you a prosperous Marathi New Year.', mr:'गुढी पाडव्याच्या हार्दिक शुभेच्छा! मराठी नववर्ष आनंदाचे आणि भरभराटीचे जावो.' },
+    { date:'2026-03-21', name:'Eid-ul-Fitr', en:'Eid Mubarak!', mr:'ईद मुबारक!' },
+    { date:'2026-03-26', name:'Ram Navami', en:'Happy Ram Navami!', mr:'रामनवमीच्या हार्दिक शुभेच्छा!' },
+    { date:'2026-04-21', name:'Akshaya Tritiya', en:'Happy Akshaya Tritiya! An auspicious day for new beginnings.', mr:'अक्षय्य तृतीयेच्या हार्दिक शुभेच्छा! नवीन सुरुवातीसाठी हा शुभ दिवस आहे.' },
+    { date:'2026-08-28', name:'Raksha Bandhan', en:'Happy Raksha Bandhan!', mr:'रक्षाबंधनाच्या हार्दिक शुभेच्छा!' },
+    { date:'2026-09-04', name:'Janmashtami', en:'Happy Janmashtami!', mr:'जन्माष्टमीच्या हार्दिक शुभेच्छा!' },
+    { date:'2026-09-14', name:'Ganesh Chaturthi', en:'Happy Ganesh Chaturthi! May Bappa bring prosperity to your home.', mr:'गणेश चतुर्थीच्या हार्दिक शुभेच्छा! बाप्पा तुमच्या घरी सुख-समृद्धी घेऊन येवो.' },
+    { date:'2026-10-11', name:'Navratri Begins', en:'Happy Navratri!', mr:'नवरात्रीच्या हार्दिक शुभेच्छा!' },
+    { date:'2026-10-20', name:'Dussehra', en:'Happy Dussehra!', mr:'दसऱ्याच्या हार्दिक शुभेच्छा!' },
+    { date:'2026-11-08', name:'Diwali', en:'Happy Diwali! Wishing you and your family joy, prosperity, and light.', mr:'दिवाळीच्या हार्दिक शुभेच्छा! तुम्हाला आणि तुमच्या कुटुंबाला सुख, समृद्धी आणि प्रकाशमय दिवाळीच्या शुभेच्छा.' },
+  ]
+  // Future years: use "+ Add Custom Occasion to Calendar" in the app once
+  // that year's exact dates are known (Holi/Diwali/Eid shift every year).
+};
+
+/* Builds the full occasion list for a given year — fixed + weekday +
+   lunar (if known) + any custom ones the owner has saved. */
+function getFestivalsForYear(year){
+  const fixed = FIXED_OBSERVANCES.map(f=>({
+    date: `${year}-${String(f.month).padStart(2,'0')}-${String(f.day).padStart(2,'0')}`,
+    name:f.name, en:f.en, mr:f.mr
+  }));
+  const weekday = WEEKDAY_OBSERVANCES.map(f=>{
+    const date = nthWeekdayOfMonth(year, f.month, f.weekday, f.nth);
+    return date ? { date, name:f.name, en:f.en, mr:f.mr } : null;
+  }).filter(Boolean);
+  const lunar = LUNAR_FESTIVALS_BY_YEAR[year] || [];
+  const custom = (DATA.customFestivals||[]).filter(f=>f.date.startsWith(String(year)));
+  return [...fixed, ...weekday, ...lunar, ...custom].sort((a,b)=>a.date.localeCompare(b.date));
+}
+/* All occasions across "today" and the next ~15 months — covers the
+   current year's remaining festivals plus early next year, so the
+   dropdown always has a healthy set of upcoming options regardless of
+   what month it is. Keeps working correctly indefinitely, year after year. */
+function getUpcomingFestivals(){
+  const y = new Date().getFullYear();
+  const all = [...getFestivalsForYear(y), ...getFestivalsForYear(y+1), ...(apiFestivalCache[y]||[]), ...(apiFestivalCache[y+1]||[])];
+  const seen = new Set();
+  return all.filter(f=>{
+    const key = f.date + '|' + f.name.toLowerCase().replace(/[^a-z]/g,'');
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/* ---------------- Auto-Update: free, keyless public holidays API ----------------
+   Nager.Date (date.nager.at) is a free, open, no-signup-required API — safe to
+   call directly from the browser (no secret key to expose). It won't have
+   every regional/lunar festival, but it fills in the major national ones
+   automatically, year after year, with zero maintenance. Results are cached
+   in Firestore so we only fetch once per year, not on every page load. */
+let apiFestivalCache = {};
+async function loadApiFestivalCache(){
+  try{
+    const d = await db.collection('meta').doc('apiFestivalCache').get();
+    if(d.exists) apiFestivalCache = d.data() || {};
+  }catch(e){ apiFestivalCache = {}; }
+  const y = new Date().getFullYear();
+  // Auto-refresh silently if we don't yet have this year or next year cached.
+  if(!apiFestivalCache[y]) await fetchAndCacheHolidays(y, true);
+  if(!apiFestivalCache[y+1]) await fetchAndCacheHolidays(y+1, true);
+  populateOccasionDropdown();
+}
+async function fetchAndCacheHolidays(year, silent){
+  try{
+    const res = await fetch(`https://date.nager.at/api/v3/publicholidays/${year}/IN`);
+    if(!res.ok) throw new Error('API error');
+    const data = await res.json();
+    const mapped = data.map(h=>({
+      date: h.date,
+      name: h.localName || h.name,
+      en: `Happy ${h.localName || h.name}!`,
+      mr: `${h.localName || h.name} च्या हार्दिक शुभेच्छा!`
+    }));
+    apiFestivalCache[year] = mapped;
+    await db.collection('meta').doc('apiFestivalCache').set(apiFestivalCache);
+    if(!silent) showToast(`${year} ke ${mapped.length} holidays calendar mein add ho gaye ✓`);
+    populateOccasionDropdown();
+    return true;
+  }catch(e){
+    if(!silent) showToast('Update fetch nahi ho paya — internet check karo, ya "Add Custom Occasion" se manually daal do.');
+    return false;
+  }
+}
+document.getElementById('fgRefreshBtn').addEventListener('click', async ()=>{
+  const y = new Date().getFullYear();
+  showToast('Check kar rahe hain…');
+  await fetchAndCacheHolidays(y, false);
+  await fetchAndCacheHolidays(y+1, true);
+});
+
+let fgFirmProfiles = {
+  firm1: { name:'', phone:'', email:'', website:'', address:'', mapsLink:'' },
+  firm2: { name:'', phone:'', email:'', website:'', address:'', mapsLink:'' }
+};
+
+async function loadFirmProfiles(){
+  try{
+    const d = await db.collection('meta').doc('firmProfiles').get();
+    if(d.exists) fgFirmProfiles = Object.assign(fgFirmProfiles, d.data());
+  }catch(e){}
+  loadFirmIntoForm();
+  populateOccasionDropdown();
+}
+function loadFirmIntoForm(){
+  const key = document.getElementById('fgFirmEdit').value;
+  const f = fgFirmProfiles[key] || {};
+  document.getElementById('fgName').value = f.name||'';
+  document.getElementById('fgPhone').value = f.phone||'';
+  document.getElementById('fgEmail').value = f.email||'';
+  document.getElementById('fgWebsite').value = f.website||'';
+  document.getElementById('fgAddress').value = f.address||'';
+  document.getElementById('fgMapsLink').value = f.mapsLink||'';
+}
+document.getElementById('fgFirmEdit').addEventListener('change', loadFirmIntoForm);
+document.getElementById('fgSaveFirmBtn').addEventListener('click', async ()=>{
+  const key = document.getElementById('fgFirmEdit').value;
+  fgFirmProfiles[key] = {
+    name: document.getElementById('fgName').value.trim(),
+    phone: document.getElementById('fgPhone').value.trim(),
+    email: document.getElementById('fgEmail').value.trim(),
+    website: document.getElementById('fgWebsite').value.trim(),
+    address: document.getElementById('fgAddress').value.trim(),
+    mapsLink: document.getElementById('fgMapsLink').value.trim()
+  };
+  try{
+    await db.collection('meta').doc('firmProfiles').set(fgFirmProfiles);
+    showToast('Firm profile save ho gaya ✓');
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); }
+});
+
+function populateOccasionDropdown(){
+  const sel = document.getElementById('gcOccasion');
+  if(!sel) return;
+
+  const statusEl = document.getElementById('fgUpdateStatus');
+  if(statusEl){
+    const y = new Date().getFullYear();
+    const cached = [y, y+1].filter(yr=>apiFestivalCache[yr]);
+    statusEl.textContent = cached.length
+      ? `✓ ${cached.join(' aur ')} ka calendar auto-updated hai (${cached.reduce((a,yr)=>a+apiFestivalCache[yr].length,0)} holidays fetched).`
+      : 'Abhi tak update fetch nahi hua — "Abhi Check Karo" dabao.';
+  }
+
+  const all = getUpcomingFestivals();
+  const today = todayStr();
+  const upcoming = all.filter(f=>f.date >= today).sort((a,b)=>a.date.localeCompare(b.date));
+  const past = all.filter(f=>f.date < today).sort((a,b)=>a.date.localeCompare(b.date));
+  const fmt = f=>`${f.name} — ${new Date(f.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}`;
+  sel.innerHTML =
+    (upcoming.length ? `<optgroup label="Upcoming">${upcoming.map(f=>`<option value="${f.date}|${f.name}">${fmt(f)}</option>`).join('')}</optgroup>` : '') +
+    (past.length ? `<optgroup label="Already Passed This Year">${past.map(f=>`<option value="${f.date}|${f.name}">${fmt(f)}</option>`).join('')}</optgroup>` : '') +
+    '<option value="custom">Custom / Other Occasion</option>';
+  if(upcoming.length) sel.value = `${upcoming[0].date}|${upcoming[0].name}`;
+}
+
+document.getElementById('ldAddBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('ldName').value.trim();
+  const phone = document.getElementById('ldPhone').value.trim();
+  const firm = document.getElementById('ldFirm').value;
+  const type = document.getElementById('ldType').value;
+  const note = document.getElementById('ldNote').value.trim();
+  if(!name){ showToast('Naam daalo'); return; }
+  if(!phone){ showToast('Phone number daalo'); return; }
+  try{
+    await db.collection('leads').add({ name, phone, firm, type, note });
+    showToast('Directory mein add ho gaya ✓');
+    document.getElementById('ldName').value='';
+    document.getElementById('ldPhone').value='';
+    document.getElementById('ldNote').value='';
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); }
+});
+
+function renderLeadsTable(){
+  const tbody = document.querySelector('#ldTable tbody');
+  if(!tbody) return;
+  const rows = [...DATA.leads].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Abhi koi client/lead add nahi hai.</td></tr>`;
+  } else {
+    tbody.innerHTML = rows.map(r=>`<tr>
+      <td>${r.name}</td><td>${r.phone}</td>
+      <td>${r.firm==='firm2'?'Firm 2':'Firm 1'}</td>
+      <td><span class="tag ${r.type==='client'?'paid':'other'}">${r.type}</span></td>
+      <td>${r.note||'—'}</td>
+      <td><button class="btn-danger-text" onclick="deleteLead('${r.id}')">Delete</button></td>
+    </tr>`).join('');
+  }
+  renderGreetingSendList();
+}
+async function deleteLead(id){
+  if(!await uiConfirm('Ye contact delete karna hai?', 'Haan, delete karo')) return;
+  try{ await db.collection('leads').doc(id).delete(); showToast('Delete ho gaya'); }
+  catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
+let currentGreeting = null;
+
+document.getElementById('gcGenerateBtn').addEventListener('click', ()=>{
+  const firmKey = document.getElementById('gcFirm').value;
+  const firm = fgFirmProfiles[firmKey] || {};
+  if(!firm.name){ showToast(`Pehle upar "${firmKey==='firm1'?'Firm 1':'Firm 2'}" ki details save karo`); return; }
+
+  const occVal = document.getElementById('gcOccasion').value;
+  const offer = document.getElementById('gcOffer').value.trim();
+  let occEn, occMr, occLabel;
+  if(occVal === 'custom'){
+    occEn = 'Greetings!'; occMr = 'शुभेच्छा!'; occLabel = 'Custom';
+  } else {
+    const [occDate, occName] = occVal.split('|');
+    const all = getUpcomingFestivals();
+    const f = all.find(x=>x.date===occDate && x.name===occName) || all.find(x=>x.date===occDate);
+    occEn = f.en; occMr = f.mr; occLabel = f.name;
+  }
+
+  const contactLine = [firm.phone, firm.email, firm.website].filter(Boolean).join('   ·   ');
+  const addressBlock = firm.address ? `\n📍 ${firm.address}` : '';
+  const mapsBlock = firm.mapsLink ? `\n🗺️ ${firm.mapsLink}` : '';
+
+  const enMsg = `${occEn}\n\nOn behalf of *${firm.name}*, wishing you and your family a very Happy ${occLabel}!${offer?`\n\n🎁 ${offer}`:''}${addressBlock}${mapsBlock}\n${contactLine?'\n'+contactLine:''}`;
+  const mrMsg = `${occMr}\n\n*${firm.name}* तर्फे, तुम्हाला आणि तुमच्या कुटुंबाला ${occLabel} च्या खूप खूप शुभेच्छा!${offer?`\n\n🎁 ${offer}`:''}${addressBlock}${mapsBlock}\n${contactLine?'\n'+contactLine:''}`;
+
+  currentGreeting = { firmKey, msg: bilingualMsg(enMsg, mrMsg), occLabel };
+  const box = document.getElementById('gcPreviewBox');
+  box.textContent = currentGreeting.msg;
+  box.style.display = 'block';
+  document.getElementById('gcSendCard').style.display = 'block';
+  renderGreetingSendList();
+});
+
+function renderGreetingSendList(){
+  const tbody = document.querySelector('#gcSendTable tbody');
+  if(!tbody || !currentGreeting) return;
+  const rows = DATA.leads.filter(l=>l.firm===currentGreeting.firmKey);
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">Is firm ke liye koi contact nahi hai directory mein.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.name}</td><td>${r.phone}</td><td>${r.type}</td>
+    <td><button class="btn-danger-text" style="color:#25D366" onclick="sendGreetingTo('${r.id}')">📱 Send</button></td>
+  </tr>`).join('');
+}
+function sendGreetingTo(leadId){
+  const lead = DATA.leads.find(l=>l.id===leadId);
+  if(!lead || !currentGreeting) return;
+  const parts = currentGreeting.msg.split('───────────');
+  const enPart = `Hello ${lead.name},\n\n${parts[0].trim()}`;
+  const mrPart = parts[1] ? `नमस्कार ${lead.name},\n\n${parts[1].trim()}` : '';
+  const personalized = mrPart ? `${enPart}\n\n───────────\n\n${mrPart}` : enPart;
+  openWhatsApp(lead.phone, personalized);
+}
+
+document.getElementById('cfAddBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('cfName').value.trim();
+  const date = document.getElementById('cfDate').value;
+  const en = document.getElementById('cfEn').value.trim() || `Happy ${name}!`;
+  const mr = document.getElementById('cfMr').value.trim() || `${name} च्या हार्दिक शुभेच्छा!`;
+  if(!name){ showToast('Occasion ka naam daalo'); return; }
+  if(!date){ showToast('Date daalo'); return; }
+  try{
+    await db.collection('customFestivals').add({ name, date, en, mr });
+    showToast('Calendar mein add ho gaya ✓');
+    document.getElementById('cfName').value='';
+    document.getElementById('cfDate').value='';
+    document.getElementById('cfEn').value='';
+    document.getElementById('cfMr').value='';
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); }
+});
+
+
+
 
 /* ---------------- Profit & Loss tab ---------------- */
 function renderPnL(){
@@ -7031,6 +7456,14 @@ function renderReminders(){
   const items = []; // { urgency: 'high'|'medium', text }
 
   if(currentRole === 'owner'){
+    // Festival calendar — nudge to add next year's lunar dates in good time
+    // (Diwali/Holi/Eid shift every year, so these can't be auto-computed).
+    const curYear = new Date().getFullYear();
+    const curMonth = new Date().getMonth()+1; // 1-12
+    if(curMonth >= 10 && !LUNAR_FESTIVALS_BY_YEAR[curYear+1]){
+      items.push({ urgency:'medium', text:`<strong>${curYear+1}</strong> ke Diwali/Holi/Eid jaise tyoharon ki dates calendar mein abhi add nahi hain — Festival Greetings tab se "Add Custom Occasion" karke daal do, taaki agle saal sahi time pe greeting jaa sake.` });
+    }
+
     // Backup reminder — nudge if it's been 7+ days (or never)
     if(lastBackupDate === null){
       items.push({ urgency:'medium', text:`Aapne kabhi <strong>Backup</strong> download nahi ki — Import Data tab se ek le lo, data safe rahega.` });
@@ -7540,6 +7973,8 @@ async function init(){
     }catch(e){ lastBackupDate = null; }
     renderReminders();
     await loadLetterheadProfile();
+    await loadFirmProfiles();
+    await loadApiFestivalCache();
   }
   await maybeRunAutoReport(false);
 }
