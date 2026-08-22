@@ -1523,7 +1523,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="field"><label>Note — optional</label><input id="ldNote" placeholder="e.g. interested in interior work"></div>
         <button class="btn btn-primary" id="ldAddBtn">+ Add to Directory</button>
         <div class="table-wrap" style="margin-top:14px"><table id="ldTable"><thead><tr>
-          <th>Name</th><th>Phone</th><th>Firm</th><th>Type</th><th>Note</th><th></th>
+          <th>Name</th><th>Phone</th><th>Firm</th><th>Type</th><th>Last Contact</th><th>Next Follow-up</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
 
@@ -1595,7 +1595,10 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card" id="gcSendCard" style="display:none">
-        <h2>Send To <small>Har naam ke aage "Send" dabao — WhatsApp khulega us insaan ke naam se personalize message ke saath. Jise bhej diya, wo list se khud hat jayega.</small></h2>
+        <div class="toolbar">
+          <h2 style="margin:0">Send To <small style="display:block;font-weight:400">Har naam ke aage "Send" dabao — jise bhej diya, wo list se khud hat jayega</small></h2>
+          <div class="toolbar-left"><select id="gcSendFirmFilter"><option value="all">Sabhi Contacts</option><option value="firm1">Sirf Firm 1</option><option value="firm2">Sirf Firm 2</option></select></div>
+        </div>
         <div class="footnote" id="gcSendCount" style="margin-bottom:8px"></div>
         <div class="table-wrap"><table id="gcSendTable"><thead><tr>
           <th>Name</th><th>Phone</th><th>Type</th><th></th>
@@ -6484,17 +6487,39 @@ document.getElementById('ldAddBtn').addEventListener('click', async ()=>{
 function renderLeadsTable(){
   const tbody = document.querySelector('#ldTable tbody');
   if(!tbody) return;
-  const rows = [...DATA.leads].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const rows = [...DATA.leads].sort((a,b)=>{
+    // Overdue/due-soon follow-ups float to the top so they're hard to miss.
+    const an = a.nextFollowUpDate || '9999-99-99';
+    const bn = b.nextFollowUpDate || '9999-99-99';
+    return an.localeCompare(bn);
+  });
   if(rows.length===0){
-    tbody.innerHTML = `<tr><td colspan="6" class="empty">Abhi koi client/lead add nahi hai.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Abhi koi client/lead add nahi hai.</td></tr>`;
   } else {
-    tbody.innerHTML = rows.map(r=>`<tr>
-      <td>${r.name}</td><td>${r.phone}</td>
-      <td>${r.firm==='firm2'?'Firm 2':'Firm 1'}</td>
-      <td><span class="tag ${r.type==='client'?'paid':'other'}">${r.type}</span></td>
-      <td>${r.note||'—'}</td>
-      <td><button class="btn-danger-text" onclick="deleteLead('${r.id}')">Delete</button></td>
-    </tr>`).join('');
+    const today = todayStr();
+    tbody.innerHTML = rows.map(r=>{
+      const fups = r.followUps || [];
+      const last = fups.length ? fups[fups.length-1] : null;
+      const nextDate = r.nextFollowUpDate;
+      let nextLabel = '—', nextColor = 'inherit';
+      if(nextDate){
+        if(nextDate < today){ nextLabel = `⚠ Overdue (${nextDate})`; nextColor = 'var(--bad)'; }
+        else if(nextDate === today){ nextLabel = `📞 Aaj (${nextDate})`; nextColor = 'var(--amber)'; }
+        else { nextLabel = nextDate; }
+      }
+      return `<tr>
+        <td>${r.name}</td><td>${r.phone}</td>
+        <td>${r.firm==='firm2'?'Firm 2':'Firm 1'}</td>
+        <td><span class="tag ${r.type==='client'?'paid':'other'}">${r.type}</span></td>
+        <td style="font-size:11.5px">${last ? `${last.date}: ${(last.note||'').slice(0,40)}${(last.note||'').length>40?'…':''}` : '—'}</td>
+        <td style="color:${nextColor};font-weight:${nextDate && nextDate<=today ? '700':'400'}">${nextLabel}</td>
+        <td>
+          <button class="btn-danger-text" style="color:var(--blue)" onclick="openFollowUpModal('${r.id}')">📞 Follow-up</button>
+          &nbsp;·&nbsp;
+          <button class="btn-danger-text" onclick="deleteLead('${r.id}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
   }
   renderGreetingSendList();
 }
@@ -6503,6 +6528,59 @@ async function deleteLead(id){
   try{ await db.collection('leads').doc(id).delete(); showToast('Delete ho gaya'); }
   catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
+
+/* ---------------- Lead Follow-up Tracking ---------------- */
+function openFollowUpModal(leadId){
+  const lead = DATA.leads.find(l=>l.id===leadId);
+  if(!lead) return;
+  const history = [...(lead.followUps||[])].sort((a,b)=>b.date.localeCompare(a.date));
+
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal" style="width:480px;max-width:96vw">
+    <h3>📞 Follow-up — ${lead.name}</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft)">${lead.phone}</p>
+
+    ${history.length ? `<div class="table-wrap" style="max-height:220px;overflow-y:auto;margin-bottom:14px">
+      <table style="font-size:12px"><thead><tr><th>Date</th><th>Kisne Baat Ki</th><th>Kya Bola</th><th>Agla Follow-up</th></tr></thead><tbody>
+        ${history.map(h=>`<tr><td>${h.date}</td><td>${h.by||'—'}</td><td>${h.note||'—'}</td><td>${h.nextDate||'—'}</td></tr>`).join('')}
+      </tbody></table>
+    </div>` : '<p class="footnote">Abhi tak koi follow-up record nahi hai.</p>'}
+
+    <h4 style="margin:14px 0 8px;font-size:13px">Naya Follow-up Add Karo</h4>
+    <div class="grid cols-2">
+      <div class="field"><label>Date</label><input id="fuDate" type="date" value="${todayStr()}"></div>
+      <div class="field"><label>Agla Follow-up Kab Karna Hai</label><input id="fuNextDate" type="date"></div>
+    </div>
+    <div class="field"><label>Kya Baat Hui / Kya Bola</label><textarea id="fuNote" rows="3" placeholder="e.g. Quotation maangi hai, agle hafte decide karenge bola"></textarea></div>
+    <div class="login-error" id="fuErr"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" id="fuCancel" style="flex:1;justify-content:center">Cancel</button>
+      <button class="btn btn-primary" id="fuSave" style="flex:1;justify-content:center">💾 Save Follow-up</button>
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  const close = ()=>bg.remove();
+  bg.addEventListener('click', e=>{ if(e.target===bg) close(); });
+  bg.querySelector('#fuCancel').onclick = close;
+  bg.querySelector('#fuSave').onclick = async ()=>{
+    const date = document.getElementById('fuDate').value || todayStr();
+    const nextDate = document.getElementById('fuNextDate').value || '';
+    const note = document.getElementById('fuNote').value.trim();
+    const errEl = document.getElementById('fuErr');
+    if(!note){ errEl.textContent = 'Kya baat hui, wo likho.'; return; }
+    const by = currentUser ? (currentUser.name || currentUser.email) : (currentRole==='owner'?'Owner':'Staff');
+    const newEntry = { date, note, nextDate, by };
+    const updatedFollowUps = [...(lead.followUps||[]), newEntry];
+    try{
+      await db.collection('leads').doc(leadId).update({ followUps: updatedFollowUps, nextFollowUpDate: nextDate || null });
+      close();
+      showToast('Follow-up save ho gaya ✓');
+      logAudit('create','Lead Follow-up', `${lead.name} — ${note.slice(0,50)}`);
+    }catch(e){ errEl.textContent = 'Error: ' + e.message; }
+  };
+}
+
 
 let currentGreeting = null;
 
@@ -6673,14 +6751,22 @@ function renderGreetingSendList(){
   const tbody = document.querySelector('#gcSendTable tbody');
   const countEl = document.getElementById('gcSendCount');
   if(!tbody || !currentGreeting) return;
-  const allForFirm = DATA.leads.filter(l=>l.firm===currentGreeting.firmKey);
+
+  // Show EVERYONE by default — a strict firm-match filter here used to
+  // silently hide leads that didn't exactly match, making the list look
+  // empty even when contacts existed. The firm filter is now a manual
+  // toggle, not an invisible trap.
+  const filterEl = document.getElementById('gcSendFirmFilter');
+  const filterVal = filterEl ? filterEl.value : 'all';
+  const allLeads = filterVal === 'all' ? DATA.leads : DATA.leads.filter(l=>l.firm===filterVal);
+
   const sentIds = new Set(
     DATA.sentGreetings.filter(sg=>sg.occasionKey===currentGreeting.occasionKey).map(sg=>sg.leadId)
   );
-  const rows = allForFirm.filter(l=>!sentIds.has(l.id));
-  if(countEl) countEl.textContent = `${sentIds.size} bhej diya, ${rows.length} baaki hai`;
+  const rows = allLeads.filter(l=>!sentIds.has(l.id));
+  if(countEl) countEl.textContent = `${sentIds.size} bhej diya, ${rows.length} baaki hai (total directory mein ${DATA.leads.length} contacts hain)`;
   if(rows.length===0){
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">${allForFirm.length===0 ? 'Is firm ke liye koi contact nahi hai directory mein.' : 'Sabko bhej diya ✓ — is occasion ke liye koi baaki nahi.'}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">${DATA.leads.length===0 ? 'Directory mein abhi koi contact nahi hai — upar "Clients / Leads Directory" mein add karo.' : 'Sabko bhej diya ✓ — is occasion ke liye koi baaki nahi.'}</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r=>`<tr>
@@ -6736,6 +6822,7 @@ function buildGreetingMessage(name){
   ].filter(x=>x!=='').join('\n');
   return [enBlock, '───────────', mrBlock, attachLine, g.contactBits].filter(Boolean).join('\n\n');
 }
+document.getElementById('gcSendFirmFilter').addEventListener('change', renderGreetingSendList);
 
 function sendGreetingTo(leadId){
   const lead = DATA.leads.find(l=>l.id===leadId);
@@ -7791,6 +7878,19 @@ function renderReminders(){
     const days = lastPaidDate ? daysBetween(lastPaidDate) : null;
     if(days !== null && days >= 21){
       items.push({ urgency:'medium', text:`<strong>${ag.contractor}</strong> ko ${inr(bal)} dena baki hai, ${days} din se koi payment nahi hui (${siteName(ag.siteId)}).` });
+    }
+  });
+
+  // Lead follow-ups — visible to everyone (owner + staff), since staff can
+  // also manage leads and should know who's due for a call.
+  const today = todayStr();
+  DATA.leads.forEach(l=>{
+    if(!l.nextFollowUpDate) return;
+    if(l.nextFollowUpDate < today){
+      const days = daysBetween(l.nextFollowUpDate);
+      items.push({ urgency:'high', text:`<strong>${l.name}</strong> (${l.phone}) ko follow-up call karna tha ${days} din pehle — abhi tak nahi hua.` });
+    } else if(l.nextFollowUpDate === today){
+      items.push({ urgency:'high', text:`<strong>${l.name}</strong> (${l.phone}) ko <strong>aaj</strong> follow-up call karna hai.` });
     }
   });
 
