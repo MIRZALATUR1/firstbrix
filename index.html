@@ -1393,10 +1393,14 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
             <button class="btn btn-steel" id="bgPdfBtn" style="padding:7px 12px;font-size:12.5px">⬇ PDF</button>
             <button class="btn btn-ghost" id="bgDocBtn" style="padding:7px 12px;font-size:12.5px">⬇ Word</button>
             <button class="btn btn-primary" id="bgSaveBtn" style="padding:7px 12px;font-size:12.5px">💾 Save to History</button>
-            <button class="btn btn-primary" id="bgWhatsAppBtn" style="padding:7px 12px;font-size:12.5px;background:#25D366">📱 WhatsApp Bhejo</button>
+            <button class="btn btn-primary" id="bgWhatsAppLinkBtn" style="padding:7px 12px;font-size:12.5px;background:#25D366">📱 Send Link (Number Seedha Khule)</button>
+            <button class="btn btn-primary" id="bgWhatsAppFileBtn" style="padding:7px 12px;font-size:12.5px;background:#128C7E">📎 Share File (Asli Attach)</button>
           </div>
         </div>
-        <div class="hint" id="bgWhatsAppHint" style="margin-top:-4px"><strong>Mobile pe:</strong> "📱 WhatsApp Bhejo" dabate hi phone ka "Share" menu khulega — usme WhatsApp choose karo, PDF <strong>waqai attach</strong> hoke jayega (real file, link nahi). <strong>Desktop/agar Share support na ho:</strong> automatic PDF upload karke uska link message mein bhej dega.</div>
+        <div class="hint" id="bgWhatsAppHint" style="margin-top:-4px">
+          <strong>📱 Send Link:</strong> WhatsApp chat seedha us number pe khul jayegi (save karne ki zaroorat nahi), lekin sirf text + PDF ka link jayega.<br>
+          <strong>📎 Share File:</strong> Mobile ke Share menu se PDF <em>asli file</em> ki tarah attach hoke jayegi, lekin WhatsApp khulne ke baad aapko khud contact/chat choose karna padega.
+        </div>
         <div id="bgPreviewBox" style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px;font-size:13px"></div>
       </div>
 
@@ -5895,15 +5899,8 @@ document.getElementById('bgSaveBtn').addEventListener('click', async ()=>{
   }catch(e){ showToast('Save nahi hua — dobara try karo'); }
 });
 
-document.getElementById('bgWhatsAppBtn').addEventListener('click', async ()=>{
-  if(!currentBillDoc){ showToast('Pehle Generate Document dabao'); return; }
+function prepBillShareData(){
   const d = currentBillDoc;
-  if(!d.customerPhone){ showToast('Pehle "Customer Phone" field bharo'); return; }
-  if(!isValidPhone10(d.customerPhone)){ showToast('Customer phone 10 digit ka hona chahiye'); return; }
-
-  const btn = document.getElementById('bgWhatsAppBtn');
-  btn.disabled = true; btn.textContent = 'PDF taiyar ho raha hai…';
-
   const doc = buildBillPdfDoc(d);
   const blob = doc.output('blob');
   const typeLabel = d.docType === 'bill' ? 'Bill' : 'Quotation';
@@ -5919,26 +5916,19 @@ document.getElementById('bgWhatsAppBtn').addEventListener('click', async ()=>{
     : `💰 एकूण रक्कम: ${inr(d.grandTotal)}`;
   const enMsgBase = `Hello ${d.customerName},\n\nYour ${title} (${d.docNumber}) from *${d.companyName}* is ready.\n\n${dueOrTotalEn}\n\nDate: ${d.date}`;
   const mrMsgBase = `नमस्कार ${d.customerName},\n\n*${d.companyName}* कडून तुमचे ${title==='Final Bill'?'बिल':'कोटेशन'} (${d.docNumber}) तयार आहे.\n\n${dueOrTotalMr}\n\nदिनांक: ${d.date}`;
+  return { blob, friendlyFileName, enMsgBase, mrMsgBase };
+}
 
-  // Path 1 — native OS share sheet. On supporting mobile browsers this
-  // genuinely attaches the PDF as a real WhatsApp document, not a link.
-  let sharedNatively = false;
-  if(navigator.canShare){
-    try{
-      const file = new File([blob], friendlyFileName, { type: 'application/pdf' });
-      if(navigator.canShare({ files: [file] })){
-        await navigator.share({ files: [file], text: bilingualMsg(enMsgBase, mrMsgBase) });
-        sharedNatively = true;
-      }
-    }catch(err){
-      if(err.name === 'AbortError') sharedNatively = true; // user backed out on purpose — don't also fire the fallback
-    }
-  }
-  btn.disabled = false; btn.textContent = '📱 WhatsApp Bhejo';
-  if(sharedNatively){ showToast('Share ho gaya ✓'); return; }
+document.getElementById('bgWhatsAppLinkBtn').addEventListener('click', async ()=>{
+  if(!currentBillDoc){ showToast('Pehle Generate Document dabao'); return; }
+  const d = currentBillDoc;
+  if(!d.customerPhone){ showToast('Pehle "Customer Phone" field bharo'); return; }
+  if(!isValidPhone10(d.customerPhone)){ showToast('Customer phone 10 digit ka hona chahiye'); return; }
 
-  // Path 2 — fallback for desktop/unsupported browsers: upload once, send
-  // the link instead (recipient taps it to open/download the PDF).
+  const btn = document.getElementById('bgWhatsAppLinkBtn');
+  btn.disabled = true; btn.textContent = 'PDF taiyar ho raha hai…';
+  const { blob, friendlyFileName, enMsgBase, mrMsgBase } = prepBillShareData();
+
   let pdfUrl = '';
   try{
     const path = `billAttachments/${friendlyFileName}`;
@@ -5948,14 +5938,36 @@ document.getElementById('bgWhatsAppBtn').addEventListener('click', async ()=>{
   }catch(e){
     showToast('PDF link nahi bana (Storage set up hai check karo) — text message hi bhej raha hoon.');
   }
+  btn.disabled = false; btn.textContent = '📱 Send Link (Number Seedha Khule)';
+
   const pdfLineEn = pdfUrl ? `\n📎 PDF: ${pdfUrl}` : '';
   const pdfLineMr = pdfUrl ? `\n📎 PDF: ${pdfUrl}` : '';
-  const enMsg = enMsgBase + pdfLineEn;
-  const mrMsg = mrMsgBase + pdfLineMr;
-  const msg = bilingualMsg(enMsg, mrMsg);
+  const msg = bilingualMsg(enMsgBase + pdfLineEn, mrMsgBase + pdfLineMr);
 
   openWhatsApp(d.customerPhone, msg);
-  showToast(pdfUrl ? 'WhatsApp khul gaya — PDF link message mein hai, click karte hi khul jayega ✓' : 'WhatsApp khul gaya (PDF link nahi bana, sirf text gaya)');
+  showToast(pdfUrl ? 'WhatsApp khul gaya — PDF link message mein hai ✓' : 'WhatsApp khul gaya (PDF link nahi bana, sirf text gaya)');
+});
+
+document.getElementById('bgWhatsAppFileBtn').addEventListener('click', async ()=>{
+  if(!currentBillDoc){ showToast('Pehle Generate Document dabao'); return; }
+  if(!navigator.canShare){ showToast('Is browser mein "Share File" support nahi hai — "Send Link" use karo.'); return; }
+
+  const btn = document.getElementById('bgWhatsAppFileBtn');
+  btn.disabled = true; btn.textContent = 'PDF taiyar ho raha hai…';
+  const { blob, friendlyFileName, enMsgBase, mrMsgBase } = prepBillShareData();
+  btn.disabled = false; btn.textContent = '📎 Share File (Asli Attach)';
+
+  try{
+    const file = new File([blob], friendlyFileName, { type: 'application/pdf' });
+    if(!navigator.canShare({ files: [file] })){
+      showToast('Is browser mein file-share support nahi hai — "Send Link" use karo.');
+      return;
+    }
+    await navigator.share({ files: [file], text: bilingualMsg(enMsgBase, mrMsgBase) });
+    showToast('Share ho gaya ✓');
+  }catch(err){
+    if(err.name !== 'AbortError') showToast('Share cancel ho gaya ya fail hua.');
+  }
 });
 
 function renderBillHistory(){
@@ -5983,7 +5995,7 @@ function resendBillWhatsApp(id){
   const r = DATA.billQuotations.find(x=>x.id===id);
   if(!r) return;
   currentBillDoc = r;
-  document.getElementById('bgWhatsAppBtn').click();
+  document.getElementById('bgWhatsAppLinkBtn').click();
 }
 
 async function linkBillToConsultancy(id){
@@ -6866,9 +6878,13 @@ function renderGreetingSendList(){
     tbody.innerHTML = `<tr><td colspan="4" class="empty">${DATA.leads.length===0 ? 'Directory mein abhi koi contact nahi hai — upar "Clients / Leads Directory" mein add karo.' : 'Sabko bhej diya ✓ — is occasion ke liye koi baaki nahi.'}</td></tr>`;
     return;
   }
+  const hasFile = !!(currentAttachment && currentAttachment.file);
   tbody.innerHTML = rows.map(r=>`<tr>
     <td>${r.name}</td><td>${r.phone}</td><td>${r.type}</td>
-    <td><button class="btn-danger-text" style="color:#25D366" onclick="sendGreetingTo('${r.id}')">📱 Send</button></td>
+    <td>
+      <button class="btn-danger-text" style="color:#25D366" onclick="sendGreetingTo('${r.id}')">📱 Send Link</button>
+      ${hasFile ? `&nbsp;·&nbsp;<button class="btn-danger-text" style="color:#128C7E" onclick="sendGreetingToWithFile('${r.id}')">📎 Attach File</button>` : ''}
+    </td>
   </tr>`).join('');
 }
 async function markGreetingSent(leadId){
@@ -6920,26 +6936,25 @@ function buildGreetingMessage(name){
   return [enBlock, '───────────', mrBlock, attachLine, g.contactBits].filter(Boolean).join('\n\n');
 }
 
-async function sendGreetingTo(leadId){
+function sendGreetingTo(leadId){
   const lead = DATA.leads.find(l=>l.id===leadId);
   if(!lead || !currentGreeting) return;
-  const msg = buildGreetingMessage(lead.name);
-
-  // If a file is attached and native sharing is available, share the REAL
-  // file (mobile) instead of just a link in the text.
-  if(currentAttachment && currentAttachment.file && navigator.canShare){
-    try{
-      if(navigator.canShare({ files: [currentAttachment.file] })){
-        await navigator.share({ files: [currentAttachment.file], text: msg });
-        markGreetingSent(leadId);
-        return;
-      }
-    }catch(err){
-      if(err.name === 'AbortError') return; // they backed out on purpose
-    }
-  }
-  openWhatsApp(lead.phone, msg);
+  openWhatsApp(lead.phone, buildGreetingMessage(lead.name));
   markGreetingSent(leadId);
+}
+async function sendGreetingToWithFile(leadId){
+  const lead = DATA.leads.find(l=>l.id===leadId);
+  if(!lead || !currentGreeting || !currentAttachment || !currentAttachment.file) return;
+  if(!navigator.canShare || !navigator.canShare({ files: [currentAttachment.file] })){
+    showToast('Is browser mein file-share support nahi hai — "Send Link" use karo.');
+    return;
+  }
+  try{
+    await navigator.share({ files: [currentAttachment.file], text: buildGreetingMessage(lead.name) });
+    markGreetingSent(leadId);
+  }catch(err){
+    if(err.name !== 'AbortError') showToast('Share cancel ho gaya ya fail hua.');
+  }
 }
 
 document.getElementById('cfAddBtn').addEventListener('click', async ()=>{
