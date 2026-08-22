@@ -1396,7 +1396,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
             <button class="btn btn-primary" id="bgWhatsAppBtn" style="padding:7px 12px;font-size:12.5px;background:#25D366">📱 WhatsApp Bhejo</button>
           </div>
         </div>
-        <div class="hint" id="bgWhatsAppHint" style="margin-top:-4px">"📱 WhatsApp Bhejo" dabate hi PDF automatic bane ga, upload hoga, aur uska link message mein chala jayega — recipient link pe click karke seedha PDF khol/download kar lega. (WhatsApp free tareeke se file seedha "attach" nahi kar sakta, ye link hi sabse close tareeka hai. Storage Firebase mein setup hona chahiye — agar nahi hai to bata dena.)</div>
+        <div class="hint" id="bgWhatsAppHint" style="margin-top:-4px"><strong>Mobile pe:</strong> "📱 WhatsApp Bhejo" dabate hi phone ka "Share" menu khulega — usme WhatsApp choose karo, PDF <strong>waqai attach</strong> hoke jayega (real file, link nahi). <strong>Desktop/agar Share support na ho:</strong> automatic PDF upload karke uska link message mein bhej dega.</div>
         <div id="bgPreviewBox" style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px;font-size:13px"></div>
       </div>
 
@@ -5904,18 +5904,11 @@ document.getElementById('bgWhatsAppBtn').addEventListener('click', async ()=>{
   const btn = document.getElementById('bgWhatsAppBtn');
   btn.disabled = true; btn.textContent = 'PDF taiyar ho raha hai…';
 
-  let pdfUrl = '';
-  try{
-    const doc = buildBillPdfDoc(d);
-    const blob = doc.output('blob');
-    const path = `billAttachments/${d.docNumber}.pdf`;
-    const ref = storage.ref().child(path);
-    await ref.put(blob, { contentType: 'application/pdf' });
-    pdfUrl = await ref.getDownloadURL();
-  }catch(e){
-    showToast('PDF link nahi bana (Storage set up hai check karo) — text message hi bhej raha hoon.');
-  }
-  btn.disabled = false; btn.textContent = '📱 WhatsApp Bhejo';
+  const doc = buildBillPdfDoc(d);
+  const blob = doc.output('blob');
+  const typeLabel = d.docType === 'bill' ? 'Bill' : 'Quotation';
+  const cleanName = (d.customerName||'Client').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  const friendlyFileName = `${typeLabel}_${cleanName}_${d.docNumber}.pdf`;
 
   const title = d.docType === 'bill' ? 'Final Bill' : 'Quotation';
   const dueOrTotalEn = d.docType==='bill'
@@ -5924,11 +5917,41 @@ document.getElementById('bgWhatsAppBtn').addEventListener('click', async ()=>{
   const dueOrTotalMr = d.docType==='bill'
     ? `💰 एकूण रक्कम: ${inr(d.grandTotal)}\n✅ आगाऊ भरलेली रक्कम: ${inr(d.advance)}\n⏳ शिल्लक रक्कम: ${inr(d.amountDue)}`
     : `💰 एकूण रक्कम: ${inr(d.grandTotal)}`;
+  const enMsgBase = `Hello ${d.customerName},\n\nYour ${title} (${d.docNumber}) from *${d.companyName}* is ready.\n\n${dueOrTotalEn}\n\nDate: ${d.date}`;
+  const mrMsgBase = `नमस्कार ${d.customerName},\n\n*${d.companyName}* कडून तुमचे ${title==='Final Bill'?'बिल':'कोटेशन'} (${d.docNumber}) तयार आहे.\n\n${dueOrTotalMr}\n\nदिनांक: ${d.date}`;
+
+  // Path 1 — native OS share sheet. On supporting mobile browsers this
+  // genuinely attaches the PDF as a real WhatsApp document, not a link.
+  let sharedNatively = false;
+  if(navigator.canShare){
+    try{
+      const file = new File([blob], friendlyFileName, { type: 'application/pdf' });
+      if(navigator.canShare({ files: [file] })){
+        await navigator.share({ files: [file], text: bilingualMsg(enMsgBase, mrMsgBase) });
+        sharedNatively = true;
+      }
+    }catch(err){
+      if(err.name === 'AbortError') sharedNatively = true; // user backed out on purpose — don't also fire the fallback
+    }
+  }
+  btn.disabled = false; btn.textContent = '📱 WhatsApp Bhejo';
+  if(sharedNatively){ showToast('Share ho gaya ✓'); return; }
+
+  // Path 2 — fallback for desktop/unsupported browsers: upload once, send
+  // the link instead (recipient taps it to open/download the PDF).
+  let pdfUrl = '';
+  try{
+    const path = `billAttachments/${friendlyFileName}`;
+    const ref = storage.ref().child(path);
+    await ref.put(blob, { contentType: 'application/pdf', contentDisposition: `inline; filename="${friendlyFileName}"` });
+    pdfUrl = await ref.getDownloadURL();
+  }catch(e){
+    showToast('PDF link nahi bana (Storage set up hai check karo) — text message hi bhej raha hoon.');
+  }
   const pdfLineEn = pdfUrl ? `\n📎 PDF: ${pdfUrl}` : '';
   const pdfLineMr = pdfUrl ? `\n📎 PDF: ${pdfUrl}` : '';
-
-  const enMsg = `Hello ${d.customerName},\n\nYour ${title} (${d.docNumber}) from *${d.companyName}* is ready.\n\n${dueOrTotalEn}\n\nDate: ${d.date}${pdfLineEn}`;
-  const mrMsg = `नमस्कार ${d.customerName},\n\n*${d.companyName}* कडून तुमचे ${title==='Final Bill'?'बिल':'कोटेशन'} (${d.docNumber}) तयार आहे.\n\n${dueOrTotalMr}\n\nदिनांक: ${d.date}${pdfLineMr}`;
+  const enMsg = enMsgBase + pdfLineEn;
+  const mrMsg = mrMsgBase + pdfLineMr;
   const msg = bilingualMsg(enMsg, mrMsg);
 
   openWhatsApp(d.customerPhone, msg);
@@ -6693,7 +6716,7 @@ document.getElementById('gcFileInput').addEventListener('change', async e=>{
     const ref = storage.ref().child(path);
     await ref.put(file);
     const url = await ref.getDownloadURL();
-    currentAttachment = { url, path, name: file.name };
+    currentAttachment = { url, path, name: file.name, file };
     renderAttachmentStatus();
     showToast('File upload ho gayi ✓ — ab jitno ko chaho bhej sakte ho');
   }catch(err){
@@ -6897,10 +6920,25 @@ function buildGreetingMessage(name){
   return [enBlock, '───────────', mrBlock, attachLine, g.contactBits].filter(Boolean).join('\n\n');
 }
 
-function sendGreetingTo(leadId){
+async function sendGreetingTo(leadId){
   const lead = DATA.leads.find(l=>l.id===leadId);
   if(!lead || !currentGreeting) return;
-  openWhatsApp(lead.phone, buildGreetingMessage(lead.name));
+  const msg = buildGreetingMessage(lead.name);
+
+  // If a file is attached and native sharing is available, share the REAL
+  // file (mobile) instead of just a link in the text.
+  if(currentAttachment && currentAttachment.file && navigator.canShare){
+    try{
+      if(navigator.canShare({ files: [currentAttachment.file] })){
+        await navigator.share({ files: [currentAttachment.file], text: msg });
+        markGreetingSent(leadId);
+        return;
+      }
+    }catch(err){
+      if(err.name === 'AbortError') return; // they backed out on purpose
+    }
+  }
+  openWhatsApp(lead.phone, msg);
   markGreetingSent(leadId);
 }
 
