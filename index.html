@@ -470,7 +470,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <button data-tab="slabs" class="owner-only"><span class="tab-ico">📋</span> <span data-i18n="slabs">Payment Slabs</span></button>
       <button data-tab="billgen" class="owner-only"><span class="tab-ico">🧾</span> Bill &amp; Quotation</button>
       <button data-tab="letterhead" class="owner-only"><span class="tab-ico">📜</span> Letterhead / Letter</button>
-      <button data-tab="greetings" class="owner-only"><span class="tab-ico">🎉</span> Festival Greetings</button>
+      <button data-tab="greetings">🎉 Festival Greetings</button>
       <button data-tab="reports"><span class="tab-ico">▤</span> <span data-i18n="reports">Reports</span></button>
 
       <div class="nav-group-label owner-only">Admin</div>
@@ -1547,7 +1547,8 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card" id="gcSendCard" style="display:none">
-        <h2>Send To <small>Har naam ke aage "Send" dabao — WhatsApp khulega us insaan ke naam se personalize message ke saath</small></h2>
+        <h2>Send To <small>Har naam ke aage "Send" dabao — WhatsApp khulega us insaan ke naam se personalize message ke saath. Jise bhej diya, wo list se khud hat jayega.</small></h2>
+        <div class="footnote" id="gcSendCount" style="margin-bottom:8px"></div>
         <div class="table-wrap"><table id="gcSendTable"><thead><tr>
           <th>Name</th><th>Phone</th><th>Type</th><th></th>
         </tr></thead><tbody></tbody></table></div>
@@ -1947,8 +1948,8 @@ async function logAudit(action, area, summary){
   }catch(e){ /* never block on audit failure */ }
 }
 
-const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments' };
-const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations', letterheadDocs:'letterheadDocs', leads:'leads', customFestivals:'customFestivals' };
+const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments', leads:'leads', customFestivals:'customFestivals', sentGreetings:'sentGreetings' };
+const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations', letterheadDocs:'letterheadDocs' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
 /* Snapshot of what the server currently holds, so saveData() can write only
@@ -2361,7 +2362,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [], sentGreetings: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -2381,9 +2382,10 @@ function rerenderAll(){
     renderSiteFunding();
     renderBillHistory();
     renderLetterheadHistory();
-    renderLeadsTable();
-    populateOccasionDropdown();
   }
+  renderLeadsTable();
+  populateOccasionDropdown();
+  renderGreetingSendList();
 }
 
 /* Live listeners: every device sees changes as they happen. */
@@ -2464,6 +2466,9 @@ async function saveData(){
     sync('udhar', 'udhar');
     sync('workAgreements', 'agreements');
     sync('vendorPayments', 'vendorPayments');
+    sync('leads', 'leads');
+    sync('customFestivals', 'customFestivals');
+    sync('sentGreetings', 'sentGreetings');
 
     if(currentRole === 'owner'){
       sync('clientPayments', 'clientPayments');
@@ -2477,8 +2482,6 @@ async function saveData(){
       sync('siteInvestments', 'siteInvestments');
       sync('billQuotations', 'billQuotations');
       sync('letterheadDocs', 'letterheadDocs');
-      sync('leads', 'leads');
-      sync('customFestivals', 'customFestivals');
       const prevFin = serverState.siteFinance || {};
       const seenFin = new Set();
       DATA.sites.forEach(s=>{
@@ -6433,26 +6436,32 @@ document.getElementById('gcGenerateBtn').addEventListener('click', ()=>{
 
   const occVal = document.getElementById('gcOccasion').value;
   const offer = document.getElementById('gcOffer').value.trim();
-  let occEn, occMr, occLabel;
+  let occEn, occMr;
   if(occVal === 'custom'){
-    occEn = 'Greetings!'; occMr = 'शुभेच्छा!'; occLabel = 'Custom';
+    occEn = 'Greetings!'; occMr = 'शुभेच्छा!';
   } else {
     const [occDate, occName] = occVal.split('|');
     const all = getUpcomingFestivals();
     const f = all.find(x=>x.date===occDate && x.name===occName) || all.find(x=>x.date===occDate);
-    occEn = f.en; occMr = f.mr; occLabel = f.name;
+    occEn = f.en; occMr = f.mr;
   }
 
-  const contactLine = [firm.phone, firm.email, firm.website].filter(Boolean).join('   ·   ');
-  const addressBlock = firm.address ? `\n📍 ${firm.address}` : '';
-  const mapsBlock = firm.mapsLink ? `\n🗺️ ${firm.mapsLink}` : '';
+  // Kept short on purpose — WhatsApp's wa.me link fails to open on long
+  // pre-filled text (Marathi text especially balloons once URL-encoded).
+  // Contact details are shown once, not duplicated per language.
+  const contactBits = [firm.phone, firm.address, firm.mapsLink].filter(Boolean).join('\n');
 
-  const enMsg = `${occEn}\n\nOn behalf of *${firm.name}*, wishing you and your family a very Happy ${occLabel}!${offer?`\n\n🎁 ${offer}`:''}${addressBlock}${mapsBlock}\n${contactLine?'\n'+contactLine:''}`;
-  const mrMsg = `${occMr}\n\n*${firm.name}* तर्फे, तुम्हाला आणि तुमच्या कुटुंबाला ${occLabel} च्या खूप खूप शुभेच्छा!${offer?`\n\n🎁 ${offer}`:''}${addressBlock}${mapsBlock}\n${contactLine?'\n'+contactLine:''}`;
-
-  currentGreeting = { firmKey, msg: bilingualMsg(enMsg, mrMsg), occLabel };
+  currentGreeting = {
+    firmKey,
+    occasionKey: `${occVal}|${firmKey}`,
+    occEn, occMr,
+    firmName: firm.name,
+    offer,
+    contactBits,
+    template: [occEn, '', occMr, '', `— *${firm.name}*`, offer ? `🎁 ${offer}` : '', contactBits].filter(x=>x!=='').join('\n')
+  };
   const box = document.getElementById('gcPreviewBox');
-  box.textContent = currentGreeting.msg;
+  box.textContent = currentGreeting.template;
   box.style.display = 'block';
   document.getElementById('gcSendCard').style.display = 'block';
   renderGreetingSendList();
@@ -6460,10 +6469,16 @@ document.getElementById('gcGenerateBtn').addEventListener('click', ()=>{
 
 function renderGreetingSendList(){
   const tbody = document.querySelector('#gcSendTable tbody');
+  const countEl = document.getElementById('gcSendCount');
   if(!tbody || !currentGreeting) return;
-  const rows = DATA.leads.filter(l=>l.firm===currentGreeting.firmKey);
+  const allForFirm = DATA.leads.filter(l=>l.firm===currentGreeting.firmKey);
+  const sentIds = new Set(
+    DATA.sentGreetings.filter(sg=>sg.occasionKey===currentGreeting.occasionKey).map(sg=>sg.leadId)
+  );
+  const rows = allForFirm.filter(l=>!sentIds.has(l.id));
+  if(countEl) countEl.textContent = `${sentIds.size} bhej diya, ${rows.length} baaki hai`;
   if(rows.length===0){
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">Is firm ke liye koi contact nahi hai directory mein.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">${allForFirm.length===0 ? 'Is firm ke liye koi contact nahi hai directory mein.' : 'Sabko bhej diya ✓ — is occasion ke liye koi baaki nahi.'}</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r=>`<tr>
@@ -6471,14 +6486,28 @@ function renderGreetingSendList(){
     <td><button class="btn-danger-text" style="color:#25D366" onclick="sendGreetingTo('${r.id}')">📱 Send</button></td>
   </tr>`).join('');
 }
+async function markGreetingSent(leadId){
+  if(!currentGreeting) return;
+  try{
+    await db.collection('sentGreetings').add({ leadId, occasionKey: currentGreeting.occasionKey, firmKey: currentGreeting.firmKey, date: todayStr() });
+  }catch(e){ /* non-critical — worst case they can send again */ }
+  renderGreetingSendList();
+}
 function sendGreetingTo(leadId){
   const lead = DATA.leads.find(l=>l.id===leadId);
   if(!lead || !currentGreeting) return;
-  const parts = currentGreeting.msg.split('───────────');
-  const enPart = `Hello ${lead.name},\n\n${parts[0].trim()}`;
-  const mrPart = parts[1] ? `नमस्कार ${lead.name},\n\n${parts[1].trim()}` : '';
-  const personalized = mrPart ? `${enPart}\n\n───────────\n\n${mrPart}` : enPart;
+  const g = currentGreeting;
+  const personalized = [
+    `Hello ${lead.name}, ${g.occEn}`,
+    '',
+    `नमस्कार ${lead.name}, ${g.occMr}`,
+    '',
+    `— *${g.firmName}*`,
+    g.offer ? `🎁 ${g.offer}` : '',
+    g.contactBits
+  ].filter(x=>x!=='').join('\n');
   openWhatsApp(lead.phone, personalized);
+  markGreetingSent(leadId);
 }
 
 document.getElementById('cfAddBtn').addEventListener('click', async ()=>{
@@ -7973,9 +8002,9 @@ async function init(){
     }catch(e){ lastBackupDate = null; }
     renderReminders();
     await loadLetterheadProfile();
-    await loadFirmProfiles();
-    await loadApiFestivalCache();
   }
+  await loadFirmProfiles();
+  await loadApiFestivalCache();
   await maybeRunAutoReport(false);
 }
 let lastBackupDate = undefined; // undefined = not checked yet, null = never backed up
