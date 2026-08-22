@@ -14,6 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════
@@ -1522,14 +1523,36 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card">
-        <h2>Compose Greeting</h2>
+        <h2>Compose Message</h2>
         <div class="grid cols-3">
           <div class="field"><label>Firm</label><select id="gcFirm"><option value="firm1">Firm 1</option><option value="firm2">Firm 2</option></select></div>
-          <div class="field"><label>Occasion</label><select id="gcOccasion"></select></div>
+          <div class="field"><label>Message Type</label>
+            <select id="gcMode">
+              <option value="occasion">Festival / Occasion Greeting</option>
+              <option value="custom">Custom Message</option>
+            </select>
+          </div>
           <div></div>
         </div>
-        <div class="field"><label>Construction Offer — optional</label><input id="gcOffer" placeholder="e.g. Book now — 10% off on RCC work this festive season!"></div>
-        <button class="btn btn-primary" id="gcGenerateBtn">✨ Generate Greeting</button>
+        <div id="gcOccasionWrap">
+          <div class="field"><label>Occasion</label><select id="gcOccasion"></select></div>
+          <div class="field"><label>Construction Offer — optional</label><input id="gcOffer" placeholder="e.g. Book now — 10% off on RCC work this festive season!"></div>
+        </div>
+        <div id="gcCustomWrap" style="display:none">
+          <div class="field"><label>Message (English)</label><textarea id="gcCustomEn" rows="4" placeholder="Apna message yahan likho..."></textarea></div>
+          <div class="field"><label>Message (Marathi) — optional</label><textarea id="gcCustomMr" rows="4" placeholder="तेच मराठीत (ऐच्छिक)..."></textarea></div>
+          <div class="field" style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="gcCustomIncludeContact" checked style="width:auto;accent-color:var(--blue)">
+            <label for="gcCustomIncludeContact" style="margin:0;text-transform:none;font-weight:500;cursor:pointer">Firm ka contact detail (phone/address/map) bhi jodo</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Attach File — JPG / PNG / PDF (optional)</label>
+          <input type="file" id="gcFileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+          <div class="hint">Ek baar upload karo, phir jitno ko chaho utno ko bhejo — WhatsApp mein file ka link jayega (WhatsApp free tareeke se file seedha attach nahi kar sakta, sirf link kaam karta hai). Bhejna khatam hone par "Delete File" dabakar hata sakte ho.</div>
+          <div id="gcFileStatus" style="margin-top:8px"></div>
+        </div>
+        <button class="btn btn-primary" id="gcGenerateBtn">✨ Generate Message</button>
         <div id="gcPreviewBox" style="display:none;margin-top:14px;background:var(--surface-2);border-radius:8px;padding:14px;font-size:12.5px;white-space:pre-wrap"></div>
       </div>
 
@@ -1924,7 +1947,7 @@ function openEditModal(title, fields, onSave){
    Security is enforced by Firestore rules on the server, not by this file.
    Staff accounts are simply refused the private/ documents, so client
    payments, investor funding and profit & loss never reach their device. */
-let fb = null, auth = null, db = null;
+let fb = null, auth = null, db = null, storage = null;
 let currentRole = null;      // 'owner' | 'staff'
 let currentUser = null;      // { uid, email, name, role }
 let unsubs = [];             // live listeners
@@ -1967,6 +1990,7 @@ async function initFirebase(){
   fb = firebase.initializeApp(FIREBASE_CONFIG);
   auth = firebase.auth();
   db = firebase.firestore();
+  storage = firebase.storage();
   db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); // offline cache, ignored if unsupported
   /* Persistence MUST finish resolving before anything else touches auth,
      otherwise a race can drop the session — this was why closing the window
@@ -6429,37 +6453,117 @@ async function deleteLead(id){
 
 let currentGreeting = null;
 
+/* ---------------- Greeting Attachments (upload once, send link to many) ----------------
+   WhatsApp's free click-to-chat (wa.me) can only pre-fill TEXT — there is no
+   free way to auto-attach a file to the chat itself. The practical, honest
+   workaround: upload the file once to Firebase Storage, and drop its link
+   into the message text. WhatsApp shows a preview for images automatically. */
+let currentAttachment = null; // { url, path, name }
+
+document.getElementById('gcFileInput').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const allowedTypes = ['image/jpeg','image/png','application/pdf'];
+  if(!allowedTypes.includes(file.type)){
+    showToast('Sirf JPG, PNG ya PDF allowed hai');
+    e.target.value = '';
+    return;
+  }
+  if(file.size > 10*1024*1024){
+    showToast('File 10MB se badi hai — chhoti file try karo');
+    e.target.value = '';
+    return;
+  }
+  const statusEl = document.getElementById('gcFileStatus');
+  statusEl.textContent = 'Upload ho raha hai…';
+  try{
+    const path = `greetingAttachments/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+    const ref = storage.ref().child(path);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+    currentAttachment = { url, path, name: file.name };
+    renderAttachmentStatus();
+    showToast('File upload ho gayi ✓ — ab jitno ko chaho bhej sakte ho');
+  }catch(err){
+    statusEl.textContent = '';
+    showToast('Upload nahi hua — dobara try karo. (Firebase Storage enabled hai check kar lo)');
+  }
+});
+function renderAttachmentStatus(){
+  const statusEl = document.getElementById('gcFileStatus');
+  if(!currentAttachment){ statusEl.innerHTML = ''; return; }
+  statusEl.innerHTML = `✓ <strong>${currentAttachment.name}</strong> uploaded &nbsp;
+    <button class="btn-danger-text" id="gcDeleteFileBtn">🗑️ Delete File</button>`;
+  document.getElementById('gcDeleteFileBtn').onclick = deleteCurrentAttachment;
+}
+async function deleteCurrentAttachment(){
+  if(!currentAttachment) return;
+  if(!await uiConfirm('Ye file delete karni hai? Ab jinko bhi bhej chuke ho unke paas link kaam karta rahega jab tak WhatsApp mein khula hai, lekin naya koi nahi khol payega.', 'Haan, delete karo')) return;
+  try{
+    await storage.ref().child(currentAttachment.path).delete();
+    showToast('File delete ho gayi');
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+  currentAttachment = null;
+  document.getElementById('gcFileInput').value = '';
+  renderAttachmentStatus();
+}
+
+document.getElementById('gcMode').addEventListener('change', e=>{
+  const isCustom = e.target.value === 'custom';
+  document.getElementById('gcOccasionWrap').style.display = isCustom ? 'none' : 'block';
+  document.getElementById('gcCustomWrap').style.display = isCustom ? 'block' : 'none';
+});
+
 document.getElementById('gcGenerateBtn').addEventListener('click', ()=>{
   const firmKey = document.getElementById('gcFirm').value;
   const firm = fgFirmProfiles[firmKey] || {};
   if(!firm.name){ showToast(`Pehle upar "${firmKey==='firm1'?'Firm 1':'Firm 2'}" ki details save karo`); return; }
 
-  const occVal = document.getElementById('gcOccasion').value;
-  const offer = document.getElementById('gcOffer').value.trim();
-  let occEn, occMr;
-  if(occVal === 'custom'){
-    occEn = 'Greetings!'; occMr = 'शुभेच्छा!';
-  } else {
-    const [occDate, occName] = occVal.split('|');
-    const all = getUpcomingFestivals();
-    const f = all.find(x=>x.date===occDate && x.name===occName) || all.find(x=>x.date===occDate);
-    occEn = f.en; occMr = f.mr;
-  }
-
+  const mode = document.getElementById('gcMode').value;
   const contactBits = [
     firm.phone ? `📞 ${firm.phone}` : '',
     firm.address ? `📍 ${firm.address}` : '',
     firm.mapsLink ? `🗺️ ${firm.mapsLink}` : ''
   ].filter(Boolean).join('\n');
 
-  currentGreeting = {
-    firmKey,
-    occasionKey: `${occVal}|${firmKey}`,
-    occEn, occMr,
-    firmName: firm.name,
-    offer,
-    contactBits
-  };
+  if(mode === 'custom'){
+    const customEn = document.getElementById('gcCustomEn').value.trim();
+    const customMr = document.getElementById('gcCustomMr').value.trim();
+    if(!customEn && !customMr){ showToast('Pehle message likho'); return; }
+    const includeContact = document.getElementById('gcCustomIncludeContact').checked;
+    currentGreeting = {
+      firmKey,
+      occasionKey: `custom_${Date.now()}|${firmKey}`, // unique per send-session so tracking doesn't clash across custom sends
+      isCustom: true,
+      customEn, customMr,
+      firmName: firm.name,
+      contactBits: includeContact ? contactBits : '',
+      attachmentUrl: currentAttachment ? currentAttachment.url : ''
+    };
+  } else {
+    const occVal = document.getElementById('gcOccasion').value;
+    const offer = document.getElementById('gcOffer').value.trim();
+    let occEn, occMr;
+    if(occVal === 'custom'){
+      occEn = 'Greetings!'; occMr = 'शुभेच्छा!';
+    } else {
+      const [occDate, occName] = occVal.split('|');
+      const all = getUpcomingFestivals();
+      const f = all.find(x=>x.date===occDate && x.name===occName) || all.find(x=>x.date===occDate);
+      occEn = f.en; occMr = f.mr;
+    }
+    currentGreeting = {
+      firmKey,
+      occasionKey: `${occVal}|${firmKey}`,
+      isCustom: false,
+      occEn, occMr,
+      firmName: firm.name,
+      offer,
+      contactBits,
+      attachmentUrl: currentAttachment ? currentAttachment.url : ''
+    };
+  }
+
   const box = document.getElementById('gcPreviewBox');
   box.textContent = buildGreetingMessage('[Client Name]');
   box.style.display = 'block';
@@ -6500,6 +6604,23 @@ async function markGreetingSent(leadId){
    safe range, while still reading like a real greeting, not a fragment. */
 function buildGreetingMessage(name){
   const g = currentGreeting;
+  const attachLine = g.attachmentUrl ? `📎 ${g.attachmentUrl}` : '';
+
+  if(g.isCustom){
+    const enBlock = [
+      `Hello ${name},`,
+      '',
+      g.customEn
+    ].filter(x=>x!=='').join('\n');
+    const mrBlock = g.customMr ? [
+      `नमस्कार ${name},`,
+      '',
+      g.customMr
+    ].filter(x=>x!=='').join('\n') : '';
+    return [enBlock, mrBlock ? '───────────' : '', mrBlock, attachLine, g.contactBits ? `— *${g.firmName}*\n${g.contactBits}` : `— *${g.firmName}*`]
+      .filter(Boolean).join('\n\n');
+  }
+
   const enBlock = [
     `Hello ${name},`,
     '',
@@ -6515,7 +6636,7 @@ function buildGreetingMessage(name){
     '',
     `*${g.firmName}* कडून हार्दिक शुभेच्छा.`
   ].filter(x=>x!=='').join('\n');
-  return [enBlock, '───────────', mrBlock, g.contactBits].filter(Boolean).join('\n\n');
+  return [enBlock, '───────────', mrBlock, attachLine, g.contactBits].filter(Boolean).join('\n\n');
 }
 
 function sendGreetingTo(leadId){
