@@ -644,7 +644,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field" style="flex:2"><label data-i18n="lbl_sitename">Site Name</label><input id="newSiteName" placeholder="e.g. Nashik Road Bungalow"></div>
           <div class="field" style="flex:2"><label data-i18n="lbl_location_opt">Location (optional)</label><input id="newSiteLocation" list="dl-sites-location" placeholder="e.g. Nashik, Maharashtra"></div>
           <div class="field owner-only" style="flex:1.4"><label data-i18n="lbl_contractvalue">Contract / Project Value (₹)</label><input id="newSiteContract" type="number" min="0" placeholder="Total project value"></div>
-          <div class="field owner-only" style="flex:1"><label>Client Phone — optional</label><input id="newSiteClientPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field owner-only" style="flex:1"><label>Client Phone — optional</label><input id="newSiteClientPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
           <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="addSiteBtn">+ <span data-i18n="btn_addsite">Add Site</span></button></div>
         </div>
         <div class="field owner-only" style="max-width:420px">
@@ -724,7 +724,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
         </div>
         <div class="grid cols-3" id="expUdharPhoneRow" style="display:none">
-          <div class="field"><label>Supplier Phone — optional</label><input id="expUdharPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Supplier Phone — optional</label><input id="expUdharPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
         </div>
         <div class="grid cols-3">
           <div class="field"><label id="expNameLabel">Contractor Name</label><input id="expName" list="dl-labour-names" placeholder="e.g. Ramesh Kumar"></div>
@@ -794,7 +794,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label data-i18n="lbl_status">Status</label>
             <select id="udStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
           </div>
-          <div class="field"><label>Supplier Phone — optional</label><input id="udSupplierPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Supplier Phone — optional</label><input id="udSupplierPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
         </div>
         <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="udNote" placeholder="e.g. bill no. / remarks"></div>
         <button class="btn btn-primary" id="addUdharBtn">+ <span data-i18n="btn_addudhar">Add Udhar Entry</span></button>
@@ -852,11 +852,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
         <div class="grid cols-2">
           <div class="field"><label data-i18n="lbl_fixedamount">Fixed Work Amount (₹)</label><input id="agAmount" type="number" min="0" placeholder="Total kaam kitne mein fix hua hai"></div>
-          <div class="field"><label>Contractor Phone — optional</label><input id="agContractorPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Contractor Phone — optional</label><input id="agContractorPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
         </div>
         <div class="grid cols-2">
           <div class="field"><label>Uska Aadmi / Sub-contractor Naam — optional</label><input id="agAltName" placeholder="e.g. Suresh (site supervisor)"></div>
-          <div class="field"><label>Uska Aadmi ka Phone — optional</label><input id="agAltPhone" placeholder="e.g. 9123456780"></div>
+          <div class="field"><label>Uska Aadmi ka Phone — optional</label><input id="agAltPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9123456780"></div>
         </div>
         <div class="hint" style="margin-top:-6px">Agar payment ka message contractor ki jagah uske aadmi/sub-contractor ko bhejna ho (jaise wo khud site pe nahi hota), to yahan uska naam aur number daal do — WhatsApp bhejte waqt dono mein se chunne ka option milega.</div>
         <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="agNote" placeholder="e.g. agreement / scope details"></div>
@@ -1002,7 +1002,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="grid cols-4">
           <div class="field"><label>Kis ke liye liya (Site / Personal Investment)</label><select id="invSite"><option value="general">General (koi specific site/investment nahi)</option></select></div>
           <div class="field"><label data-i18n="lbl_investorname">Investor Name</label><input id="invName" list="dl-investors" placeholder="e.g. Mr. Deshmukh"></div>
-          <div class="field"><label>Investor Phone — optional</label><input id="invPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Investor Phone — optional</label><input id="invPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
           <div class="field"><label data-i18n="lbl_datetaken">Date Taken</label><input id="invDate" type="date"></div>
         </div>
         <div class="grid cols-4">
@@ -1165,7 +1165,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label>Status</label>
             <select id="plStatus"><option value="pending">Pending</option><option value="returned">Returned</option></select>
           </div>
-          <div class="field"><label>Person Phone — optional</label><input id="plPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Person Phone — optional</label><input id="plPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
           <div class="field"><label>Note (optional)</label><input id="plNote" placeholder="e.g. reason / agreement"></div>
         </div>
         <button class="btn btn-primary" id="plAddBtn">+ Add Lending Entry</button>
@@ -1356,7 +1356,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <h2>Customer &amp; Project Details</h2>
         <div class="grid cols-3">
           <div class="field"><label>Customer Name</label><input id="bgCustName" list="dl-clients" placeholder="e.g. Mr. Sharma"></div>
-          <div class="field"><label>Customer Phone</label><input id="bgCustPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Customer Phone</label><input id="bgCustPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
           <div class="field"><label>Site Address</label><input id="bgSiteAddr" placeholder="e.g. Plot 12, Nashik Road"></div>
         </div>
         <div class="grid cols-4">
@@ -1419,7 +1419,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label>Address</label><input id="lhAddress" placeholder="e.g. Huseniya Colony, India Nagar, Latur-413512"></div>
         </div>
         <div class="grid cols-3">
-          <div class="field"><label>Phone</label><input id="lhPhone" placeholder="e.g. +91 9975797167"></div>
+          <div class="field"><label>Phone</label><input id="lhPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9975797167"></div>
           <div class="field"><label>Email</label><input id="lhEmail" placeholder="e.g. mirzalatur@gmail.com"></div>
           <div class="field"><label>Website</label><input id="lhWebsite" placeholder="e.g. www.firstbrix.com"></div>
         </div>
@@ -1501,7 +1501,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
         <div class="grid cols-2">
           <div class="field"><label>Firm Name</label><input id="fgName" placeholder="e.g. FIRSTBRIX INFRATECH PVT. LTD."></div>
-          <div class="field"><label>Phone</label><input id="fgPhone" placeholder="e.g. +91 9975797167"></div>
+          <div class="field"><label>Phone</label><input id="fgPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9975797167"></div>
         </div>
         <div class="grid cols-2">
           <div class="field"><label>Email</label><input id="fgEmail" placeholder="e.g. mirzalatur@gmail.com"></div>
@@ -1516,7 +1516,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <h2>Clients / Leads Directory</h2>
         <div class="grid cols-4">
           <div class="field"><label>Name</label><input id="ldName" placeholder="e.g. Mr. Sharma"></div>
-          <div class="field"><label>Phone</label><input id="ldPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Phone</label><input id="ldPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
           <div class="field"><label>Firm</label><select id="ldFirm"><option value="firm1">Firm 1</option><option value="firm2">Firm 2</option></select></div>
           <div class="field"><label>Type</label><select id="ldType"><option value="client">Client</option><option value="lead">Lead</option></select></div>
         </div>
@@ -1531,7 +1531,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <h2>⚡ Quick Send <small>Kisi bhi number pe seedha bhejo — directory mein add karne ki zaroorat nahi</small></h2>
         <div class="grid cols-3">
           <div class="field"><label>Name — optional</label><input id="qsName" placeholder="e.g. Suresh"></div>
-          <div class="field"><label>Phone Number</label><input id="qsPhone" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>Phone Number</label><input id="qsPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
           <div class="field"><label>Firm (contact details ke liye)</label><select id="qsFirm"><option value="firm1">Firm 1</option><option value="firm2">Firm 2</option></select></div>
         </div>
         <div class="field"><label>Message (English)</label><textarea id="qsMsgEn" rows="3" placeholder="Apna message likho..."></textarea></div>
@@ -1859,7 +1859,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="field"><label>Status</label>
         <select id="qUdharStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
       </div>
-      <div class="field"><label>Supplier Phone — optional</label><input id="qUdharPhone" placeholder="e.g. 9876543210"></div>
+      <div class="field"><label>Supplier Phone — optional</label><input id="qUdharPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
     </div>
     <div class="grid cols-2">
       <div class="field" id="qModeWrap"><label data-i18n="lbl_paidby">Paid by</label>
@@ -2743,6 +2743,23 @@ function previewFifoAllocation(supplier, amount){
 
 /* Free WhatsApp click-to-chat (wa.me) — no API, no cost. Opens WhatsApp
    Web/App with the message pre-filled; person still hits Send themselves. */
+/* Every phone field (class="phone10") only ever holds digits, max 10 —
+   sanitized live as the person types, so nothing but a valid number can
+   end up in the field in the first place. */
+function isValidPhone10(v){
+  return /^\d{10}$/.test((v||'').trim());
+}
+document.addEventListener('input', e=>{
+  if(!e.target.classList || !e.target.classList.contains('phone10')) return;
+  let digitsOnly = e.target.value.replace(/\D/g,'');
+  // If they typed with a country code or leading 0 by habit, drop it so the
+  // last 10 digits (the actual number) survive instead of getting truncated.
+  if(digitsOnly.length > 10 && digitsOnly.startsWith('91')) digitsOnly = digitsOnly.slice(2);
+  if(digitsOnly.length > 10 && digitsOnly.startsWith('0')) digitsOnly = digitsOnly.slice(1);
+  digitsOnly = digitsOnly.slice(0,10);
+  if(e.target.value !== digitsOnly) e.target.value = digitsOnly;
+});
+
 function openWhatsApp(phone, message){
   let digits = (phone||'').replace(/\D/g,'');
   if(!digits){ showToast('Phone number nahi mila — pehle contractor/client ka number add karo'); return; }
@@ -2829,6 +2846,7 @@ document.getElementById('addSiteBtn').addEventListener('click', async ()=>{
   const gstRate = Number(document.getElementById('newSiteGstRate').value) || 18;
   const hsn = document.getElementById('newSiteHsn').value.trim();
   const clientPhone = document.getElementById('newSiteClientPhone').value.trim();
+  if(clientPhone && !isValidPhone10(clientPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
   if(!name){ showToast('Site ka naam daalo'); return; }
   DATA.sites.push({ id: uid(), name, location: loc, contractValue, siteType, gstApplicable, gstin, gstRate, hsn, clientPhone, createdAt: todayStr() });
   document.getElementById('newSiteName').value='';
@@ -3042,6 +3060,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
 
   if(mode === 'udhar'){
     const supplierPhone = document.getElementById('expUdharPhone').value.trim();
+  if(supplierPhone && !isValidPhone10(supplierPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
     try{
       await db.collection('udhar').add({
         siteId, supplier: contractor,
@@ -3191,6 +3210,7 @@ document.getElementById('addUdharBtn').addEventListener('click', async ()=>{
   const status = document.getElementById('udStatus').value;
   const note = document.getElementById('udNote').value.trim();
   const supplierPhone = document.getElementById('udSupplierPhone').value.trim();
+  if(supplierPhone && !isValidPhone10(supplierPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
 
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
   if(isSiteLockedForMe(siteId)){ showToast('Ye site complete ho chuki hai — sirf owner isme naya udhar add kar sakta hai'); return; }
@@ -3708,8 +3728,10 @@ document.getElementById('addAgreementBtn').addEventListener('click', async ()=>{
   const amount = Number(document.getElementById('agAmount').value);
   const note = document.getElementById('agNote').value.trim();
   const contractorPhone = document.getElementById('agContractorPhone').value.trim();
+  if(contractorPhone && !isValidPhone10(contractorPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
   const altName = document.getElementById('agAltName').value.trim();
   const altPhone = document.getElementById('agAltPhone').value.trim();
+  if(altPhone && !isValidPhone10(altPhone)){ showToast('Uske aadmi ka phone number 10 digit ka hona chahiye'); return; }
 
   if(!siteId){ showToast('Pehle ek site select/add karo'); return; }
   if(isSiteLockedForMe(siteId)){ showToast('Ye site complete ho chuki hai — sirf owner isme naya work agreement add kar sakta hai'); return; }
@@ -4328,6 +4350,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
 
   if(mode === 'udhar'){
     const supplierPhone = document.getElementById('qUdharPhone').value.trim();
+    if(supplierPhone && !isValidPhone10(supplierPhone)){ err.textContent = 'Phone number 10 digit ka hona chahiye.'; return; }
     try{
       await db.collection('udhar').add({
         siteId, supplier: name,
@@ -4588,6 +4611,7 @@ document.getElementById('addInvestorBtn').addEventListener('click', async ()=>{
   const status = document.getElementById('invStatus').value;
   const note = document.getElementById('invNote').value.trim();
   const investorPhone = document.getElementById('invPhone').value.trim();
+  if(investorPhone && !isValidPhone10(investorPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
 
   if(!investorName){ showToast('Investor ka naam daalo'); return; }
   if(!taken || taken<=0){ showToast('Sahi amount daalo jo liya hai'); return; }
@@ -4914,6 +4938,7 @@ document.getElementById('plAddBtn').addEventListener('click', async ()=>{
   const status = document.getElementById('plStatus').value;
   const note = document.getElementById('plNote').value.trim();
   const personPhone = document.getElementById('plPhone').value.trim();
+  if(personPhone && !isValidPhone10(personPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
 
   if(!personName){ showToast('Naam likho'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
@@ -5682,8 +5707,10 @@ document.getElementById('bgGenerateBtn').addEventListener('click', ()=>{
   const gstPct = Number(document.getElementById('bgGst').value) || 0;
   const advance = Number(document.getElementById('bgAdvance').value) || 0;
   const custName = document.getElementById('bgCustName').value.trim();
+  const custPhoneVal = document.getElementById('bgCustPhone').value.trim();
 
   if(!custName){ showToast('Customer ka naam daalo'); return; }
+  if(custPhoneVal && !isValidPhone10(custPhoneVal)){ showToast('Customer phone 10 digit ka hona chahiye'); return; }
 
   const lineItems = [];
   [...BG_DESIGN_SERVICES, ...BG_PACKAGE_SERVICES, ...BG_TURNKEY_SERVICES].forEach(s=>{
@@ -5951,6 +5978,7 @@ document.getElementById('lhSaveProfileBtn').addEventListener('click', async ()=>
   lhProfile.cin = document.getElementById('lhCin').value.trim();
   lhProfile.address = document.getElementById('lhAddress').value.trim();
   lhProfile.phone = document.getElementById('lhPhone').value.trim();
+  if(lhProfile.phone && !isValidPhone10(lhProfile.phone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
   lhProfile.email = document.getElementById('lhEmail').value.trim();
   lhProfile.website = document.getElementById('lhWebsite').value.trim();
   lhProfile.signName = document.getElementById('lhSignName').value.trim();
@@ -6425,9 +6453,11 @@ function loadFirmIntoForm(){
 document.getElementById('fgFirmEdit').addEventListener('change', loadFirmIntoForm);
 document.getElementById('fgSaveFirmBtn').addEventListener('click', async ()=>{
   const key = document.getElementById('fgFirmEdit').value;
+  const fgPhoneVal = document.getElementById('fgPhone').value.trim();
+  if(fgPhoneVal && !isValidPhone10(fgPhoneVal)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
   fgFirmProfiles[key] = {
     name: document.getElementById('fgName').value.trim(),
-    phone: document.getElementById('fgPhone').value.trim(),
+    phone: fgPhoneVal,
     email: document.getElementById('fgEmail').value.trim(),
     website: document.getElementById('fgWebsite').value.trim(),
     address: document.getElementById('fgAddress').value.trim(),
@@ -6472,6 +6502,7 @@ document.getElementById('ldAddBtn').addEventListener('click', async ()=>{
   const note = document.getElementById('ldNote').value.trim();
   if(!name){ showToast('Naam daalo'); return; }
   if(!phone){ showToast('Phone number daalo'); return; }
+  if(!isValidPhone10(phone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
   try{
     await db.collection('leads').add({ name, phone, firm, type, note });
     showToast('Directory mein add ho gaya ✓');
@@ -6646,6 +6677,7 @@ document.getElementById('qsSendBtn').addEventListener('click', async ()=>{
   const includeContact = document.getElementById('qsIncludeContact').checked;
 
   if(!phone){ showToast('Phone number daalo'); return; }
+  if(!isValidPhone10(phone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
   if(!msgEn && !msgMr){ showToast('Pehle message likho'); return; }
 
   const contactBits = [
