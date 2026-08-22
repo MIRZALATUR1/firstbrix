@@ -1595,10 +1595,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card" id="gcSendCard" style="display:none">
-        <div class="toolbar">
-          <h2 style="margin:0">Send To <small style="display:block;font-weight:400">Har naam ke aage "Send" dabao — jise bhej diya, wo list se khud hat jayega</small></h2>
-          <div class="toolbar-left"><select id="gcSendFirmFilter"><option value="all">Sabhi Contacts</option><option value="firm1">Sirf Firm 1</option><option value="firm2">Sirf Firm 2</option></select></div>
-        </div>
+        <h2>Send To <small>Har naam ke aage "Send" dabao — jise bhej diya, wo list se khud hat jayega</small></h2>
         <div class="footnote" id="gcSendCount" style="margin-bottom:8px"></div>
         <div class="table-wrap"><table id="gcSendTable"><thead><tr>
           <th>Name</th><th>Phone</th><th>Type</th><th></th>
@@ -6752,19 +6749,11 @@ function renderGreetingSendList(){
   const countEl = document.getElementById('gcSendCount');
   if(!tbody || !currentGreeting) return;
 
-  // Show EVERYONE by default — a strict firm-match filter here used to
-  // silently hide leads that didn't exactly match, making the list look
-  // empty even when contacts existed. The firm filter is now a manual
-  // toggle, not an invisible trap.
-  const filterEl = document.getElementById('gcSendFirmFilter');
-  const filterVal = filterEl ? filterEl.value : 'all';
-  const allLeads = filterVal === 'all' ? DATA.leads : DATA.leads.filter(l=>l.firm===filterVal);
-
   const sentIds = new Set(
     DATA.sentGreetings.filter(sg=>sg.occasionKey===currentGreeting.occasionKey).map(sg=>sg.leadId)
   );
-  const rows = allLeads.filter(l=>!sentIds.has(l.id));
-  if(countEl) countEl.textContent = `${sentIds.size} bhej diya, ${rows.length} baaki hai (total directory mein ${DATA.leads.length} contacts hain)`;
+  const rows = DATA.leads.filter(l=>!sentIds.has(l.id));
+  if(countEl) countEl.textContent = `${sentIds.size} bhej diya, ${rows.length} baaki hai`;
   if(rows.length===0){
     tbody.innerHTML = `<tr><td colspan="4" class="empty">${DATA.leads.length===0 ? 'Directory mein abhi koi contact nahi hai — upar "Clients / Leads Directory" mein add karo.' : 'Sabko bhej diya ✓ — is occasion ke liye koi baaki nahi.'}</td></tr>`;
     return;
@@ -6822,7 +6811,6 @@ function buildGreetingMessage(name){
   ].filter(x=>x!=='').join('\n');
   return [enBlock, '───────────', mrBlock, attachLine, g.contactBits].filter(Boolean).join('\n\n');
 }
-document.getElementById('gcSendFirmFilter').addEventListener('change', renderGreetingSendList);
 
 function sendGreetingTo(leadId){
   const lead = DATA.leads.find(l=>l.id===leadId);
