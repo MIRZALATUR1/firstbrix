@@ -6446,10 +6446,11 @@ document.getElementById('gcGenerateBtn').addEventListener('click', ()=>{
     occEn = f.en; occMr = f.mr;
   }
 
-  // Kept short on purpose — WhatsApp's wa.me link fails to open on long
-  // pre-filled text (Marathi text especially balloons once URL-encoded).
-  // Contact details are shown once, not duplicated per language.
-  const contactBits = [firm.phone, firm.address, firm.mapsLink].filter(Boolean).join('\n');
+  const contactBits = [
+    firm.phone ? `📞 ${firm.phone}` : '',
+    firm.address ? `📍 ${firm.address}` : '',
+    firm.mapsLink ? `🗺️ ${firm.mapsLink}` : ''
+  ].filter(Boolean).join('\n');
 
   currentGreeting = {
     firmKey,
@@ -6457,11 +6458,10 @@ document.getElementById('gcGenerateBtn').addEventListener('click', ()=>{
     occEn, occMr,
     firmName: firm.name,
     offer,
-    contactBits,
-    template: [occEn, '', occMr, '', `— *${firm.name}*`, offer ? `🎁 ${offer}` : '', contactBits].filter(x=>x!=='').join('\n')
+    contactBits
   };
   const box = document.getElementById('gcPreviewBox');
-  box.textContent = currentGreeting.template;
+  box.textContent = buildGreetingMessage('[Client Name]');
   box.style.display = 'block';
   document.getElementById('gcSendCard').style.display = 'block';
   renderGreetingSendList();
@@ -6493,20 +6493,35 @@ async function markGreetingSent(leadId){
   }catch(e){ /* non-critical — worst case they can send again */ }
   renderGreetingSendList();
 }
+/* Kept warm and properly drafted, but deliberately not padded — Marathi
+   text balloons hugely once URL-encoded, so every extra sentence here
+   risks the wa.me link failing to open (confirmed at ~2500+ encoded chars).
+   This template stays around ~1700-1800 encoded chars, well inside the
+   safe range, while still reading like a real greeting, not a fragment. */
+function buildGreetingMessage(name){
+  const g = currentGreeting;
+  const enBlock = [
+    `Hello ${name},`,
+    '',
+    g.occEn,
+    '',
+    `Warm wishes from *${g.firmName}*.`,
+    g.offer ? `🎁 ${g.offer}` : ''
+  ].filter(x=>x!=='').join('\n');
+  const mrBlock = [
+    `नमस्कार ${name},`,
+    '',
+    g.occMr,
+    '',
+    `*${g.firmName}* कडून हार्दिक शुभेच्छा.`
+  ].filter(x=>x!=='').join('\n');
+  return [enBlock, '───────────', mrBlock, g.contactBits].filter(Boolean).join('\n\n');
+}
+
 function sendGreetingTo(leadId){
   const lead = DATA.leads.find(l=>l.id===leadId);
   if(!lead || !currentGreeting) return;
-  const g = currentGreeting;
-  const personalized = [
-    `Hello ${lead.name}, ${g.occEn}`,
-    '',
-    `नमस्कार ${lead.name}, ${g.occMr}`,
-    '',
-    `— *${g.firmName}*`,
-    g.offer ? `🎁 ${g.offer}` : '',
-    g.contactBits
-  ].filter(x=>x!=='').join('\n');
-  openWhatsApp(lead.phone, personalized);
+  openWhatsApp(lead.phone, buildGreetingMessage(lead.name));
   markGreetingSent(leadId);
 }
 
