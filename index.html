@@ -6661,7 +6661,12 @@ document.getElementById('gcGenerateBtn').addEventListener('click', ()=>{
 
   // Save the draft so any other logged-in device/user sees the SAME
   // generated message immediately, instead of only living in this browser.
-  db.collection('meta').doc('activeGreetingDraft').set(currentGreeting).catch(()=>{});
+  // (Firestore rejects any field that's `undefined`, so strip those first —
+  // a silently-swallowed error here was why this sometimes failed to sync.)
+  const draftToSave = {};
+  Object.entries(currentGreeting).forEach(([k,v])=>{ if(v !== undefined) draftToSave[k] = v; });
+  db.collection('meta').doc('activeGreetingDraft').set(draftToSave)
+    .catch(err=>showToast('Sync nahi hua (dusre device pe turant nahi dikhega): ' + err.message));
 });
 
 function renderGreetingSendList(){
