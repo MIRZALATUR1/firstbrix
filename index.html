@@ -3404,15 +3404,56 @@ document.getElementById('supDirSaveBtn').addEventListener('click', async ()=>{
 function renderSupplierDirectory(){
   const tbody = document.querySelector('#supDirTable tbody');
   if(!tbody) return;
-  const rows = [...DATA.suppliers].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  if(rows.length===0){
+
+  // Legacy numbers: phones typed before this Directory existed, sitting
+  // only on old udhar entries and never migrated in. Surfaced here too so
+  // nothing saved earlier gets lost, clearly labeled as "not yet saved".
+  const dirKeys = new Set(DATA.suppliers.map(s=>vendorNameKey(s.name)));
+  const legacyMap = {};
+  DATA.udhar.forEach(u=>{
+    if(!u.supplierPhone) return;
+    const key = vendorNameKey(u.supplier);
+    if(dirKeys.has(key)) return; // already in the real directory
+    if(!legacyMap[key] || u.date > legacyMap[key].date){
+      legacyMap[key] = { name:u.supplier, phone:u.supplierPhone, date:u.date };
+    }
+  });
+  const legacyRows = Object.values(legacyMap);
+
+  const dirRows = [...DATA.suppliers].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(dirRows.length===0 && legacyRows.length===0){
     tbody.innerHTML = `<tr><td colspan="3" class="empty">Abhi koi supplier save nahi hua.</td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.map(r=>`<tr>
+  const dirHtml = dirRows.map(r=>`<tr>
     <td>${r.name}</td><td>${r.phone}</td>
-    <td><button class="btn-danger-text" onclick="deleteSupplierDirEntry('${r.id}')">Delete</button></td>
+    <td>
+      <button class="btn-danger-text" style="color:var(--blue)" onclick="editSupplierDirEntry('${r.id}')">Edit</button>
+      &nbsp;·&nbsp;
+      <button class="btn-danger-text" onclick="deleteSupplierDirEntry('${r.id}')">Delete</button>
+    </td>
   </tr>`).join('');
+  const legacyHtml = legacyRows.map(r=>`<tr style="opacity:0.75">
+    <td>${r.name} <span class="footnote" style="margin:0">(purani entry se)</span></td><td>${r.phone}</td>
+    <td><button class="btn-danger-text" style="color:var(--good)" onclick="migrateLegacySupplier('${encodeURIComponent(r.name).replace(/'/g,'%27')}','${r.phone}')">💾 Directory mein Save Karo</button></td>
+  </tr>`).join('');
+  tbody.innerHTML = dirHtml + legacyHtml;
+}
+function editSupplierDirEntry(id){
+  const r = DATA.suppliers.find(x=>x.id===id);
+  if(!r) return;
+  openEditModal('Supplier', [
+    {key:'name', label:'Supplier Name', value:r.name},
+    {key:'phone', label:'Phone Number', value:r.phone}
+  ], async v=>{
+    if(!isValidPhone10(v.phone)){ throw new Error('Phone number 10 digit ka hona chahiye'); }
+    await db.collection('suppliers').doc(id).update(v);
+  });
+}
+async function migrateLegacySupplier(encodedName, phone){
+  const name = decodeURIComponent(encodedName);
+  await saveSupplierPhone(name, phone);
+  showToast(`${name} ab Directory mein permanently save ho gaya ✓`);
 }
 async function deleteSupplierDirEntry(id){
   if(!await uiConfirm('Ye supplier directory se hatana hai?', 'Haan, hatao')) return;
