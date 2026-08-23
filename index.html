@@ -723,8 +723,9 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
             <select id="expUdharStatus"><option value="pending">Pending</option><option value="paid">Paid</option></select>
           </div>
         </div>
-        <div class="grid cols-3" id="expUdharPhoneRow" style="display:none">
+        <div class="grid cols-2" id="expUdharPhoneRow" style="display:none">
           <div class="field"><label>Supplier Phone — optional</label><input id="expUdharPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
+          <div class="field"><label>WhatsApp Message mein Important Point — optional</label><input id="expUdharWaNote" placeholder="e.g. Agla bill 20 tarikh tak clear kar denge"></div>
         </div>
         <div class="grid cols-3">
           <div class="field"><label id="expNameLabel">Contractor Name</label><input id="expName" list="dl-labour-names" placeholder="e.g. Ramesh Kumar"></div>
@@ -796,7 +797,10 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
           <div class="field"><label>Supplier Phone — optional</label><input id="udSupplierPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
         </div>
-        <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="udNote" placeholder="e.g. bill no. / remarks"></div>
+        <div class="grid cols-2">
+          <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="udNote" placeholder="e.g. bill no. / remarks"></div>
+          <div class="field"><label>WhatsApp Message mein Important Point — optional</label><input id="udWaNote" placeholder="e.g. Agla bill 20 tarikh tak clear kar denge"></div>
+        </div>
         <button class="btn btn-primary" id="addUdharBtn">+ <span data-i18n="btn_addudhar">Add Udhar Entry</span></button>
       </div>
 
@@ -1867,6 +1871,9 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
       <div class="field"><label>Supplier Phone — optional</label><input id="qUdharPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
     </div>
+    <div class="grid cols-2" id="qUdharWaNoteRow" style="display:none">
+      <div class="field"><label>WhatsApp Message mein Important Point — optional</label><input id="qUdharWaNote" placeholder="e.g. Agla bill 20 tarikh tak clear kar denge"></div>
+    </div>
     <div class="grid cols-2">
       <div class="field" id="qModeWrap"><label data-i18n="lbl_paidby">Paid by</label>
         <select id="qMode"><option>Cash</option><option>Bank Transfer</option><option>UPI</option><option>Cheque</option><option value="udhar">Udhar (Credit — Baad mein pay karenge)</option></select>
@@ -2731,6 +2738,19 @@ function vendorTotals(supplier){
   return { billed, paid, outstanding, billCount:bills.length };
 }
 
+/* Full picture for the supplier: what's taken today, what's been paid
+   overall so far, and what's still outstanding across ALL their sites —
+   plus an optional line for anything important worth flagging. */
+function buildUdharWhatsAppMsg(siteId, supplier, material, amountNow, date, extraNote){
+  const before = vendorTotals(supplier); // live totals BEFORE this new bill lands via Firestore
+  const totalPaid = before.paid;
+  const outstandingAfter = before.outstanding + amountNow;
+  const extraLine = extraNote ? `\n📝 ${extraNote}` : '';
+  const enMsg = `Hello,\n\nMaterial taken on credit for *${siteName(siteId)}* site:\n\n📦 Material: ${material}\n💰 Amount Taken Now: ₹${amountNow.toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${totalPaid.toLocaleString('en-IN')}\n⏳ Total Outstanding: ₹${outstandingAfter.toLocaleString('en-IN')}\n\nDate: ${date}${extraLine}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार,\n\n*${siteName(siteId)}* साइटसाठी उधारीवर घेतलेले साहित्य:\n\n📦 साहित्य: ${material}\n💰 आत्ता घेतलेली रक्कम: ₹${amountNow.toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${totalPaid.toLocaleString('en-IN')}\n⏳ एकूण शिल्लक रक्कम: ₹${outstandingAfter.toLocaleString('en-IN')}\n\nदिनांक: ${date}${extraLine}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  return bilingualMsg(enMsg, mrMsg);
+}
+
 /* Preview only — used to show "yeh payment kahan jayegi" before saving */
 function previewFifoAllocation(supplier, amount){
   const { bills, billRemaining: existingRemaining } = computeVendorAllocations(supplier);
@@ -3080,9 +3100,8 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
       showToast('Udhar entry add ho gayi ✓');
       if(supplierPhone){
         const matVal = document.getElementById('expUdharMaterial').value;
-        const enMsg = `Hello,\n\nMaterial taken on credit for *${siteName(siteId)}* site:\n\n📦 Material: ${matVal}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
-        const mrMsg = `नमस्कार,\n\n*${siteName(siteId)}* साइटसाठी उधारीवर घेतलेले साहित्य:\n\n📦 साहित्य: ${matVal}\n💰 रक्कम: ₹${amount.toLocaleString('en-IN')}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
-        const msg = bilingualMsg(enMsg, mrMsg);
+        const extraNote = document.getElementById('expUdharWaNote').value.trim();
+        const msg = buildUdharWhatsAppMsg(siteId, contractor, matVal, amount, date, extraNote);
         offerWhatsAppPrompt(contractor, supplierPhone, msg);
       }
     }catch(e){ errEl.textContent = 'Error: ' + e.message; return; }
@@ -3091,6 +3110,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
     document.getElementById('expQty').value='';
     document.getElementById('expUnit').value='';
     document.getElementById('expUdharPhone').value='';
+    document.getElementById('expUdharWaNote').value='';
     document.getElementById('expNote').value='';
     return;
   }
@@ -3223,6 +3243,12 @@ document.getElementById('addUdharBtn').addEventListener('click', async ()=>{
   if(!supplier || !material){ showToast('Supplier aur material ka naam daalo'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
 
+  const waNote = document.getElementById('udWaNote').value.trim();
+
+  // Built BEFORE the push below, so vendorTotals() reads pre-entry state —
+  // buildUdharWhatsAppMsg adds this amount on top itself.
+  const waMsg = supplierPhone ? buildUdharWhatsAppMsg(siteId, supplier, material, amount, date, waNote) : null;
+
   DATA.udhar.push({ id: uid(), siteId, supplier, material, qty, unit, date, amount, status, note, supplierPhone });
   document.getElementById('udSupplier').value='';
   document.getElementById('udSupplierPhone').value='';
@@ -3231,9 +3257,11 @@ document.getElementById('addUdharBtn').addEventListener('click', async ()=>{
   document.getElementById('udUnit').value='';
   document.getElementById('udAmount').value='';
   document.getElementById('udNote').value='';
+  document.getElementById('udWaNote').value='';
   await saveData();
   renderUdharTable(); renderDashboard(); renderSitesTable(); renderExpenseTable();
   showToast('Udhar entry add ho gayi ✓');
+  if(waMsg) offerWhatsAppPrompt(supplier, supplierPhone, waMsg);
 });
 
 function renderUdharTable(){
@@ -4312,6 +4340,7 @@ document.getElementById('qMode').addEventListener('change', e=>{
   document.getElementById('qUdharMaterialWrap').style.display = isUdhar ? 'block' : 'none';
   document.getElementById('qMaterialTypeWrap').style.display = isUdhar ? 'none' : (document.getElementById('qType').value==='material' ? 'block' : 'none');
   document.getElementById('qUdharQtyRow').style.display = isUdhar ? 'flex' : 'none';
+  document.getElementById('qUdharWaNoteRow').style.display = isUdhar ? 'flex' : 'none';
   if(isUdhar) document.getElementById('qNameLabel').textContent = 'Supplier name';
   document.getElementById('qName').setAttribute('list', isUdhar ? 'dl-suppliers' : 'dl-material-names');
 });
@@ -4370,9 +4399,8 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
       });
       if(supplierPhone){
         const matVal = document.getElementById('qUdharMaterial').value;
-        const enMsg = `Hello,\n\nMaterial taken on credit for *${siteName(siteId)}* site:\n\n📦 Material: ${matVal}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
-        const mrMsg = `नमस्कार,\n\n*${siteName(siteId)}* साइटसाठी उधारीवर घेतलेले साहित्य:\n\n📦 साहित्य: ${matVal}\n💰 रक्कम: ₹${amount.toLocaleString('en-IN')}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
-        const msg = bilingualMsg(enMsg, mrMsg);
+        const extraNote = document.getElementById('qUdharWaNote').value.trim();
+        const msg = buildUdharWhatsAppMsg(siteId, name, matVal, amount, date, extraNote);
         offerWhatsAppPrompt(name, supplierPhone, msg);
       }
     }catch(e){ err.textContent = 'Error: ' + e.message; return; }
@@ -4386,6 +4414,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
     document.getElementById('qQty').value = '';
     document.getElementById('qUnit').value = '';
     document.getElementById('qUdharPhone').value = '';
+    document.getElementById('qUdharWaNote').value = '';
     document.getElementById('qNote').value = '';
     document.getElementById('qName').focus();
     showToast('Udhar entry save ho gayi ✓');
