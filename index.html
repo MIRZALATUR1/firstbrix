@@ -805,6 +805,18 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card">
+        <h2>Supplier Directory <small>Phone numbers yahan permanently save hote hain — kisi bhi entry se add/upar likho, hamesha yaad rahega</small></h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Supplier Name</label><input id="supDirName" list="dl-suppliers" placeholder="e.g. Shree Hardware Store"></div>
+          <div class="field"><label>Phone Number</label><input id="supDirPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
+          <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="supDirSaveBtn">💾 Save</button></div>
+        </div>
+        <div class="table-wrap" style="max-height:220px;overflow-y:auto"><table id="supDirTable"><thead><tr>
+          <th>Supplier Name</th><th>Phone</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
         <h2>Vendor Ledger <small>Ek vendor se kayi sites pe udhar liya ho, to yahan se lumpsum payment do — system khud purane bill se shuru karke adjust kar dega (chahe wo kisi bhi site ka ho). Overall udhari yahan se automatic deduct hoti hai.</small></h2>
         <div class="table-wrap"><table id="vendorLedgerTable"><thead><tr>
           <th>Vendor</th><th>Total Billed (Sabhi Sites)</th><th>Total Paid</th><th>Outstanding</th><th>Bills</th><th></th>
@@ -2009,7 +2021,7 @@ async function logAudit(action, area, summary){
   }catch(e){ /* never block on audit failure */ }
 }
 
-const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments', leads:'leads', customFestivals:'customFestivals', sentGreetings:'sentGreetings' };
+const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments', leads:'leads', customFestivals:'customFestivals', sentGreetings:'sentGreetings', suppliers:'suppliers' };
 const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations', letterheadDocs:'letterheadDocs' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
@@ -2424,7 +2436,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [], sentGreetings: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [], sentGreetings: [], suppliers: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -2433,6 +2445,7 @@ function rerenderAll(){
   renderExpenseTable();
   renderUdharTable();
   renderVendorLedger();
+  renderSupplierDirectory();
   renderAgreementsTable();
   renderDashboard();
   if(currentRole === 'owner'){
@@ -2546,6 +2559,7 @@ async function saveData(){
     sync('leads', 'leads');
     sync('customFestivals', 'customFestivals');
     sync('sentGreetings', 'sentGreetings');
+    sync('suppliers', 'suppliers');
 
     if(currentRole === 'owner'){
       sync('clientPayments', 'clientPayments');
@@ -2716,9 +2730,30 @@ function computeVendorAllocations(supplier){
 
 function vendorPhone(supplier){
   const key = vendorNameKey(supplier);
+  // Permanent directory first — this is the source of truth going forward.
+  const dirEntry = DATA.suppliers.find(s=>vendorNameKey(s.name)===key && s.phone);
+  if(dirEntry) return dirEntry.phone;
+  // Fallback for numbers saved before the directory existed — pulls from
+  // whichever past udhar entry last had a phone typed in.
   const withPhone = DATA.udhar.filter(u=>vendorNameKey(u.supplier)===key && u.supplierPhone)
     .sort((a,b)=>b.date.localeCompare(a.date));
   return withPhone.length ? withPhone[0].supplierPhone : '';
+}
+
+/* Permanently remembers a supplier's phone the moment it's typed anywhere
+   in the app — independent of any single transaction, so it survives even
+   if that particular udhar entry is later edited or deleted. */
+async function saveSupplierPhone(name, phone){
+  if(!name || !phone) return;
+  const key = vendorNameKey(name);
+  const existing = DATA.suppliers.find(s=>vendorNameKey(s.name)===key);
+  try{
+    if(existing){
+      if(existing.phone !== phone) await db.collection('suppliers').doc(existing.id).update({ phone, name });
+    } else {
+      await db.collection('suppliers').add({ name, phone });
+    }
+  }catch(e){ /* non-critical — the per-entry fallback still works */ }
 }
 
 /* Auto-fills a supplier's phone from their last udhar entry that had one
@@ -3120,6 +3155,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
         const matVal = document.getElementById('expUdharMaterial').value;
         const extraNote = document.getElementById('expUdharWaNote').value.trim();
         const msg = buildUdharWhatsAppMsg(siteId, contractor, matVal, amount, date, extraNote);
+        saveSupplierPhone(contractor, supplierPhone);
         offerWhatsAppPrompt(contractor, supplierPhone, msg);
       }
     }catch(e){ errEl.textContent = 'Error: ' + e.message; return; }
@@ -3279,6 +3315,7 @@ document.getElementById('addUdharBtn').addEventListener('click', async ()=>{
   await saveData();
   renderUdharTable(); renderDashboard(); renderSitesTable(); renderExpenseTable();
   showToast('Udhar entry add ho gayi ✓');
+  if(supplierPhone) saveSupplierPhone(supplier, supplierPhone);
   if(waMsg) offerWhatsAppPrompt(supplier, supplierPhone, waMsg);
 });
 
@@ -3330,11 +3367,59 @@ function renderUdharTable(){
         &nbsp;·&nbsp;
         <button class="btn-danger-text" onclick="toggleUdhar('${r.id}')">${r.status==='paid'?'Mark Pending':'Mark Paid (manual)'}</button>
         &nbsp;·&nbsp;
+        <button class="btn-danger-text" style="color:#25D366" onclick="resendUdharWhatsApp('${r.id}')">📱 WhatsApp</button>
+        &nbsp;·&nbsp;
         <button class="btn-danger-text" onclick="deleteUdhar('${r.id}')">Delete</button>
       </td>
     </tr>`;
   }).join('');
 }
+function resendUdharWhatsApp(id){
+  const r = DATA.udhar.find(x=>x.id===id);
+  if(!r) return;
+  const phone = r.supplierPhone || vendorPhone(r.supplier);
+  if(!phone){ showToast(`${r.supplier} ka phone number kahin nahi mila — pehle Supplier Directory ya is entry mein add karo`); return; }
+  // This entry already exists in DATA.udhar, so vendorTotals() already
+  // reflects it — using it directly here (unlike the "new entry" builder,
+  // which adds the amount on top because the entry doesn't exist yet then).
+  const totals = vendorTotals(r.supplier);
+  const materialLabel = r.material + (r.qty?` (${r.qty} ${r.unit||''})`:'');
+  const extraLine = r.note ? `\n📝 ${r.note}` : '';
+  const enMsg = `Hello,\n\nReminder — material taken on credit for *${siteName(r.siteId)}* site:\n\n📦 Material: ${materialLabel}\n💰 Bill Amount: ₹${Number(r.amount).toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${totals.paid.toLocaleString('en-IN')}\n⏳ Total Outstanding: ₹${totals.outstanding.toLocaleString('en-IN')}\n\nDate: ${r.date}${extraLine}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार,\n\n*${siteName(r.siteId)}* साइटसाठी उधारीवर घेतलेल्या साहित्याची आठवण:\n\n📦 साहित्य: ${materialLabel}\n💰 बिल रक्कम: ₹${Number(r.amount).toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${totals.paid.toLocaleString('en-IN')}\n⏳ एकूण शिल्लक रक्कम: ₹${totals.outstanding.toLocaleString('en-IN')}\n\nदिनांक: ${r.date}${extraLine}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const msg = bilingualMsg(enMsg, mrMsg);
+  offerWhatsAppPrompt(r.supplier, phone, msg);
+}
+
+document.getElementById('supDirSaveBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('supDirName').value.trim();
+  const phone = document.getElementById('supDirPhone').value.trim();
+  if(!name){ showToast('Supplier ka naam daalo'); return; }
+  if(!isValidPhone10(phone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
+  await saveSupplierPhone(name, phone);
+  showToast(`${name} ka number save ho gaya ✓`);
+  document.getElementById('supDirName').value = '';
+  document.getElementById('supDirPhone').value = '';
+});
+function renderSupplierDirectory(){
+  const tbody = document.querySelector('#supDirTable tbody');
+  if(!tbody) return;
+  const rows = [...DATA.suppliers].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(rows.length===0){
+    tbody.innerHTML = `<tr><td colspan="3" class="empty">Abhi koi supplier save nahi hua.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>`<tr>
+    <td>${r.name}</td><td>${r.phone}</td>
+    <td><button class="btn-danger-text" onclick="deleteSupplierDirEntry('${r.id}')">Delete</button></td>
+  </tr>`).join('');
+}
+async function deleteSupplierDirEntry(id){
+  if(!await uiConfirm('Ye supplier directory se hatana hai?', 'Haan, hatao')) return;
+  try{ await db.collection('suppliers').doc(id).delete(); showToast('Hata diya'); }
+  catch(e){ showToast('Nahi hua — dobara try karo'); }
+}
+
 const MATERIAL_TYPES = ['Cement','Steel / TMT Bar','Bricks','Sand','Aggregate / Gitti','Tiles','Paint','Plumbing Material','Electrical Material','Hardware','Wood / Furniture','Other'];
 
 function editUdhar(id){
@@ -4419,6 +4504,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
         const matVal = document.getElementById('qUdharMaterial').value;
         const extraNote = document.getElementById('qUdharWaNote').value.trim();
         const msg = buildUdharWhatsAppMsg(siteId, name, matVal, amount, date, extraNote);
+        saveSupplierPhone(name, supplierPhone);
         offerWhatsAppPrompt(name, supplierPhone, msg);
       }
     }catch(e){ err.textContent = 'Error: ' + e.message; return; }
