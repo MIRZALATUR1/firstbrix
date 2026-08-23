@@ -2721,6 +2721,24 @@ function vendorPhone(supplier){
   return withPhone.length ? withPhone[0].supplierPhone : '';
 }
 
+/* Auto-fills a supplier's phone from their last udhar entry that had one
+   saved, so it doesn't need retyping every time — only fills if the phone
+   box is currently empty (never overwrites what's already typed). */
+function autoFillSupplierPhone(nameFieldId, phoneFieldId){
+  const nameEl = document.getElementById(nameFieldId);
+  const phoneEl = document.getElementById(phoneFieldId);
+  if(!nameEl || !phoneEl) return;
+  nameEl.addEventListener('blur', ()=>{
+    const name = nameEl.value.trim();
+    if(!name || phoneEl.value.trim()) return;
+    const found = vendorPhone(name);
+    if(found) phoneEl.value = found;
+  });
+}
+autoFillSupplierPhone('udSupplier', 'udSupplierPhone');
+autoFillSupplierPhone('expName', 'expUdharPhone');
+autoFillSupplierPhone('qName', 'qUdharPhone');
+
 function allVendorNames(){
   const seen = new Map();
   DATA.udhar.forEach(u=>{
