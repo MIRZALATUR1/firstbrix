@@ -452,6 +452,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <button data-tab="udhar"><span class="tab-ico">↺</span> <span data-i18n="udhar">Udhar Material</span></button>
       <button data-tab="contractwork"><span class="tab-ico">⚒</span> <span data-i18n="contractwork">Contractor Work</span></button>
       <button data-tab="import"><span class="tab-ico">⇪</span> <span data-i18n="import">Import Data</span></button>
+      <button data-tab="approvals">✅ Extra Work Approvals</button>
 
       <div class="nav-group-label owner-only">Client &amp; Funding</div>
       <button data-tab="clientpay" class="owner-only"><span class="tab-ico">⇩</span> <span data-i18n="clientpay">Client Payments</span></button>
@@ -738,6 +739,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
           <div class="field" id="expNoteWrap"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="expNote" placeholder="e.g. 2nd floor slab payment"></div>
         </div>
+        <div class="field owner-only" id="expConsultancyLinkWrap"><label>Consultancy Fund se Link Karo — optional</label><select id="expConsultancyLink"><option value="">Nahi, normal site expense hai</option></select></div>
         <div class="login-error" id="expFormErr" style="margin-bottom:8px"></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <button class="btn btn-primary" id="addExpenseBtn">+ <span data-i18n="btn_addexpense">Add Expense</span></button>
@@ -1502,6 +1504,54 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
     </section>
 
+    <!-- EXTRA WORK / OVER-BUDGET APPROVALS -->
+    <section id="tab-approvals" style="display:none">
+      <h1 class="page-title">Extra Work Approvals</h1>
+      <p class="page-sub">Kisi bhi site pe extra kaam (RCC, brickwork, finishing, kuch bhi) ya kisi material ki fix ki hui amount se mehenga purchase karna ho, to pehle client se WhatsApp pe approval maango. Jab tak approve nahi hota, status Pending rahega — approve hone ke baad hi site ke bill/expense mein add hoga.</p>
+
+      <div class="card">
+        <h2>Naya Approval Request Banao</h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Site</label><select id="apSite"></select></div>
+          <div class="field"><label>Type</label>
+            <select id="apType">
+              <option value="extra_work">Extra Work (scope se bahar kaam)</option>
+              <option value="over_budget">Material Over-Budget (fix rate se mehenga)</option>
+            </select>
+          </div>
+          <div class="field"><label>Kaam/Material ka Category</label>
+            <select id="apCategory">
+              <option value="RCC">RCC</option><option value="Brickwork">Brickwork</option><option value="Plaster">Plaster</option>
+              <option value="Tiles">Tiles</option><option value="Paint">Paint</option><option value="Finishing">Finishing</option>
+              <option value="Electric">Electric</option><option value="Plumbing">Plumbing</option><option value="Material">Material</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Description</label><input id="apDescription" placeholder="e.g. Extra RCC slab for terrace, ya Cement rate 380/bag ki jagah 420/bag mil raha hai"></div>
+        <div class="grid cols-2">
+          <div class="field"><label>Amount (₹)</label><input id="apAmount" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Reason — kyun zaroori/mehenga hai</label><input id="apReason" placeholder="e.g. Design change ki wajah se, ya market rate badh gaya"></div>
+        </div>
+        <button class="btn btn-primary" id="apCreateBtn">📱 Approval Request Banao aur WhatsApp Bhejo</button>
+        <div class="hint">Client ka phone number Site ki details mein "Client Phone" field se aayega (Sites tab → Edit se add kar sakte ho).</div>
+      </div>
+
+      <div class="card">
+        <h2>Pending Approvals <small>Client ke reply ka wait hai — jawab milne ke baad neeche se Approve/Reject karo</small></h2>
+        <div class="table-wrap"><table id="apPendingTable"><thead><tr>
+          <th>Date</th><th>Site</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h2>History <small>Approved / Rejected</small></h2>
+        <div class="table-wrap"><table id="apHistoryTable"><thead><tr>
+          <th>Date</th><th>Site</th><th>Category</th><th>Description</th><th>Amount</th><th>Status</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
     <!-- FESTIVAL GREETINGS -->
     <section id="tab-greetings" style="display:none">
       <h1 class="page-title">Festival Greetings</h1>
@@ -1649,6 +1699,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
             </select>
           </div>
           <div class="field"><label>Client Name</label><input id="csClient" list="dl-clients" placeholder="e.g. Mr. Patil"></div>
+          <div class="field"><label>Client Phone — optional</label><input id="csClientPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
           <div class="field"><label>Date</label><input id="csDate" type="date"></div>
         </div>
         <div class="grid cols-3">
@@ -2021,7 +2072,7 @@ async function logAudit(action, area, summary){
   }catch(e){ /* never block on audit failure */ }
 }
 
-const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments', leads:'leads', customFestivals:'customFestivals', sentGreetings:'sentGreetings', suppliers:'suppliers' };
+const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments', leads:'leads', customFestivals:'customFestivals', sentGreetings:'sentGreetings', suppliers:'suppliers', approvals:'approvals' };
 const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations', letterheadDocs:'letterheadDocs' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
@@ -2436,7 +2487,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [], sentGreetings: [], suppliers: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [], sentGreetings: [], suppliers: [], approvals: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -2446,6 +2497,7 @@ function rerenderAll(){
   renderUdharTable();
   renderVendorLedger();
   renderSupplierDirectory();
+  renderApprovalsTable();
   renderAgreementsTable();
   renderDashboard();
   if(currentRole === 'owner'){
@@ -2560,6 +2612,7 @@ async function saveData(){
     sync('customFestivals', 'customFestivals');
     sync('sentGreetings', 'sentGreetings');
     sync('suppliers', 'suppliers');
+    sync('approvals', 'approvals');
 
     if(currentRole === 'owner'){
       sync('clientPayments', 'clientPayments');
@@ -2680,6 +2733,7 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='billgen') renderBillHistory();
   if(btn.dataset.tab==='letterhead') renderLetterheadHistory();
   if(btn.dataset.tab==='greetings') renderLeadsTable();
+  if(btn.dataset.tab==='approvals') renderApprovalsTable();
   if(btn.dataset.tab==='consultancy') renderConsultancyIncome();
 });
 
@@ -2872,7 +2926,7 @@ function siteReceived(siteId){
 }
 
 function renderSiteSelects(){
-  const selects = ['expSite','udSite','cpSite','agSite','qSite'];
+  const selects = ['expSite','udSite','cpSite','agSite','qSite','apSite'];
   selects.forEach(id=>{
     const el = document.getElementById(id);
     const cur = el.value;
@@ -2894,6 +2948,16 @@ function renderSiteSelects(){
     const puCur = puLinkEl.value;
     puLinkEl.innerHTML = '<option value="">Koi nahi (sirf resell deal)</option>' + DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
     if(puCur) puLinkEl.value = puCur;
+  }
+
+  const csLinkEl = document.getElementById('expConsultancyLink');
+  if(csLinkEl){
+    const csCur = csLinkEl.value;
+    const opts = DATA.consultancyIncome.filter(c=>c.status==='received').map(c=>
+      `<option value="${c.id}">${c.client} — ${inr(c.amount)} (${c.date})</option>`
+    ).join('');
+    csLinkEl.innerHTML = '<option value="">Nahi, normal site expense hai</option>' + opts;
+    if(csCur) csLinkEl.value = csCur;
   }
 
   const filterSelects = ['dashSiteFilter','expListSiteFilter','udListSiteFilter','repSite','cpListSiteFilter','agListSiteFilter','impSite'];
@@ -3170,19 +3234,21 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   }
 
   let isNewLabourEntry = false;
+  const linkedConsultancyId = document.getElementById('expConsultancyLink').value;
   if(editingExpenseId){
     const item = DATA.expenses.find(e=>e.id===editingExpenseId);
-    if(item) Object.assign(item, { siteId, type, category, contractor, date, amount, mode, note });
+    if(item) Object.assign(item, { siteId, type, category, contractor, date, amount, mode, note, linkedConsultancyId });
     cancelExpenseEdit(true);
     showToast('Entry update ho gayi ✓');
   } else {
-    DATA.expenses.push({ id: uid(), siteId, type, category, contractor, date, amount, mode, note });
+    DATA.expenses.push({ id: uid(), siteId, type, category, contractor, date, amount, mode, note, linkedConsultancyId });
     showToast('Expense add ho gaya ✓');
     isNewLabourEntry = true;
   }
   document.getElementById('expName').value='';
   document.getElementById('expAmount').value='';
   document.getElementById('expNote').value='';
+  document.getElementById('expConsultancyLink').value='';
   await saveData();
   renderExpenseTable(); renderDashboard(); renderSitesTable();
   if(isNewLabourEntry) maybeOfferContractorWhatsApp(siteId, contractor, type, amount);
@@ -3459,6 +3525,135 @@ async function deleteSupplierDirEntry(id){
   if(!await uiConfirm('Ye supplier directory se hatana hai?', 'Haan, hatao')) return;
   try{ await db.collection('suppliers').doc(id).delete(); showToast('Hata diya'); }
   catch(e){ showToast('Nahi hua — dobara try karo'); }
+}
+
+/* ---------------- Extra Work / Over-Budget Approvals ---------------- */
+document.getElementById('apCreateBtn').addEventListener('click', async ()=>{
+  const siteId = document.getElementById('apSite').value;
+  const type = document.getElementById('apType').value;
+  const category = document.getElementById('apCategory').value;
+  const description = document.getElementById('apDescription').value.trim();
+  const amount = Number(document.getElementById('apAmount').value);
+  const reason = document.getElementById('apReason').value.trim();
+
+  if(!siteId){ showToast('Site chuno'); return; }
+  if(!description){ showToast('Description likho'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+
+  const site = DATA.sites.find(s=>s.id===siteId);
+  const date = todayStr();
+  const typeLabelEn = type==='extra_work' ? 'Extra Work' : 'Material Over-Budget';
+  const typeLabelMr = type==='extra_work' ? 'अतिरिक्त काम' : 'साहित्य बजेटपेक्षा जास्त';
+
+  let approvalId;
+  try{
+    const ref = await db.collection('approvals').add({ siteId, type, category, description, amount, reason, status:'pending', date });
+    approvalId = ref.id;
+    showToast('Approval request ban gaya ✓ — status Pending hai');
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); return; }
+
+  document.getElementById('apDescription').value = '';
+  document.getElementById('apAmount').value = '';
+  document.getElementById('apReason').value = '';
+
+  if(site && site.clientPhone){
+    const enMsg = `Hello,\n\nWe need your approval for *${typeLabelEn}* at *${site.name}*:\n\n🔧 Category: ${category}\n📋 Description: ${description}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}${reason?`\n📝 Reason: ${reason}`:''}\n\nPlease reply to confirm if this is approved.\n\nDate: ${date}`;
+    const mrMsg = `नमस्कार,\n\n*${site.name}* साठी *${typeLabelMr}* ला तुमची मंजुरी हवी आहे:\n\n🔧 प्रकार: ${category}\n📋 वर्णन: ${description}\n💰 रक्कम: ₹${amount.toLocaleString('en-IN')}${reason?`\n📝 कारण: ${reason}`:''}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${date}`;
+    offerWhatsAppPrompt(site.name, site.clientPhone, bilingualMsg(enMsg, mrMsg));
+  } else {
+    showToast('Is site ka Client Phone save nahi hai — Sites tab se Edit karke add karo, phir WhatsApp bhej sakte ho');
+  }
+});
+
+function renderApprovalsTable(){
+  const pendingTbody = document.querySelector('#apPendingTable tbody');
+  const historyTbody = document.querySelector('#apHistoryTable tbody');
+  if(!pendingTbody || !historyTbody) return;
+
+  const all = [...DATA.approvals].sort((a,b)=>b.date.localeCompare(a.date));
+  const pending = all.filter(a=>a.status==='pending');
+  const done = all.filter(a=>a.status!=='pending');
+
+  pendingTbody.innerHTML = pending.length===0
+    ? `<tr><td colspan="7" class="empty">Koi pending approval nahi hai.</td></tr>`
+    : pending.map(a=>{
+      const site = DATA.sites.find(s=>s.id===a.siteId);
+      return `<tr>
+        <td>${a.date}</td><td>${site?site.name:'—'}</td>
+        <td>${a.type==='extra_work'?'Extra Work':'Over-Budget'}</td>
+        <td>${a.category}</td><td>${a.description}</td>
+        <td class="amt">${inr(a.amount)}</td>
+        <td>
+          <button class="btn-danger-text" style="color:var(--good)" onclick="resolveApproval('${a.id}','approved')">✓ Approve</button>
+          &nbsp;·&nbsp;
+          <button class="btn-danger-text" onclick="resolveApproval('${a.id}','rejected')">✗ Reject</button>
+          &nbsp;·&nbsp;
+          <button class="btn-danger-text" style="color:#25D366" onclick="resendApprovalWhatsApp('${a.id}')">📱 Dobara Bhejo</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+  historyTbody.innerHTML = done.length===0
+    ? `<tr><td colspan="7" class="empty">Abhi koi history nahi hai.</td></tr>`
+    : done.map(a=>{
+      const site = DATA.sites.find(s=>s.id===a.siteId);
+      return `<tr>
+        <td>${a.date}</td><td>${site?site.name:'—'}</td>
+        <td>${a.category}</td><td>${a.description}</td>
+        <td class="amt">${inr(a.amount)}</td>
+        <td><span class="tag ${a.status==='approved'?'paid':'pending'}">${a.status}</span></td>
+        <td><button class="btn-danger-text" onclick="deleteApproval('${a.id}')">Delete</button></td>
+      </tr>`;
+    }).join('');
+}
+
+async function resolveApproval(id, newStatus){
+  const a = DATA.approvals.find(x=>x.id===id);
+  if(!a) return;
+  const confirmMsg = newStatus==='approved'
+    ? 'Client ne approve kar diya? Ye site ke expense/udhar mein add ho jayega.'
+    : 'Ye request reject karni hai?';
+  if(!await uiConfirm(confirmMsg, newStatus==='approved'?'Haan, Approve Karo':'Haan, Reject Karo')) return;
+
+  try{
+    await db.collection('approvals').doc(id).update({ status:newStatus, resolvedDate: todayStr() });
+    if(newStatus==='approved'){
+      // Extra work → labour expense; Over-budget material → udhar-style material entry.
+      if(a.type==='extra_work'){
+        await db.collection('expenses').add({
+          siteId:a.siteId, type:'labour', category:a.category, contractor:'',
+          date: todayStr(), amount:a.amount, mode:'cash',
+          note:`Approved extra work — ${a.description}${a.reason?' ('+a.reason+')':''}`
+        });
+      } else {
+        await db.collection('expenses').add({
+          siteId:a.siteId, type:'material', category:a.category, contractor:'',
+          date: todayStr(), amount:a.amount, mode:'cash',
+          note:`Approved over-budget purchase — ${a.description}${a.reason?' ('+a.reason+')':''}`
+        });
+      }
+      showToast('Approve ho gaya ✓ — site ke expense mein add ho gaya');
+      logAudit('create','Approval', `${a.category} approved — ${inr(a.amount)}`);
+    } else {
+      showToast('Reject kar diya');
+    }
+  }catch(e){ showToast('Kuch galat hua — dobara try karo'); }
+}
+function resendApprovalWhatsApp(id){
+  const a = DATA.approvals.find(x=>x.id===id);
+  if(!a) return;
+  const site = DATA.sites.find(s=>s.id===a.siteId);
+  if(!site || !site.clientPhone){ showToast('Client Phone save nahi hai is site ke liye'); return; }
+  const typeLabelEn = a.type==='extra_work' ? 'Extra Work' : 'Material Over-Budget';
+  const typeLabelMr = a.type==='extra_work' ? 'अतिरिक्त काम' : 'साहित्य बजेटपेक्षा जास्त';
+  const enMsg = `Hello,\n\nReminder — we need your approval for *${typeLabelEn}* at *${site.name}*:\n\n🔧 Category: ${a.category}\n📋 Description: ${a.description}\n💰 Amount: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 Reason: ${a.reason}`:''}\n\nPlease reply to confirm if this is approved.\n\nDate: ${a.date}`;
+  const mrMsg = `नमस्कार,\n\n*${site.name}* साठी *${typeLabelMr}* ला तुमची मंजुरी हवी आहे (आठवण):\n\n🔧 प्रकार: ${a.category}\n📋 वर्णन: ${a.description}\n💰 रक्कम: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 कारण: ${a.reason}`:''}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${a.date}`;
+  offerWhatsAppPrompt(site.name, site.clientPhone, bilingualMsg(enMsg, mrMsg));
+}
+async function deleteApproval(id){
+  if(!await uiConfirm('Ye approval record delete karna hai?', 'Haan, delete karo')) return;
+  try{ await db.collection('approvals').doc(id).delete(); showToast('Delete ho gaya'); }
+  catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 
 const MATERIAL_TYPES = ['Cement','Steel / TMT Bar','Bricks','Sand','Aggregate / Gitti','Tiles','Paint','Plumbing Material','Electrical Material','Hardware','Wood / Furniture','Other'];
@@ -5728,12 +5923,15 @@ document.getElementById('csAddBtn').addEventListener('click', async ()=>{
   const fundMode = document.getElementById('csFundMode').value;
   const staffName = fundMode==='staff' ? document.getElementById('csStaffName').value.trim() : '';
   const usedOnSite = document.getElementById('csUsedOnSite').value;
+  const clientPhone = document.getElementById('csClientPhone').value.trim();
+  if(clientPhone && !isValidPhone10(clientPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
 
   if(!client){ showToast('Client ka naam likho'); return; }
   if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
 
-  DATA.consultancyIncome.push({ id: uid(), type, client, date, amount, status, note, fundMode, staffName, usedOnSite });
+  DATA.consultancyIncome.push({ id: uid(), type, client, clientPhone, date, amount, status, note, fundMode, staffName, usedOnSite });
   document.getElementById('csClient').value='';
+  document.getElementById('csClientPhone').value='';
   document.getElementById('csAmount').value='';
   document.getElementById('csNote').value='';
   document.getElementById('csStaffName').value='';
@@ -5785,6 +5983,8 @@ function renderConsultancyIncome(){
     <td>
       <button class="btn-danger-text" style="color:var(--blue)" onclick="editConsultancy('${r.id}')">Edit</button>
       &nbsp;·&nbsp;
+      <button class="btn-danger-text" style="color:#25D366" onclick="openConsultancyReport('${r.id}')">📊 Report & WhatsApp</button>
+      &nbsp;·&nbsp;
       <button class="btn-danger-text" onclick="deleteConsultancy('${r.id}')">Delete</button>
     </td>
   </tr>`).join('');
@@ -5796,6 +5996,7 @@ function editConsultancy(id){
   openEditModal('Consultancy Income', [
     {key:'type', label:'Service Type', value:r.type, type:'select', options:types.map(t=>({value:t,label:t}))},
     {key:'client', label:'Client Name', value:r.client},
+    {key:'clientPhone', label:'Client Phone', value:r.clientPhone},
     {key:'date', label:'Date', value:r.date, type:'date'},
     {key:'amount', label:'Amount (₹)', value:r.amount, type:'number'},
     {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'received',label:'Received'},{value:'pending',label:'Pending'}]},
@@ -5817,6 +6018,62 @@ async function deleteConsultancy(id){
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 document.getElementById('csListTypeFilter').addEventListener('change', renderConsultancyIncome);
+
+/* ---------------- Consultancy Fund Spending Report ---------------- */
+function computeConsultancySpending(consultancyId){
+  const linkedExpenses = DATA.expenses.filter(e=>e.linkedConsultancyId===consultancyId);
+  const items = linkedExpenses.map(e=>({
+    date: e.date,
+    label: e.type==='labour' ? `Labour — ${e.contractor||e.category}` : (e.type==='material' ? `Material — ${e.category}${e.contractor?' ('+e.contractor+')':''}` : (e.contractor||e.category||'Other')),
+    to: e.contractor || '—',
+    amount: Number(e.amount)
+  }));
+  const totalSpent = items.reduce((a,i)=>a+i.amount,0);
+  return { items, totalSpent };
+}
+
+function openConsultancyReport(id){
+  const r = DATA.consultancyIncome.find(x=>x.id===id);
+  if(!r) return;
+  const { items, totalSpent } = computeConsultancySpending(id);
+  const balance = Number(r.amount) - totalSpent;
+
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal" style="width:560px;max-width:96vw">
+    <h3>📊 Consultancy Fund Report — ${r.client}</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft)">${r.type} · ${r.date}</p>
+    <div style="background:var(--surface-2);border-radius:6px;padding:12px;margin-bottom:14px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Total Received</span><strong>${inr(Number(r.amount))}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Total Spent</span><strong>${inr(totalSpent)}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line);font-weight:700"><span>Balance</span><span style="color:${balance>=0?'var(--good)':'var(--bad)'}">${inr(balance)}</span></div>
+    </div>
+    ${items.length ? `<div class="table-wrap" style="max-height:220px;overflow-y:auto;margin-bottom:14px">
+      <table style="font-size:12px"><thead><tr><th>Date</th><th>Kya</th><th>Kisko</th><th>Amount</th></tr></thead><tbody>
+        ${items.map(i=>`<tr><td>${i.date}</td><td>${i.label}</td><td>${i.to}</td><td class="amt">${inr(i.amount)}</td></tr>`).join('')}
+      </tbody></table>
+    </div>` : '<p class="footnote">Abhi tak koi expense is fund se link nahi hua. Add Expense tab mein "Consultancy Fund se Link Karo" dropdown se link kar sakte ho.</p>'}
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" id="crClose" style="flex:1;justify-content:center">Band Karo</button>
+      <button class="btn btn-primary" id="crWhatsApp" style="flex:1;justify-content:center;background:#25D366">📱 WhatsApp Bhejo</button>
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  const close = ()=>bg.remove();
+  bg.addEventListener('click', e=>{ if(e.target===bg) close(); });
+  bg.querySelector('#crClose').onclick = close;
+  bg.querySelector('#crWhatsApp').onclick = ()=>{
+    if(!r.clientPhone){ showToast('Client Phone save nahi hai — pehle "Edit" se add karo'); return; }
+    if(!isValidPhone10(r.clientPhone)){ showToast('Client Phone 10 digit ka nahi hai — Edit se theek karo'); return; }
+    const itemLines = items.map(i=>`• ${i.date} — ${i.label} (${i.to}): ${inr(i.amount)}`).join('\n');
+    const itemLinesMr = items.map(i=>`• ${i.date} — ${i.label} (${i.to}): ${inr(i.amount)}`).join('\n');
+    const enMsg = `Hello ${r.client},\n\nYour consultancy fund report:\n\n💰 Total Received: ${inr(Number(r.amount))}\n💸 Total Spent: ${inr(totalSpent)}\n${balance>=0?'✅':'⚠️'} Balance: ${inr(balance)}\n${items.length?`\nDetails:\n${itemLines}`:''}\n\nThank you,\nFirstBrix Infratech`;
+    const mrMsg = `नमस्कार ${r.client},\n\nतुमच्या कन्सल्टन्सी फंडाचा रिपोर्ट:\n\n💰 एकूण मिळालेली रक्कम: ${inr(Number(r.amount))}\n💸 एकूण खर्च: ${inr(totalSpent)}\n${balance>=0?'✅':'⚠️'} शिल्लक रक्कम: ${inr(balance)}\n${items.length?`\nतपशील:\n${itemLinesMr}`:''}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+    openWhatsApp(r.clientPhone, bilingualMsg(enMsg, mrMsg));
+    close();
+  };
+}
+
 
 /* ---------------- Bill & Quotation Generator ---------------- */
 const BG_DESIGN_SERVICES = [
@@ -8179,6 +8436,13 @@ function renderReminders(){
     if(days !== null && days >= 21){
       items.push({ urgency:'medium', text:`<strong>${ag.contractor}</strong> ko ${inr(bal)} dena baki hai, ${days} din se koi payment nahi hui (${siteName(ag.siteId)}).` });
     }
+  });
+
+  // Pending extra-work/over-budget approvals — visible to everyone.
+  DATA.approvals.filter(a=>a.status==='pending').forEach(a=>{
+    const site = DATA.sites.find(s=>s.id===a.siteId);
+    const days = daysBetween(a.date);
+    items.push({ urgency: days>=3 ? 'high':'medium', text:`<strong>${a.category}</strong> approval (${inr(a.amount)}) ${site?site.name:''} ke liye ${days} din se pending hai — client ka reply mila to Approvals tab se confirm karo.` });
   });
 
   // Lead follow-ups — visible to everyone (owner + staff), since staff can
