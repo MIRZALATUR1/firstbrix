@@ -1562,8 +1562,18 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
         <div class="field" id="apReasonPerUnitWrap" style="display:none"><label>Reason — kyun zaroori/mehenga hai</label><input id="apReasonPerUnit" placeholder="e.g. Design change ki wajah se, ya market rate badh gaya"></div>
 
-        <button class="btn btn-primary" id="apCreateBtn">📱 Approval Request Banao aur WhatsApp Bhejo</button>
-        <div class="hint">Client ka phone number Site ki details mein "Client Phone" field se aayega (Sites tab → Edit se add kar sakte ho).</div>
+        <button class="btn btn-steel" id="apAddItemBtn">+ Is List Mein Add Karo</button>
+        <div class="hint">Ek se zyada extra kaam/material ho to har ek ko yahan add karte jao — sabka ek hi combined WhatsApp message client ko jayega.</div>
+
+        <div id="apStagingWrap" style="display:none;margin-top:16px">
+          <h3 style="font-size:13.5px;margin-bottom:8px">Bhejne ke liye List</h3>
+          <div class="table-wrap"><table id="apStagingTable"><thead><tr>
+            <th>Type</th><th>Category</th><th>Description</th><th>Amount</th><th></th>
+          </tr></thead><tbody></tbody></table></div>
+          <div style="text-align:right;font-weight:700;margin:8px 0;font-size:14px">Grand Total: <span id="apStagingGrandTotal">₹0</span></div>
+          <button class="btn btn-primary" id="apSendAllBtn">📱 Sabke Liye Approval Bhejo</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Client ka phone number Site ki details mein "Client Phone" field se aayega (Sites tab → Edit se add kar sakte ho).</div>
       </div>
 
       <div class="card">
@@ -3573,7 +3583,9 @@ function apRecalcTotal(){
 document.getElementById('apQty').addEventListener('input', apRecalcTotal);
 document.getElementById('apRate').addEventListener('input', apRecalcTotal);
 
-document.getElementById('apCreateBtn').addEventListener('click', async ()=>{
+let apStagingItems = [];
+
+document.getElementById('apAddItemBtn').addEventListener('click', ()=>{
   const siteId = document.getElementById('apSite').value;
   const type = document.getElementById('apType').value;
   const category = document.getElementById('apCategory').value;
@@ -3594,26 +3606,10 @@ document.getElementById('apCreateBtn').addEventListener('click', async ()=>{
     reason = document.getElementById('apReason').value.trim();
     if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
   }
-
   if(!siteId){ showToast('Site chuno'); return; }
   if(!description){ showToast('Description likho'); return; }
 
-  const site = DATA.sites.find(s=>s.id===siteId);
-  const date = todayStr();
-  const typeLabelEn = type==='extra_work' ? 'Extra Work' : 'Material Over-Budget';
-  const typeLabelMr = type==='extra_work' ? 'अतिरिक्त काम' : 'साहित्य बजेटपेक्षा जास्त';
-
-  // Clear breakdown line so the client sees exactly how the number was
-  // reached — avoids "why is this ₹X?" confusion for per-unit pricing.
-  const breakdownEn = pricingType==='perunit' ? `\n📐 Calculation: ${qty} ${AP_UNIT_LABELS[unit]} × ₹${rate}/${AP_UNIT_LABELS[unit]} = ₹${amount.toLocaleString('en-IN')}` : '';
-  const breakdownMr = pricingType==='perunit' ? `\n📐 गणित: ${qty} ${AP_UNIT_LABELS[unit]} × ₹${rate}/${AP_UNIT_LABELS[unit]} = ₹${amount.toLocaleString('en-IN')}` : '';
-
-  let approvalId;
-  try{
-    const ref = await db.collection('approvals').add({ siteId, type, category, description, amount, reason, status:'pending', date, pricingType, qty, unit, rate });
-    approvalId = ref.id;
-    showToast('Approval request ban gaya ✓ — status Pending hai');
-  }catch(e){ showToast('Save nahi hua — dobara try karo'); return; }
+  apStagingItems.push({ siteId, type, category, description, pricingType, amount, qty, unit, rate, reason });
 
   document.getElementById('apDescription').value = '';
   document.getElementById('apAmount').value = '';
@@ -3622,14 +3618,86 @@ document.getElementById('apCreateBtn').addEventListener('click', async ()=>{
   document.getElementById('apRate').value = '';
   document.getElementById('apPerUnitTotal').value = '';
   document.getElementById('apReasonPerUnit').value = '';
+  // Reset pricing mode back to Lumpsum for the next item — otherwise it
+  // silently stays on "Per Unit" and blocks the next add if you meant to
+  // switch back to a plain amount without noticing the dropdown didn't change.
+  document.getElementById('apPricingType').value = 'lumpsum';
+  document.getElementById('apLumpsumWrap').style.display = 'flex';
+  document.getElementById('apPerUnitWrap').style.display = 'none';
+  document.getElementById('apReasonPerUnitWrap').style.display = 'none';
 
-  if(site && site.clientPhone){
-    const enMsg = `Hello,\n\nWe need your approval for *${typeLabelEn}* at *${site.name}*:\n\n🔧 Category: ${category}\n📋 Description: ${description}${breakdownEn}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}${reason?`\n📝 Reason: ${reason}`:''}\n\nPlease reply to confirm if this is approved.\n\nDate: ${date}`;
-    const mrMsg = `नमस्कार,\n\n*${site.name}* साठी *${typeLabelMr}* ला तुमची मंजुरी हवी आहे:\n\n🔧 प्रकार: ${category}\n📋 वर्णन: ${description}${breakdownMr}\n💰 रक्कम: ₹${amount.toLocaleString('en-IN')}${reason?`\n📝 कारण: ${reason}`:''}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${date}`;
-    offerWhatsAppPrompt(site.name, site.clientPhone, bilingualMsg(enMsg, mrMsg));
-  } else {
-    showToast('Is site ka Client Phone save nahi hai — Sites tab se Edit karke add karo, phir WhatsApp bhej sakte ho');
-  }
+  renderApStaging();
+  document.getElementById('apStagingWrap').scrollIntoView({behavior:'smooth', block:'nearest'});
+  showToast(`✓ List mein add ho gaya (ab tak ${apStagingItems.length} item${apStagingItems.length>1?'s':''}) — aur add karo ya "Sabke Liye Approval Bhejo" dabao`);
+});
+
+function renderApStaging(){
+  const wrap = document.getElementById('apStagingWrap');
+  const tbody = document.querySelector('#apStagingTable tbody');
+  if(apStagingItems.length===0){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  let grandTotal = 0;
+  tbody.innerHTML = apStagingItems.map((it,i)=>{
+    grandTotal += it.amount;
+    const breakdown = it.pricingType==='perunit' ? ` <span class="footnote">(${it.qty} ${AP_UNIT_LABELS[it.unit]} × ${inr(it.rate)})</span>` : '';
+    return `<tr>
+      <td>${it.type==='extra_work'?'Extra Work':'Over-Budget'}</td>
+      <td>${it.category}</td>
+      <td>${it.description}${breakdown}</td>
+      <td class="amt">${inr(it.amount)}</td>
+      <td><button class="btn-danger-text" onclick="apRemoveStagingItem(${i})">Remove</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('apStagingGrandTotal').textContent = inr(grandTotal);
+}
+function apRemoveStagingItem(i){
+  apStagingItems.splice(i,1);
+  renderApStaging();
+}
+
+document.getElementById('apSendAllBtn').addEventListener('click', async ()=>{
+  if(apStagingItems.length===0){ showToast('List khaali hai'); return; }
+  const date = todayStr();
+  const batchId = uid();
+
+  try{
+    for(const it of apStagingItems){
+      await db.collection('approvals').add({ ...it, status:'pending', date, batchId });
+    }
+    showToast(`${apStagingItems.length} items ke liye approval request ban gaye ✓`);
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); return; }
+
+  // Group by site — if items from more than one site ended up in the same
+  // batch, each site gets its own combined message (never mixed together).
+  const bySite = {};
+  apStagingItems.forEach(it=>{ (bySite[it.siteId] = bySite[it.siteId] || []).push(it); });
+
+  const lineEn = it => {
+    const bd = it.pricingType==='perunit' ? ` (${it.qty} ${AP_UNIT_LABELS[it.unit]} × ₹${it.rate}/${AP_UNIT_LABELS[it.unit]})` : '';
+    return `• ${it.category} — ${it.description}${bd}: ₹${it.amount.toLocaleString('en-IN')}${it.reason?` [${it.reason}]`:''}`;
+  };
+
+  const messages = Object.entries(bySite).map(([siteId, items])=>{
+    const site = DATA.sites.find(s=>s.id===siteId);
+    const grandTotal = items.reduce((a,it)=>a+it.amount,0);
+    const itemLines = items.map(lineEn).join('\n');
+    const enMsg = `Hello,\n\nWe need your approval for the following extra work/material items at *${site?site.name:''}*:\n\n${itemLines}\n\n💰 Grand Total: ₹${grandTotal.toLocaleString('en-IN')}\n\nPlease reply to confirm if these are approved.\n\nDate: ${date}`;
+    const mrMsg = `नमस्कार,\n\n*${site?site.name:''}* साठी खालील अतिरिक्त काम/साहित्यासाठी तुमची मंजुरी हवी आहे:\n\n${itemLines}\n\n💰 एकूण रक्कम: ₹${grandTotal.toLocaleString('en-IN')}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${date}`;
+    return { site, msg: bilingualMsg(enMsg, mrMsg) };
+  });
+
+  apStagingItems = [];
+  renderApStaging();
+
+  // One site → straight to the WhatsApp prompt. Multiple sites → send them
+  // one at a time so each prompt is unambiguous about which site it's for.
+  messages.forEach(({site, msg})=>{
+    if(site && site.clientPhone){
+      offerWhatsAppPrompt(site.name, site.clientPhone, msg);
+    } else {
+      showToast(`${site?site.name:'Ek site'} ka Client Phone save nahi hai — Sites tab se Edit karke add karo`);
+    }
+  });
 });
 
 function renderApprovalsTable(){
