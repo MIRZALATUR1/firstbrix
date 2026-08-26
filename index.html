@@ -1529,10 +1529,39 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
         </div>
         <div class="field"><label>Description</label><input id="apDescription" placeholder="e.g. Extra RCC slab for terrace, ya Cement rate 380/bag ki jagah 420/bag mil raha hai"></div>
-        <div class="grid cols-2">
+
+        <div class="field"><label>Pricing Kaise Hai?</label>
+          <select id="apPricingType">
+            <option value="lumpsum">Lumpsum (ek fix total amount)</option>
+            <option value="perunit">Per Unit (Quantity × Rate se calculate hoga)</option>
+          </select>
+        </div>
+
+        <div class="grid cols-2" id="apLumpsumWrap">
           <div class="field"><label>Amount (₹)</label><input id="apAmount" type="number" min="0" placeholder="0"></div>
           <div class="field"><label>Reason — kyun zaroori/mehenga hai</label><input id="apReason" placeholder="e.g. Design change ki wajah se, ya market rate badh gaya"></div>
         </div>
+
+        <div class="grid cols-4" id="apPerUnitWrap" style="display:none">
+          <div class="field"><label>Quantity</label><input id="apQty" type="number" min="0" placeholder="e.g. 150"></div>
+          <div class="field"><label>Unit</label>
+            <select id="apUnit">
+              <option value="sqft">Sq.ft (area)</option>
+              <option value="rft">Running ft</option>
+              <option value="cft">Cubic ft</option>
+              <option value="bags">Bags</option>
+              <option value="kg">Kg</option>
+              <option value="piece">Piece / Nos</option>
+              <option value="ton">Ton</option>
+              <option value="litre">Litre</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Rate per Unit (₹)</label><input id="apRate" type="number" min="0" placeholder="e.g. 45"></div>
+          <div class="field"><label>Total (auto)</label><input id="apPerUnitTotal" readonly style="background:var(--surface-2);font-weight:700" placeholder="₹0"></div>
+        </div>
+        <div class="field" id="apReasonPerUnitWrap" style="display:none"><label>Reason — kyun zaroori/mehenga hai</label><input id="apReasonPerUnit" placeholder="e.g. Design change ki wajah se, ya market rate badh gaya"></div>
+
         <button class="btn btn-primary" id="apCreateBtn">📱 Approval Request Banao aur WhatsApp Bhejo</button>
         <div class="hint">Client ka phone number Site ki details mein "Client Phone" field se aayega (Sites tab → Edit se add kar sakte ho).</div>
       </div>
@@ -3528,26 +3557,60 @@ async function deleteSupplierDirEntry(id){
 }
 
 /* ---------------- Extra Work / Over-Budget Approvals ---------------- */
+const AP_UNIT_LABELS = { sqft:'Sq.ft', rft:'Running ft', cft:'Cubic ft', bags:'Bags', kg:'Kg', piece:'Piece', ton:'Ton', litre:'Litre', other:'Unit' };
+
+document.getElementById('apPricingType').addEventListener('change', e=>{
+  const isPerUnit = e.target.value === 'perunit';
+  document.getElementById('apLumpsumWrap').style.display = isPerUnit ? 'none' : 'flex';
+  document.getElementById('apPerUnitWrap').style.display = isPerUnit ? 'grid' : 'none';
+  document.getElementById('apReasonPerUnitWrap').style.display = isPerUnit ? 'block' : 'none';
+});
+function apRecalcTotal(){
+  const qty = Number(document.getElementById('apQty').value) || 0;
+  const rate = Number(document.getElementById('apRate').value) || 0;
+  document.getElementById('apPerUnitTotal').value = qty && rate ? inr(qty*rate) : '';
+}
+document.getElementById('apQty').addEventListener('input', apRecalcTotal);
+document.getElementById('apRate').addEventListener('input', apRecalcTotal);
+
 document.getElementById('apCreateBtn').addEventListener('click', async ()=>{
   const siteId = document.getElementById('apSite').value;
   const type = document.getElementById('apType').value;
   const category = document.getElementById('apCategory').value;
   const description = document.getElementById('apDescription').value.trim();
-  const amount = Number(document.getElementById('apAmount').value);
-  const reason = document.getElementById('apReason').value.trim();
+  const pricingType = document.getElementById('apPricingType').value;
+
+  let amount, reason, qty=null, unit=null, rate=null;
+  if(pricingType === 'perunit'){
+    qty = Number(document.getElementById('apQty').value);
+    rate = Number(document.getElementById('apRate').value);
+    unit = document.getElementById('apUnit').value;
+    reason = document.getElementById('apReasonPerUnit').value.trim();
+    if(!qty || qty<=0){ showToast('Quantity daalo'); return; }
+    if(!rate || rate<=0){ showToast('Rate per unit daalo'); return; }
+    amount = qty * rate;
+  } else {
+    amount = Number(document.getElementById('apAmount').value);
+    reason = document.getElementById('apReason').value.trim();
+    if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+  }
 
   if(!siteId){ showToast('Site chuno'); return; }
   if(!description){ showToast('Description likho'); return; }
-  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
 
   const site = DATA.sites.find(s=>s.id===siteId);
   const date = todayStr();
   const typeLabelEn = type==='extra_work' ? 'Extra Work' : 'Material Over-Budget';
   const typeLabelMr = type==='extra_work' ? 'अतिरिक्त काम' : 'साहित्य बजेटपेक्षा जास्त';
 
+  // Clear breakdown line so the client sees exactly how the number was
+  // reached — avoids "why is this ₹X?" confusion for per-unit pricing.
+  const breakdownEn = pricingType==='perunit' ? `\n📐 Calculation: ${qty} ${AP_UNIT_LABELS[unit]} × ₹${rate}/${AP_UNIT_LABELS[unit]} = ₹${amount.toLocaleString('en-IN')}` : '';
+  const breakdownMr = pricingType==='perunit' ? `\n📐 गणित: ${qty} ${AP_UNIT_LABELS[unit]} × ₹${rate}/${AP_UNIT_LABELS[unit]} = ₹${amount.toLocaleString('en-IN')}` : '';
+
   let approvalId;
   try{
-    const ref = await db.collection('approvals').add({ siteId, type, category, description, amount, reason, status:'pending', date });
+    const ref = await db.collection('approvals').add({ siteId, type, category, description, amount, reason, status:'pending', date, pricingType, qty, unit, rate });
     approvalId = ref.id;
     showToast('Approval request ban gaya ✓ — status Pending hai');
   }catch(e){ showToast('Save nahi hua — dobara try karo'); return; }
@@ -3555,10 +3618,14 @@ document.getElementById('apCreateBtn').addEventListener('click', async ()=>{
   document.getElementById('apDescription').value = '';
   document.getElementById('apAmount').value = '';
   document.getElementById('apReason').value = '';
+  document.getElementById('apQty').value = '';
+  document.getElementById('apRate').value = '';
+  document.getElementById('apPerUnitTotal').value = '';
+  document.getElementById('apReasonPerUnit').value = '';
 
   if(site && site.clientPhone){
-    const enMsg = `Hello,\n\nWe need your approval for *${typeLabelEn}* at *${site.name}*:\n\n🔧 Category: ${category}\n📋 Description: ${description}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}${reason?`\n📝 Reason: ${reason}`:''}\n\nPlease reply to confirm if this is approved.\n\nDate: ${date}`;
-    const mrMsg = `नमस्कार,\n\n*${site.name}* साठी *${typeLabelMr}* ला तुमची मंजुरी हवी आहे:\n\n🔧 प्रकार: ${category}\n📋 वर्णन: ${description}\n💰 रक्कम: ₹${amount.toLocaleString('en-IN')}${reason?`\n📝 कारण: ${reason}`:''}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${date}`;
+    const enMsg = `Hello,\n\nWe need your approval for *${typeLabelEn}* at *${site.name}*:\n\n🔧 Category: ${category}\n📋 Description: ${description}${breakdownEn}\n💰 Amount: ₹${amount.toLocaleString('en-IN')}${reason?`\n📝 Reason: ${reason}`:''}\n\nPlease reply to confirm if this is approved.\n\nDate: ${date}`;
+    const mrMsg = `नमस्कार,\n\n*${site.name}* साठी *${typeLabelMr}* ला तुमची मंजुरी हवी आहे:\n\n🔧 प्रकार: ${category}\n📋 वर्णन: ${description}${breakdownMr}\n💰 रक्कम: ₹${amount.toLocaleString('en-IN')}${reason?`\n📝 कारण: ${reason}`:''}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${date}`;
     offerWhatsAppPrompt(site.name, site.clientPhone, bilingualMsg(enMsg, mrMsg));
   } else {
     showToast('Is site ka Client Phone save nahi hai — Sites tab se Edit karke add karo, phir WhatsApp bhej sakte ho');
@@ -3578,10 +3645,11 @@ function renderApprovalsTable(){
     ? `<tr><td colspan="7" class="empty">Koi pending approval nahi hai.</td></tr>`
     : pending.map(a=>{
       const site = DATA.sites.find(s=>s.id===a.siteId);
+      const breakdownLabel = a.pricingType==='perunit' ? `<div class="footnote" style="margin:2px 0 0">${a.qty} ${AP_UNIT_LABELS[a.unit]} × ${inr(a.rate)}/${AP_UNIT_LABELS[a.unit]}</div>` : '';
       return `<tr>
         <td>${a.date}</td><td>${site?site.name:'—'}</td>
         <td>${a.type==='extra_work'?'Extra Work':'Over-Budget'}</td>
-        <td>${a.category}</td><td>${a.description}</td>
+        <td>${a.category}</td><td>${a.description}${breakdownLabel}</td>
         <td class="amt">${inr(a.amount)}</td>
         <td>
           <button class="btn-danger-text" style="color:var(--good)" onclick="resolveApproval('${a.id}','approved')">✓ Approve</button>
@@ -3618,18 +3686,19 @@ async function resolveApproval(id, newStatus){
   try{
     await db.collection('approvals').doc(id).update({ status:newStatus, resolvedDate: todayStr() });
     if(newStatus==='approved'){
+      const breakdownNote = a.pricingType==='perunit' ? ` [${a.qty} ${AP_UNIT_LABELS[a.unit]} × ${inr(a.rate)}/${AP_UNIT_LABELS[a.unit]}]` : '';
       // Extra work → labour expense; Over-budget material → udhar-style material entry.
       if(a.type==='extra_work'){
         await db.collection('expenses').add({
           siteId:a.siteId, type:'labour', category:a.category, contractor:'',
           date: todayStr(), amount:a.amount, mode:'cash',
-          note:`Approved extra work — ${a.description}${a.reason?' ('+a.reason+')':''}`
+          note:`Approved extra work — ${a.description}${breakdownNote}${a.reason?' ('+a.reason+')':''}`
         });
       } else {
         await db.collection('expenses').add({
           siteId:a.siteId, type:'material', category:a.category, contractor:'',
           date: todayStr(), amount:a.amount, mode:'cash',
-          note:`Approved over-budget purchase — ${a.description}${a.reason?' ('+a.reason+')':''}`
+          note:`Approved over-budget purchase — ${a.description}${breakdownNote}${a.reason?' ('+a.reason+')':''}`
         });
       }
       showToast('Approve ho gaya ✓ — site ke expense mein add ho gaya');
@@ -3646,8 +3715,10 @@ function resendApprovalWhatsApp(id){
   if(!site || !site.clientPhone){ showToast('Client Phone save nahi hai is site ke liye'); return; }
   const typeLabelEn = a.type==='extra_work' ? 'Extra Work' : 'Material Over-Budget';
   const typeLabelMr = a.type==='extra_work' ? 'अतिरिक्त काम' : 'साहित्य बजेटपेक्षा जास्त';
-  const enMsg = `Hello,\n\nReminder — we need your approval for *${typeLabelEn}* at *${site.name}*:\n\n🔧 Category: ${a.category}\n📋 Description: ${a.description}\n💰 Amount: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 Reason: ${a.reason}`:''}\n\nPlease reply to confirm if this is approved.\n\nDate: ${a.date}`;
-  const mrMsg = `नमस्कार,\n\n*${site.name}* साठी *${typeLabelMr}* ला तुमची मंजुरी हवी आहे (आठवण):\n\n🔧 प्रकार: ${a.category}\n📋 वर्णन: ${a.description}\n💰 रक्कम: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 कारण: ${a.reason}`:''}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${a.date}`;
+  const breakdownEn = a.pricingType==='perunit' ? `\n📐 Calculation: ${a.qty} ${AP_UNIT_LABELS[a.unit]} × ₹${a.rate}/${AP_UNIT_LABELS[a.unit]} = ₹${a.amount.toLocaleString('en-IN')}` : '';
+  const breakdownMr = a.pricingType==='perunit' ? `\n📐 गणित: ${a.qty} ${AP_UNIT_LABELS[a.unit]} × ₹${a.rate}/${AP_UNIT_LABELS[a.unit]} = ₹${a.amount.toLocaleString('en-IN')}` : '';
+  const enMsg = `Hello,\n\nReminder — we need your approval for *${typeLabelEn}* at *${site.name}*:\n\n🔧 Category: ${a.category}\n📋 Description: ${a.description}${breakdownEn}\n💰 Amount: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 Reason: ${a.reason}`:''}\n\nPlease reply to confirm if this is approved.\n\nDate: ${a.date}`;
+  const mrMsg = `नमस्कार,\n\n*${site.name}* साठी *${typeLabelMr}* ला तुमची मंजुरी हवी आहे (आठवण):\n\n🔧 प्रकार: ${a.category}\n📋 वर्णन: ${a.description}${breakdownMr}\n💰 रक्कम: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 कारण: ${a.reason}`:''}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${a.date}`;
   offerWhatsAppPrompt(site.name, site.clientPhone, bilingualMsg(enMsg, mrMsg));
 }
 async function deleteApproval(id){
