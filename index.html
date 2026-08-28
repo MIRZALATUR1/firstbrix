@@ -1625,6 +1625,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
       <div class="card">
         <h2>Clients / Leads Directory</h2>
+        <button class="btn btn-ghost" id="ldRemoveDupesBtn" style="padding:7px 12px;font-size:12.5px;margin-bottom:10px">🧹 Duplicate Numbers Hatao</button>
         <div class="grid cols-4">
           <div class="field"><label>Name</label><input id="ldName" placeholder="e.g. Mr. Sharma"></div>
           <div class="field"><label>Phone</label><input id="ldPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
@@ -1633,9 +1634,22 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
         <div class="field"><label>Note — optional</label><input id="ldNote" placeholder="e.g. interested in interior work"></div>
         <button class="btn btn-primary" id="ldAddBtn">+ Add to Directory</button>
-        <div class="table-wrap" style="margin-top:14px"><table id="ldTable"><thead><tr>
+        <div class="toolbar" style="margin-top:14px">
+          <div></div>
+          <div class="toolbar-left">
+            <button class="btn btn-ghost" id="ldDownloadBtn" style="padding:7px 12px;font-size:12.5px">⬇ Excel/CSV Download (Sabhi Leads)</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="ldTable"><thead><tr>
           <th>Name</th><th>Phone</th><th>Firm</th><th>Type</th><th>Last Contact</th><th>Next Follow-up</th><th></th>
         </tr></thead><tbody></tbody></table></div>
+        <div class="toolbar" style="margin-top:10px">
+          <div class="footnote" id="ldPageInfo" style="margin:0"></div>
+          <div class="toolbar-left">
+            <button class="btn btn-ghost" id="ldPrevBtn" style="padding:6px 12px;font-size:12.5px">← Pichla</button>
+            <button class="btn btn-ghost" id="ldNextBtn" style="padding:6px 12px;font-size:12.5px">Agla →</button>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -7161,6 +7175,8 @@ document.getElementById('ldAddBtn').addEventListener('click', async ()=>{
   if(!name){ showToast('Naam daalo'); return; }
   if(!phone){ showToast('Phone number daalo'); return; }
   if(!isValidPhone10(phone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
+  const existing = DATA.leads.find(l=>l.phone===phone);
+  if(existing){ showToast(`Ye number pehle se hai — "${existing.name}" ke naam se save hai`); return; }
   try{
     await db.collection('leads').add({ name, phone, firm, type, note });
     showToast('Directory mein add ho gaya ✓');
@@ -7170,15 +7186,32 @@ document.getElementById('ldAddBtn').addEventListener('click', async ()=>{
   }catch(e){ showToast('Save nahi hua — dobara try karo'); }
 });
 
+let ldCurrentPage = 1;
+const LD_PAGE_SIZE = 10;
+
 function renderLeadsTable(){
   const tbody = document.querySelector('#ldTable tbody');
   if(!tbody) return;
-  const rows = [...DATA.leads].sort((a,b)=>{
+  const allRows = [...DATA.leads].sort((a,b)=>{
     // Overdue/due-soon follow-ups float to the top so they're hard to miss.
     const an = a.nextFollowUpDate || '9999-99-99';
     const bn = b.nextFollowUpDate || '9999-99-99';
     return an.localeCompare(bn);
   });
+
+  const totalPages = Math.max(1, Math.ceil(allRows.length / LD_PAGE_SIZE));
+  if(ldCurrentPage > totalPages) ldCurrentPage = totalPages;
+  if(ldCurrentPage < 1) ldCurrentPage = 1;
+  const startIdx = (ldCurrentPage-1) * LD_PAGE_SIZE;
+  const rows = allRows.slice(startIdx, startIdx + LD_PAGE_SIZE);
+
+  const pageInfoEl = document.getElementById('ldPageInfo');
+  if(pageInfoEl) pageInfoEl.textContent = allRows.length===0 ? '' : `${startIdx+1}–${Math.min(startIdx+LD_PAGE_SIZE, allRows.length)} dikha rahe hain, total ${allRows.length} mein se (Page ${ldCurrentPage}/${totalPages})`;
+  const prevBtn = document.getElementById('ldPrevBtn');
+  const nextBtn = document.getElementById('ldNextBtn');
+  if(prevBtn) prevBtn.disabled = ldCurrentPage<=1;
+  if(nextBtn) nextBtn.disabled = ldCurrentPage>=totalPages;
+
   if(rows.length===0){
     tbody.innerHTML = `<tr><td colspan="7" class="empty">Abhi koi client/lead add nahi hai.</td></tr>`;
   } else {
@@ -7214,6 +7247,51 @@ async function deleteLead(id){
   try{ await db.collection('leads').doc(id).delete(); showToast('Delete ho gaya'); }
   catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
+
+document.getElementById('ldPrevBtn').addEventListener('click', ()=>{ ldCurrentPage--; renderLeadsTable(); });
+document.getElementById('ldNextBtn').addEventListener('click', ()=>{ ldCurrentPage++; renderLeadsTable(); });
+
+document.getElementById('ldDownloadBtn').addEventListener('click', ()=>{
+  if(DATA.leads.length===0){ showToast('Directory khaali hai'); return; }
+  const rows = [...DATA.leads].sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(r=>({
+    'Name': r.name,
+    'Phone': r.phone,
+    'Firm': r.firm==='firm2' ? 'Firm 2' : 'Firm 1',
+    'Type': r.type,
+    'Note': r.note || '',
+    'Last Contact Date': (r.followUps && r.followUps.length) ? r.followUps[r.followUps.length-1].date : '',
+    'Last Contact Note': (r.followUps && r.followUps.length) ? r.followUps[r.followUps.length-1].note : '',
+    'Next Follow-up': r.nextFollowUpDate || ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+  XLSX.writeFile(wb, `FirstBrix_Leads_${todayStr()}.xlsx`);
+  showToast(`${rows.length} leads ki Excel file taiyar ✓`);
+});
+
+document.getElementById('ldRemoveDupesBtn').addEventListener('click', async ()=>{
+  const seenPhones = new Map(); // phone -> first-encountered lead (kept)
+  const toDelete = [];
+  DATA.leads.forEach(l=>{
+    if(!l.phone) return;
+    if(seenPhones.has(l.phone)){
+      toDelete.push(l);
+    } else {
+      seenPhones.set(l.phone, l);
+    }
+  });
+
+  if(toDelete.length===0){ showToast('Koi duplicate number nahi mila ✓'); return; }
+  const preview = toDelete.slice(0,5).map(l=>`${l.name} (${l.phone})`).join(', ');
+  const more = toDelete.length>5 ? ` aur ${toDelete.length-5} aur` : '';
+  if(!await uiConfirm(`${toDelete.length} duplicate contact milein: ${preview}${more}. Har number ka ek copy rakha jayega, baaki delete honge. Confirm karo?`, 'Haan, Duplicates Hatao')) return;
+
+  try{
+    for(const l of toDelete){ await db.collection('leads').doc(l.id).delete(); }
+    showToast(`${toDelete.length} duplicate contacts hata diye ✓`);
+  }catch(e){ showToast('Kuch duplicates delete nahi hue — dobara try karo'); }
+});
 
 /* ---------------- Lead Follow-up Tracking ---------------- */
 function openFollowUpModal(leadId){
