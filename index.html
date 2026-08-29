@@ -1780,6 +1780,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
       </div>
 
+      <div class="card" id="gcSendCountCard" style="border-left:4px solid var(--good)">
+        <h2 style="margin:0;font-size:14px">📊 Aaj Ka WhatsApp Send Count <small>WhatsApp khud spam-detection karta hai — bahut zyada messages thodi der mein bhejne se 24-48 ghante ka block lag sakta hai. Ye humari taraf se limit nahi hai, WhatsApp ka apna anti-spam system hai.</small></h2>
+        <div id="gcSendCountStatus" style="font-size:14px;font-weight:700;margin-top:6px"></div>
+      </div>
+
       <div class="card" id="gcSendCard" style="display:none">
         <h2>Send To <small>Har naam ke aage "Send" dabao — jise bhej diya, wo list se khud hat jayega</small></h2>
         <div class="footnote" id="gcSendCount" style="margin-bottom:8px"></div>
@@ -2627,6 +2632,7 @@ function rerenderAll(){
   renderLeadsTable();
   populateOccasionDropdown();
   renderGreetingSendList();
+  renderSendCountStatus();
 }
 
 /* Live listeners: every device sees changes as they happen. */
@@ -7565,6 +7571,7 @@ document.getElementById('qsSendBtn').addEventListener('click', async ()=>{
   if(!phone){ showToast('Phone number daalo'); return; }
   if(!isValidPhone10(phone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
   if(!msgEn && !msgMr){ showToast('Pehle message likho'); return; }
+  if(!await confirmSendCountRisk()) return;
 
   const contactBits = [
     firm.phone ? `📞 ${firm.phone}` : '',
@@ -7579,6 +7586,8 @@ document.getElementById('qsSendBtn').addEventListener('click', async ()=>{
     .filter(Boolean).join('\n\n');
 
   openWhatsApp(phone, finalMsg);
+  db.collection('sentGreetings').add({ leadId:null, occasionKey:`quicksend_${phone}`, firmKey, date: todayStr() }).catch(()=>{});
+  renderSendCountStatus();
 
   if(document.getElementById('qsSaveToDirectory').checked && document.getElementById('qsName').value.trim()){
     try{
@@ -7691,6 +7700,43 @@ async function markGreetingSent(leadId){
     await db.collection('sentGreetings').add({ leadId, occasionKey: currentGreeting.occasionKey, firmKey: currentGreeting.firmKey, date: todayStr() });
   }catch(e){ /* non-critical — worst case they can send again */ }
   renderGreetingSendList();
+  renderSendCountStatus();
+}
+
+/* WhatsApp's own anti-spam system, not something any tool (free or paid-
+   for-this-app) can bypass — it silently rate-limits or 24-48hr-blocks a
+   number that fires many click-to-chat sends in a short window. This is a
+   soft guardrail: track today's count and warn early, rather than let
+   someone find out the hard way at message #75. */
+function getTodaySendCount(){
+  const today = todayStr();
+  return DATA.sentGreetings.filter(sg=>sg.date===today).length;
+}
+function renderSendCountStatus(){
+  const el = document.getElementById('gcSendCountStatus');
+  const card = document.getElementById('gcSendCountCard');
+  if(!el || !card) return;
+  const count = getTodaySendCount();
+  let color, msg;
+  if(count < 20){ color='var(--good)'; msg=`${count} messages bheje hain aaj — safe range mein hai.`; }
+  else if(count < 35){ color='var(--amber)'; msg=`${count} messages bheje hain aaj — thoda dhyan se, beech-beech mein gap rakho.`; }
+  else if(count < 50){ color='var(--amber)'; msg=`⚠ ${count} messages bheje hain aaj — block ka risk badh raha hai. Ab yahin rok do, baaki kal bhejo.`; }
+  else { color='var(--bad)'; msg=`🛑 ${count} messages bheje hain aaj — BAHUT zyada hai, block hone ka bahut zyada chance hai. Aaj aur mat bhejo.`; }
+  card.style.borderLeftColor = color;
+  el.style.color = color;
+  el.textContent = msg;
+}
+
+/* Fires right before a send — not a hard block (owner's call to make),
+   but makes them consciously confirm once things get risky instead of
+   finding out via a 24-48hr account lock. */
+async function confirmSendCountRisk(){
+  const count = getTodaySendCount();
+  if(count < 35) return true;
+  return await uiConfirm(
+    `Aaj already ${count} WhatsApp messages bhej chuke ho. Isse zyada bhejne se WhatsApp 24-48 ghante ke liye block kar sakta hai (WhatsApp ka apna anti-spam system hai). Aage badhna hai?`,
+    'Haan, Risk Lekar Bhejo'
+  );
 }
 /* Kept warm and properly drafted, but deliberately not padded — Marathi
    text balloons hugely once URL-encoded, so every extra sentence here
@@ -7734,15 +7780,17 @@ function buildGreetingMessage(name){
   return [enBlock, '───────────', mrBlock, attachLine, g.contactBits].filter(Boolean).join('\n\n');
 }
 
-function sendGreetingTo(leadId){
+async function sendGreetingTo(leadId){
   const lead = DATA.leads.find(l=>l.id===leadId);
   if(!lead || !currentGreeting) return;
+  if(!await confirmSendCountRisk()) return;
   openWhatsApp(lead.phone, buildGreetingMessage(lead.name));
   markGreetingSent(leadId);
 }
 async function sendGreetingToWithFile(leadId){
   const lead = DATA.leads.find(l=>l.id===leadId);
   if(!lead || !currentGreeting || !currentAttachment || !currentAttachment.file) return;
+  if(!await confirmSendCountRisk()) return;
   if(!navigator.canShare || !navigator.canShare({ files: [currentAttachment.file] })){
     showToast('Is browser mein file-share support nahi hai — "Send Link" use karo.');
     return;
