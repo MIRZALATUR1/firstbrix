@@ -987,6 +987,67 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </tr></thead><tbody></tbody></table></div>
       </div>
 
+      <div class="card">
+        <h2>📋 Client Update Message <small>Payment summary + upcoming schedule + note + request — sab kuch mila ke ek professional message banao, kisi bhi client ke liye</small></h2>
+        <div class="field"><label>Site</label><select id="cuSite"></select></div>
+        <div id="cuSummaryPreview" class="footnote" style="margin-bottom:10px"></div>
+
+        <h3 style="font-size:13px;margin:14px 0 8px">Upcoming Payment Schedule — Stages Add Karo</h3>
+        <div class="field"><label>Quick Select — Common Construction Stage (optional shortcut)</label>
+          <select id="cuQuickStage">
+            <option value="">— Khud likho, ya yahan se quick-select karo —</option>
+            <optgroup label="Start / Structure">
+              <option value="Booking / Token Advance">Booking / Token Advance</option>
+              <option value="To start Excavation & Footing">To start Excavation & Footing</option>
+              <option value="After Footing Completion">After Footing Completion</option>
+              <option value="Plinth Beam Work">Plinth Beam Work</option>
+              <option value="Ground Floor Slab">Ground Floor Slab</option>
+              <option value="First Floor Slab">First Floor Slab</option>
+              <option value="Second Floor Slab">Second Floor Slab</option>
+              <option value="Terrace Slab">Terrace Slab</option>
+            </optgroup>
+            <optgroup label="Brickwork & Plaster">
+              <option value="Brickwork — Ground Floor">Brickwork — Ground Floor</option>
+              <option value="Brickwork — First Floor">Brickwork — First Floor</option>
+              <option value="To start Internal Plaster Work">To start Internal Plaster Work</option>
+              <option value="After completion of Internal Plaster">After completion of Internal Plaster</option>
+              <option value="To start Outer/External Plaster Work">To start Outer/External Plaster Work</option>
+              <option value="After completion of Outer Plaster">After completion of Outer Plaster</option>
+            </optgroup>
+            <optgroup label="Finishing">
+              <option value="Flooring / Tiles Work">Flooring / Tiles Work</option>
+              <option value="Electrical Work">Electrical Work</option>
+              <option value="Plumbing Work">Plumbing Work</option>
+              <option value="Doors & Windows Fitting">Doors & Windows Fitting</option>
+              <option value="Painting Work">Painting Work</option>
+              <option value="After Full Finishing">After Full Finishing</option>
+              <option value="Final Handover">Final Handover</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Stage Description</label><input id="cuStageDesc" placeholder="e.g. To start Plaster Work"></div>
+          <div class="field"><label>Amount (₹)</label><input id="cuStageAmt" type="number" min="0" placeholder="e.g. 200000"></div>
+          <div class="field"><label>Note — optional</label><input id="cuStageNote" placeholder="e.g. Required now to commence"></div>
+        </div>
+        <button class="btn btn-steel" id="cuAddStageBtn">+ Stage Add Karo</button>
+
+        <div id="cuStagingWrap" style="display:none;margin-top:14px">
+          <div class="table-wrap"><table id="cuStagingTable"><thead><tr>
+            <th>#</th><th>Description</th><th>Amount</th><th>Note</th><th></th>
+          </tr></thead><tbody></tbody></table></div>
+        </div>
+
+        <div class="field" style="margin-top:14px"><label>Extra Note — optional</label><input id="cuExtraNote" placeholder="e.g. Extra work billing will be settled separately at final handover"></div>
+        <div class="field"><label>Request / Call-to-Action — optional</label><input id="cuRequest" placeholder="e.g. Please arrange the initial ₹2,00,000 so we can start the work"></div>
+
+        <button class="btn btn-primary" id="cuGenerateBtn" style="margin-top:10px">✨ Message Banao</button>
+        <div id="cuPreviewBox" style="display:none;margin-top:14px;background:var(--surface-2);border-radius:8px;padding:14px;font-size:12.5px;white-space:pre-wrap"></div>
+        <div id="cuSendWrap" style="display:none;margin-top:12px">
+          <button class="btn btn-primary" id="cuSendBtn" style="background:#25D366">📱 WhatsApp Bhejo</button>
+        </div>
+      </div>
+
       <div class="card" id="gstSummaryCard" style="display:none">
         <h2>GST Summary <small>Sirf GST-applicable sites ka — filing ke liye</small></h2>
         <div class="stat-row">
@@ -2979,7 +3040,7 @@ function siteReceived(siteId){
 }
 
 function renderSiteSelects(){
-  const selects = ['expSite','udSite','cpSite','agSite','qSite','apSite'];
+  const selects = ['expSite','udSite','cpSite','agSite','qSite','apSite','cuSite'];
   selects.forEach(id=>{
     const el = document.getElementById(id);
     const cur = el.value;
@@ -5065,6 +5126,95 @@ function sendClientWhatsApp(siteId){
   const msg = bilingualMsg(enMsg, mrMsg);
   openWhatsApp(site.clientPhone, msg);
 }
+
+/* ---------------- Client Update Message (Payment Summary + Schedule) ---------------- */
+let cuStages = [];
+
+function cuUpdateSummaryPreview(){
+  const siteId = document.getElementById('cuSite').value;
+  const el = document.getElementById('cuSummaryPreview');
+  if(!siteId){ el.textContent = ''; return; }
+  const site = DATA.sites.find(s=>s.id===siteId);
+  if(!site) return;
+  const received = siteReceived(siteId);
+  const contract = Number(site.contractValue)||0;
+  const pending = contract - received;
+  el.innerHTML = `Contract Value: <strong>${inr(contract)}</strong> &nbsp;·&nbsp; Received: <strong>${inr(received)}</strong> &nbsp;·&nbsp; Pending: <strong>${inr(pending)}</strong>${!site.clientPhone?' &nbsp;·&nbsp; <span style="color:var(--bad)">⚠ Client Phone save nahi hai (Sites tab se Edit karke add karo)</span>':''}`;
+}
+document.getElementById('cuSite').addEventListener('change', cuUpdateSummaryPreview);
+
+document.getElementById('cuQuickStage').addEventListener('change', e=>{
+  if(e.target.value) document.getElementById('cuStageDesc').value = e.target.value;
+  document.getElementById('cuStageAmt').focus();
+});
+
+document.getElementById('cuAddStageBtn').addEventListener('click', ()=>{
+  const desc = document.getElementById('cuStageDesc').value.trim();
+  const amt = Number(document.getElementById('cuStageAmt').value);
+  const note = document.getElementById('cuStageNote').value.trim();
+  if(!desc){ showToast('Stage description likho'); return; }
+  if(!amt || amt<=0){ showToast('Sahi amount daalo'); return; }
+  cuStages.push({ desc, amt, note });
+  document.getElementById('cuStageDesc').value = '';
+  document.getElementById('cuStageAmt').value = '';
+  document.getElementById('cuStageNote').value = '';
+  document.getElementById('cuQuickStage').value = '';
+  renderCuStaging();
+  showToast(`✓ Stage add ho gaya (ab tak ${cuStages.length})`);
+});
+function renderCuStaging(){
+  const wrap = document.getElementById('cuStagingWrap');
+  const tbody = document.querySelector('#cuStagingTable tbody');
+  if(cuStages.length===0){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  tbody.innerHTML = cuStages.map((s,i)=>`<tr>
+    <td>${i+1}</td><td>${s.desc}</td><td class="amt">${inr(s.amt)}</td><td>${s.note||'—'}</td>
+    <td><button class="btn-danger-text" onclick="cuRemoveStage(${i})">Remove</button></td>
+  </tr>`).join('');
+}
+function cuRemoveStage(i){ cuStages.splice(i,1); renderCuStaging(); }
+
+let currentClientUpdate = null;
+document.getElementById('cuGenerateBtn').addEventListener('click', ()=>{
+  const siteId = document.getElementById('cuSite').value;
+  if(!siteId){ showToast('Site chuno'); return; }
+  const site = DATA.sites.find(s=>s.id===siteId);
+  if(!site){ showToast('Site nahi mila'); return; }
+
+  const received = siteReceived(siteId);
+  const contract = Number(site.contractValue)||0;
+  const pending = contract - received;
+  const extraNote = document.getElementById('cuExtraNote').value.trim();
+  const request = document.getElementById('cuRequest').value.trim();
+  const date = new Date().toLocaleDateString('en-IN');
+
+  const scheduleEn = cuStages.length ? `\n\n🗓️ Upcoming Payment Schedule:\n${cuStages.map((s,i)=>`${i+1}. ${s.desc}: ₹${s.amt.toLocaleString('en-IN')}${s.note?` (${s.note})`:''}`).join('\n')}` : '';
+  const scheduleMr = cuStages.length ? `\n\n🗓️ पुढील पेमेंटचे वेळापत्रक:\n${cuStages.map((s,i)=>`${i+1}. ${s.desc}: ₹${s.amt.toLocaleString('en-IN')}${s.note?` (${s.note})`:''}`).join('\n')}` : '';
+
+  const enMsg = `Hello,\n\nHere is the payment update${cuStages.length?' and the upcoming schedule':''} for the *${site.name}* project:\n\n📊 Payment Summary:\n• Total Contract Value: ₹${contract.toLocaleString('en-IN')}\n• Total Received: ₹${received.toLocaleString('en-IN')}\n• Pending Amount: ₹${pending.toLocaleString('en-IN')}${scheduleEn}${extraNote?`\n\nNote: ${extraNote}`:''}${request?`\n\n${request}`:''}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार,\n\n*${site.name}* प्रकल्पाची आतापर्यंतची पेमेंट माहिती${cuStages.length?' आणि पुढील कामाचे वेळापत्रक':''} खालीलप्रमाणे आहे:\n\n📊 पेमेंट तपशील:\n• एकूण कराराची रक्कम: ₹${contract.toLocaleString('en-IN')}\n• एकूण मिळालेली रक्कम: ₹${received.toLocaleString('en-IN')}\n• शिल्लक रक्कम: ₹${pending.toLocaleString('en-IN')}${scheduleMr}${extraNote?`\n\nटीप: ${extraNote}`:''}${request?`\n\n${request}`:''}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+
+  currentClientUpdate = { site, msg: bilingualMsg(enMsg, mrMsg) };
+  const box = document.getElementById('cuPreviewBox');
+  box.textContent = currentClientUpdate.msg;
+  box.style.display = 'block';
+  document.getElementById('cuSendWrap').style.display = 'block';
+});
+
+document.getElementById('cuSendBtn').addEventListener('click', ()=>{
+  if(!currentClientUpdate) return;
+  const { site, msg } = currentClientUpdate;
+  if(!site.clientPhone){ showToast('Client Phone save nahi hai — Sites tab se Edit karke add karo'); return; }
+  openWhatsApp(site.clientPhone, msg);
+  cuStages = [];
+  renderCuStaging();
+  document.getElementById('cuExtraNote').value = '';
+  document.getElementById('cuRequest').value = '';
+  document.getElementById('cuPreviewBox').style.display = 'none';
+  document.getElementById('cuSendWrap').style.display = 'none';
+  currentClientUpdate = null;
+  showToast('WhatsApp khul gaya ✓');
+});
 
 function renderGstSummary(){
   const card = document.getElementById('gstSummaryCard');
