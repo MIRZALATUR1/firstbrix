@@ -459,6 +459,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <button data-tab="investor" class="owner-only"><span class="tab-ico">⇧</span> <span data-i18n="investor">Investor Funding</span></button>
       <button data-tab="sitefunding" class="owner-only"><span class="tab-ico">🏛️</span> <span data-i18n="sitefunding">Site Funding</span></button>
       <button data-tab="pnl" class="owner-only"><span class="tab-ico">±</span> <span data-i18n="pnl">Profit &amp; Loss</span></button>
+      <button data-tab="cashposition" class="owner-only"><span class="tab-ico">💰</span> Cash Position</button>
 
       <div class="nav-group-label owner-only">Company Expenses</div>
       <button data-tab="office" class="owner-only"><span class="tab-ico">⌂</span> <span data-i18n="office_nav">Office Expense</span></button>
@@ -517,10 +518,6 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         🏗️ Business — Site Expenses
       </h2>
       <div class="stat-row">
-        <div class="stat owner-only" id="statAvailableFundCard" style="border-left:4px solid var(--good)">
-          <div class="lbl">💰 Available Fund (Jeb Mein Abhi Kitna Hai)</div>
-          <div class="val" id="statAvailableFund" style="font-size:22px">₹0</div>
-        </div>
         <div class="stat brick"><div class="lbl">Total Expense (Udhar Sahit)</div><div class="val" id="statTotal">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_labour">Labour</div><div class="val" id="statLabour">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_material">Material</div><div class="val" id="statMaterial">₹0</div></div>
@@ -591,30 +588,6 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="table-wrap"><table id="recentTable"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th data-i18n="th_type">Type</th><th>Category / Item</th><th data-i18n="th_name">Name</th><th data-i18n="th_amount">Amount</th>
         </tr></thead><tbody></tbody></table></div>
-      </div>
-
-      <div class="card owner-only" id="cashPositionCard">
-        <h2>💰 Cash Position <small>Kitna paisa account mein aaya, kitna bahar gaya, kitna bacha hai — sab jagah se combine karke</small></h2>
-        <div class="field" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <input type="checkbox" id="cpExcludeGovtToggle" style="width:auto;accent-color:var(--blue)">
-          <label for="cpExcludeGovtToggle" style="margin:0;text-transform:none;font-weight:500;cursor:pointer">Government/RA-Bill sites ka client payment is calculation se hatao — sirf Turnkey clients ka andaza dikhao</label>
-        </div>
-        <div class="hint" style="margin-top:-2px">Ye sirf ek "view" hai — real mein paisa mix hi hota hai, Turnkey clients ka fund government/company ke kaam mein bhi use kar sakte ho. Ye toggle sirf ANDAZA lagane ke liye hai ki sirf turnkey clients ka kitna balance bacha hai.</div>
-        <div class="grid cols-2" style="margin-top:10px">
-          <div>
-            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--good);margin-bottom:8px">✅ Paisa Aaya (Money In)</div>
-            <div id="cpInBreakdown" style="font-size:13px;line-height:2"></div>
-          </div>
-          <div>
-            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--bad);margin-bottom:8px">⬇ Paisa Gaya (Money Out)</div>
-            <div id="cpOutBreakdown" style="font-size:13px;line-height:2"></div>
-          </div>
-        </div>
-        <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--line);display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:15px;font-weight:700">Bacha Hua Balance</span>
-          <span id="cpNetBalance" style="font-size:22px;font-weight:800"></span>
-        </div>
-        <div class="hint" style="margin-top:10px">Ye calculation sirf paisa (cash/bank/UPI/cheque) ke movement ka hai — Udhar (jo abhi tak actually pay nahi hua) isme shaamil nahi hai, kyunki wo paisa asal mein gaya hi nahi hai abhi tak.</div>
       </div>
 
       <div class="card" id="remindersCard" style="display:none">
@@ -767,6 +740,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
           <div class="field" id="expNoteWrap"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="expNote" placeholder="e.g. 2nd floor slab payment"></div>
         </div>
+        <div class="field"><label>Kisne Pay Kiya / Handle Kiya — optional</label><select id="expHandledBy"><option value="">— Track nahi karna —</option><option value="Owner">Owner (Mera Apna)</option></select></div>
         <div class="field owner-only" id="expConsultancyLinkWrap"><label>Consultancy Fund se Link Karo — optional</label><select id="expConsultancyLink"><option value="">Nahi, normal site expense hai</option></select></div>
         <div class="login-error" id="expFormErr" style="margin-bottom:8px"></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1680,6 +1654,78 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
     </section>
 
+    <!-- CASH POSITION -->
+    <section id="tab-cashposition" style="display:none">
+      <h1 class="page-title">💰 Cash Position</h1>
+      <p class="page-sub">Kitna paisa account mein aaya, kitna bahar gaya, kitna bacha hai. Neeche se chuno kaunsi sites is calculation mein shaamil karni hain — jaise agar Government/RA-Bill sites hatani hon, to sirf Turnkey clients ka andaza mil jayega.</p>
+
+      <div class="card">
+        <h2>Sites Chuno <small>Sirf yahan check ki hui sites ka Client Payment aur Expense calculation mein aayega. Consultancy, Investor Funding, Office Expenses jaise company-wide items hamesha shaamil rehte hain.</small></h2>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <button class="btn btn-ghost" id="cpSelectAllBtn" style="padding:6px 12px;font-size:12.5px">✓ Sabhi Select Karo</button>
+          <button class="btn btn-ghost" id="cpDeselectAllBtn" style="padding:6px 12px;font-size:12.5px">✗ Sabhi Hatao</button>
+        </div>
+        <div id="cpSiteChecklist" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px"></div>
+        <div class="hint" style="margin-top:10px">Ye sirf ek "view" hai — real mein paisa mix hi hota hai, ek site ka fund doosre kaam mein bhi use ho sakta hai. Ye selection sirf ANDAZA lagane ke liye hai.</div>
+      </div>
+
+      <div class="card">
+        <div class="grid cols-2">
+          <div>
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--good);margin-bottom:8px">✅ Paisa Aaya (Money In)</div>
+            <div id="cpInBreakdown" style="font-size:13px;line-height:2"></div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--bad);margin-bottom:8px">⬇ Paisa Gaya (Money Out)</div>
+            <div id="cpOutBreakdown" style="font-size:13px;line-height:2"></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:15px;font-weight:700">Bacha Hua Balance</span>
+          <span id="cpNetBalance" style="font-size:22px;font-weight:800"></span>
+        </div>
+        <div class="hint" style="margin-top:10px">Ye calculation sirf paisa (cash/bank/UPI/cheque) ke movement ka hai — Udhar (jo abhi tak actually pay nahi hua) isme shaamil nahi hai, kyunki wo paisa asal mein gaya hi nahi hai abhi tak.</div>
+      </div>
+
+      <div class="card">
+        <h2>👤 Kaun Kitna Handle Kar Raha Hai <small>Owner ya kisi staff ko cash diya ho kharch karne ke liye, to yahan track karo — kitna diya, kitna unhone kharch kiya (Add Expense ke "Kisne Pay Kiya" field se), aur kitna bacha hai unke paas</small></h2>
+
+        <h3 style="font-size:13px;margin-bottom:8px">Naya Float/Advance Diya</h3>
+        <div class="grid cols-3">
+          <div class="field"><label>Kisko Diya</label><select id="sfPerson"><option value="Owner">Owner (Mera Apna)</option></select></div>
+          <div class="field"><label>Amount (₹)</label><input id="sfAmount" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Note — optional</label><input id="sfNote" placeholder="e.g. is hafte ke labour payment ke liye"></div>
+        </div>
+        <button class="btn btn-primary" id="sfAddBtn">+ Float Add Karo</button>
+
+        <h3 style="font-size:13px;margin:18px 0 8px">Har Vyakti Ka Balance</h3>
+        <div class="table-wrap"><table id="sfBalanceTable"><thead><tr>
+          <th>Naam</th><th>Total Diya Gaya</th><th>Total Kharch Kiya</th><th>Bacha Hua Balance</th>
+        </tr></thead><tbody></tbody></table></div>
+
+        <h3 style="font-size:13px;margin:18px 0 8px">Purani Entries Mein Bulk Assign Karo <small style="font-weight:400">Ek-ek karke edit karne ki zaroorat nahi — filter karke sabko ek saath assign karo</small></h3>
+        <div class="grid cols-4">
+          <div class="field"><label>Site — optional filter</label><select id="sfBulkSite"><option value="">Sabhi Sites</option></select></div>
+          <div class="field"><label>Date Se</label><input id="sfBulkDateFrom" type="date"></div>
+          <div class="field"><label>Date Tak</label><input id="sfBulkDateTo" type="date"></div>
+          <div class="field"><label>Sirf "Khaali" Entries</label>
+            <select id="sfBulkOnlyEmpty"><option value="yes">Haan, sirf jinme abhi khaali hai</option><option value="no">Nahi, sabko overwrite karo</option></select>
+          </div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field"><label>Kisko Assign Karna Hai</label><select id="sfBulkPerson"><option value="Owner">Owner (Mera Apna)</option></select></div>
+          <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="sfBulkPreviewBtn">🔍 Kitni Entries Match Hongi, Dekho</button></div>
+        </div>
+        <div id="sfBulkPreviewBox" style="display:none;background:var(--surface-2);border-radius:6px;padding:10px;font-size:13px;margin-bottom:10px"></div>
+        <button class="btn btn-primary" id="sfBulkApplyBtn" style="display:none;background:var(--good)">✓ In Sabko Assign Karo</button>
+
+        <h3 style="font-size:13px;margin:18px 0 8px">Float History</h3>
+        <div class="table-wrap" style="max-height:220px;overflow-y:auto"><table id="sfHistoryTable"><thead><tr>
+          <th>Date</th><th>Kisko Diya</th><th>Amount</th><th>Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
     <!-- FESTIVAL GREETINGS -->
     <section id="tab-greetings" style="display:none">
       <h1 class="page-title">Festival Greetings</h1>
@@ -2219,7 +2265,7 @@ async function logAudit(action, area, summary){
   }catch(e){ /* never block on audit failure */ }
 }
 
-const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments', leads:'leads', customFestivals:'customFestivals', sentGreetings:'sentGreetings', suppliers:'suppliers', approvals:'approvals' };
+const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments', leads:'leads', customFestivals:'customFestivals', sentGreetings:'sentGreetings', suppliers:'suppliers', approvals:'approvals', staffFloats:'staffFloats' };
 const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations', letterheadDocs:'letterheadDocs' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
@@ -2634,7 +2680,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [], sentGreetings: [], suppliers: [], approvals: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [], sentGreetings: [], suppliers: [], approvals: [], staffFloats: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -2645,6 +2691,7 @@ function rerenderAll(){
   renderVendorLedger();
   renderSupplierDirectory();
   renderApprovalsTable();
+  if(currentRole==='owner') renderCashPosition();
   renderAgreementsTable();
   renderDashboard();
   if(currentRole === 'owner'){
@@ -2761,6 +2808,7 @@ async function saveData(){
     sync('sentGreetings', 'sentGreetings');
     sync('suppliers', 'suppliers');
     sync('approvals', 'approvals');
+    sync('staffFloats', 'staffFloats');
 
     if(currentRole === 'owner'){
       sync('clientPayments', 'clientPayments');
@@ -2882,6 +2930,7 @@ document.getElementById('navTabs').addEventListener('click', (e)=>{
   if(btn.dataset.tab==='letterhead') renderLetterheadHistory();
   if(btn.dataset.tab==='greetings') renderLeadsTable();
   if(btn.dataset.tab==='approvals') renderApprovalsTable();
+  if(btn.dataset.tab==='cashposition') renderCashPosition();
   if(btn.dataset.tab==='consultancy') renderConsultancyIncome();
 });
 
@@ -3118,6 +3167,12 @@ function renderSiteSelects(){
     el.innerHTML = prefix + DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
     if(cur) el.value = cur;
   });
+  const sfBulkSiteEl = document.getElementById('sfBulkSite');
+  if(sfBulkSiteEl){
+    const cur = sfBulkSiteEl.value;
+    sfBulkSiteEl.innerHTML = '<option value="">Sabhi Sites</option>' + DATA.sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    if(cur) sfBulkSiteEl.value = cur;
+  }
 }
 
 /* ---------------- Sites tab ---------------- */
@@ -3383,13 +3438,14 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
 
   let isNewLabourEntry = false;
   const linkedConsultancyId = document.getElementById('expConsultancyLink').value;
+  const handledBy = document.getElementById('expHandledBy').value;
   if(editingExpenseId){
     const item = DATA.expenses.find(e=>e.id===editingExpenseId);
-    if(item) Object.assign(item, { siteId, type, category, contractor, date, amount, mode, note, linkedConsultancyId });
+    if(item) Object.assign(item, { siteId, type, category, contractor, date, amount, mode, note, linkedConsultancyId, handledBy });
     cancelExpenseEdit(true);
     showToast('Entry update ho gayi ✓');
   } else {
-    DATA.expenses.push({ id: uid(), siteId, type, category, contractor, date, amount, mode, note, linkedConsultancyId });
+    DATA.expenses.push({ id: uid(), siteId, type, category, contractor, date, amount, mode, note, linkedConsultancyId, handledBy });
     showToast('Expense add ho gaya ✓');
     isNewLabourEntry = true;
   }
@@ -3397,6 +3453,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   document.getElementById('expAmount').value='';
   document.getElementById('expNote').value='';
   document.getElementById('expConsultancyLink').value='';
+  document.getElementById('expHandledBy').value='';
   await saveData();
   renderExpenseTable(); renderDashboard(); renderSitesTable();
   if(isNewLabourEntry) maybeOfferContractorWhatsApp(siteId, contractor, type, amount);
@@ -3418,6 +3475,7 @@ function editExpense(id){
   document.getElementById('expAmount').value = r.amount;
   document.getElementById('expMode').value = r.mode||'Cash';
   document.getElementById('expNote').value = r.note||'';
+  document.getElementById('expHandledBy').value = r.handledBy||'';
   document.getElementById('addExpenseBtn').textContent = '✓ Update Entry';
   document.getElementById('cancelEditBtn').style.display = 'inline-flex';
   document.getElementById('expEditNote').textContent = 'Editing an existing entry — change karke Update dabao.';
@@ -3432,6 +3490,7 @@ function cancelExpenseEdit(silent){
     document.getElementById('expName').value='';
     document.getElementById('expAmount').value='';
     document.getElementById('expNote').value='';
+    document.getElementById('expHandledBy').value='';
   }
 }
 document.getElementById('cancelEditBtn').addEventListener('click', ()=>cancelExpenseEdit(false));
@@ -4743,6 +4802,7 @@ async function loadTeam(){
       };
     }).sort((a,b)=>a.email.localeCompare(b.email));
     renderTeamTable();
+    populateHandledByDropdowns();
   }catch(e){
     showToast('Team load nahi hui — rules check karo');
     console.error(e);
@@ -4842,6 +4902,31 @@ function showInviteDetails(name, email, password){
     try{ await navigator.clipboard.writeText(msg); e.target.textContent = 'Copied ✓'; }
     catch(_){ e.target.textContent = 'Copy nahi hua'; }
   };
+}
+
+/* "Handled By" needs the staff name list for everyone, not just the owner
+   — but the full team-management data (loadTeam) is owner-only. Staff get
+   a lighter read here: just names, via the invites collection which every
+   signed-in user can read. */
+async function populateHandledByDropdowns(){
+  let names = [];
+  if(TEAM.length > 0){
+    names = TEAM.filter(t=>!t.disabled).map(t=>t.name);
+  } else {
+    try{
+      const snap = await db.collection('invites').get();
+      names = snap.docs.map(d=>d.data().name || d.id.split('@')[0]);
+    }catch(e){ /* not critical — dropdown just won't have other staff names */ }
+  }
+  const dropdownIds = ['expHandledBy'];
+  dropdownIds.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="">— Track nahi karna —</option><option value="Owner">Owner (Mera Apna)</option>'
+      + names.map(n=>`<option value="${n}">${n}</option>`).join('');
+    if(cur) el.value = cur;
+  });
 }
 
 function renderTeamTable(){
@@ -8446,19 +8531,32 @@ function renderChartOfAccounts(){
    across all sites and all modules. Udhar is deliberately excluded since
    that money hasn't actually left the account yet (it's a liability, not
    a paid expense) — only settled amounts (vendor payments) count as "out". */
+let cpSelectedSites = null; // null = not initialized yet; Set of siteIds once initialized
+
+function cpInitSelection(){
+  if(cpSelectedSites === null){
+    cpSelectedSites = new Set(DATA.sites.map(s=>s.id)); // all selected by default
+  } else {
+    // Keep existing selections but add any newly-created sites as selected.
+    DATA.sites.forEach(s=>{ if(!cpKnownSiteIds.has(s.id)) cpSelectedSites.add(s.id); });
+  }
+  cpKnownSiteIds = new Set(DATA.sites.map(s=>s.id));
+}
+let cpKnownSiteIds = new Set();
+
 function computeCashPosition(){
-  const excludeGovt = document.getElementById('cpExcludeGovtToggle') && document.getElementById('cpExcludeGovtToggle').checked;
-  const govtSiteIds = new Set(DATA.sites.filter(s=>s.siteType==='government').map(s=>s.id));
+  cpInitSelection();
+  const selected = cpSelectedSites;
 
   const clientReceived = DATA.clientPayments
-    .filter(p => !excludeGovt || !govtSiteIds.has(p.siteId))
+    .filter(p => selected.has(p.siteId))
     .reduce((a,p)=>a+Number(p.amount),0);
   const consultancyReceived = DATA.consultancyIncome.filter(c=>c.status==='received').reduce((a,c)=>a+Number(c.amount),0);
   const investorTaken = DATA.investorLoans.reduce((a,l)=>a+Number(l.taken),0);
   const totalIn = clientReceived + consultancyReceived + investorTaken;
 
   const siteExpenses = DATA.expenses
-    .filter(e => !excludeGovt || !govtSiteIds.has(e.siteId))
+    .filter(e => selected.has(e.siteId))
     .reduce((a,e)=>a+Number(e.amount),0);
   const officeExpenses = DATA.officeExpenses.reduce((a,e)=>a+Number(e.amount),0);
   const personalInvestOut = DATA.personalInvestments.reduce((a,p)=>a+Number(p.amount),0);
@@ -8477,21 +8575,11 @@ function renderCashPosition(){
   const inEl = document.getElementById('cpInBreakdown');
   const outEl = document.getElementById('cpOutBreakdown');
   const netEl = document.getElementById('cpNetBalance');
+  if(!inEl || !outEl || !netEl) return; // tab not open — nothing to render
+
+  renderCpSiteChecklist();
+  renderStaffHandling();
   const c = computeCashPosition();
-  const excludeGovt = document.getElementById('cpExcludeGovtToggle') && document.getElementById('cpExcludeGovtToggle').checked;
-
-  // Prominent top-of-dashboard number — this is the answer to "abhi kitna
-  // fund hai jeb mein pay karne ke liye", updated live with everything else.
-  const fundEl = document.getElementById('statAvailableFund');
-  const fundLblEl = document.querySelector('#statAvailableFundCard .lbl');
-  if(fundLblEl) fundLblEl.textContent = excludeGovt ? '💰 Available Fund (Sirf Turnkey Clients)' : '💰 Available Fund (Jeb Mein Abhi Kitna Hai)';
-  const fundCard = document.getElementById('statAvailableFundCard');
-  if(fundEl){
-    fundEl.textContent = inr(c.net);
-    if(fundCard) fundCard.style.borderLeftColor = c.net >= 0 ? 'var(--good)' : 'var(--bad)';
-  }
-
-  if(!inEl || !outEl || !netEl) return;
 
   inEl.innerHTML = `
     <div style="display:flex;justify-content:space-between"><span>Client Payments</span><strong>${inr(c.clientReceived)}</strong></div>
@@ -8511,10 +8599,147 @@ function renderCashPosition(){
   netEl.textContent = inr(c.net);
   netEl.style.color = c.net >= 0 ? 'var(--good)' : 'var(--bad)';
 }
-document.getElementById('cpExcludeGovtToggle').addEventListener('change', renderCashPosition);
+
+/* ---------------- Staff Cash Handling (who's holding how much) ---------------- */
+function populateSfPersonDropdown(){
+  const el = document.getElementById('sfPerson');
+  const bulkEl = document.getElementById('sfBulkPerson');
+  const names = TEAM.filter(t=>!t.disabled).map(t=>t.name);
+  const optsHtml = '<option value="Owner">Owner (Mera Apna)</option>' + names.map(n=>`<option value="${n}">${n}</option>`).join('');
+  if(el){ const cur = el.value; el.innerHTML = optsHtml; if(cur) el.value = cur; }
+  if(bulkEl){ const cur = bulkEl.value; bulkEl.innerHTML = optsHtml; if(cur) bulkEl.value = cur; }
+}
+
+function sfGetBulkMatches(){
+  const siteId = document.getElementById('sfBulkSite').value;
+  const dateFrom = document.getElementById('sfBulkDateFrom').value;
+  const dateTo = document.getElementById('sfBulkDateTo').value;
+  const onlyEmpty = document.getElementById('sfBulkOnlyEmpty').value === 'yes';
+  return DATA.expenses.filter(e=>{
+    if(siteId && e.siteId !== siteId) return false;
+    if(dateFrom && e.date < dateFrom) return false;
+    if(dateTo && e.date > dateTo) return false;
+    if(onlyEmpty && e.handledBy) return false;
+    return true;
+  });
+}
+
+document.getElementById('sfBulkPreviewBtn').addEventListener('click', ()=>{
+  const matches = sfGetBulkMatches();
+  const box = document.getElementById('sfBulkPreviewBox');
+  const total = matches.reduce((a,e)=>a+Number(e.amount),0);
+  box.innerHTML = matches.length===0
+    ? 'Koi entry match nahi hui in filters se.'
+    : `<strong>${matches.length} entries</strong> match hui, total <strong>${inr(total)}</strong>. "In Sabko Assign Karo" dabao confirm karne ke liye.`;
+  box.style.display = 'block';
+  document.getElementById('sfBulkApplyBtn').style.display = matches.length>0 ? 'inline-flex' : 'none';
+});
+
+document.getElementById('sfBulkApplyBtn').addEventListener('click', async ()=>{
+  const matches = sfGetBulkMatches();
+  const person = document.getElementById('sfBulkPerson').value;
+  if(matches.length===0){ showToast('Koi entry match nahi hui'); return; }
+  if(!await uiConfirm(`${matches.length} purani expense entries mein "Kisne Pay Kiya" = ${person} set karna hai. Confirm karo?`, 'Haan, Sabko Assign Karo')) return;
+
+  let done = 0;
+  try{
+    for(const e of matches){
+      await db.collection('expenses').doc(e.id).update({ handledBy: person });
+      done++;
+    }
+    showToast(`${done} entries update ho gayi ✓ — ${person} ko assign ho gaya`);
+    logAudit('update','Staff Float', `Bulk assign: ${done} expenses → ${person}`);
+    document.getElementById('sfBulkPreviewBox').style.display = 'none';
+    document.getElementById('sfBulkApplyBtn').style.display = 'none';
+  }catch(e){ showToast(`${done} ho gayi, phir error aaya — dobara try karo baaki ke liye`); }
+});
+
+function computeStaffHandling(){
+  const allNames = new Set(['Owner']);
+  DATA.staffFloats.forEach(f=>allNames.add(f.person));
+  DATA.expenses.forEach(e=>{ if(e.handledBy) allNames.add(e.handledBy); });
+
+  return [...allNames].map(person=>{
+    const given = DATA.staffFloats.filter(f=>f.person===person).reduce((a,f)=>a+Number(f.amount),0);
+    const spent = DATA.expenses.filter(e=>e.handledBy===person).reduce((a,e)=>a+Number(e.amount),0);
+    return { person, given, spent, balance: given - spent };
+  }).filter(p => p.given>0 || p.spent>0); // hide people with zero activity
+}
+
+function renderStaffHandling(){
+  const balTbody = document.querySelector('#sfBalanceTable tbody');
+  const histTbody = document.querySelector('#sfHistoryTable tbody');
+  if(!balTbody || !histTbody) return;
+
+  populateSfPersonDropdown();
+
+  const rows = computeStaffHandling();
+  balTbody.innerHTML = rows.length===0
+    ? `<tr><td colspan="4" class="empty">Abhi tak kisi ko float nahi diya, ya kisi expense mein "Kisne Pay Kiya" set nahi kiya.</td></tr>`
+    : rows.map(r=>`<tr>
+        <td>${r.person}</td>
+        <td class="amt">${inr(r.given)}</td>
+        <td class="amt">${inr(r.spent)}</td>
+        <td class="amt" style="color:${r.balance>=0?'var(--good)':'var(--bad)'};font-weight:700">${inr(r.balance)}</td>
+      </tr>`).join('');
+
+  const history = [...DATA.staffFloats].sort((a,b)=>b.date.localeCompare(a.date));
+  histTbody.innerHTML = history.length===0
+    ? `<tr><td colspan="5" class="empty">Abhi koi float record nahi hai.</td></tr>`
+    : history.map(f=>`<tr>
+        <td>${f.date}</td><td>${f.person}</td><td class="amt">${inr(f.amount)}</td><td>${f.note||'—'}</td>
+        <td><button class="btn-danger-text" onclick="deleteStaffFloat('${f.id}')">Delete</button></td>
+      </tr>`).join('');
+}
+
+document.getElementById('sfAddBtn').addEventListener('click', async ()=>{
+  const person = document.getElementById('sfPerson').value;
+  const amount = Number(document.getElementById('sfAmount').value);
+  const note = document.getElementById('sfNote').value.trim();
+  if(!amount || amount<=0){ showToast('Sahi amount daalo'); return; }
+  try{
+    await db.collection('staffFloats').add({ person, amount, date: todayStr(), note });
+    showToast(`${person} ko float add ho gaya ✓`);
+    document.getElementById('sfAmount').value = '';
+    document.getElementById('sfNote').value = '';
+    logAudit('create','Staff Float', `${person} ko ${inr(amount)} diya`);
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); }
+});
+async function deleteStaffFloat(id){
+  if(!await uiConfirm('Ye float record delete karna hai?', 'Haan, delete karo')) return;
+  try{ await db.collection('staffFloats').doc(id).delete(); showToast('Delete ho gaya'); }
+  catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
+function renderCpSiteChecklist(){
+  const wrap = document.getElementById('cpSiteChecklist');
+  if(!wrap) return;
+  cpInitSelection();
+  wrap.innerHTML = DATA.sites.map(s=>`
+    <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;text-transform:none;cursor:pointer;background:var(--surface-2);padding:6px 10px;border-radius:6px">
+      <input type="checkbox" class="cp-site-chk" data-site="${s.id}" ${cpSelectedSites.has(s.id)?'checked':''} style="width:auto;accent-color:var(--blue)">
+      ${s.name}${s.siteType==='government'?' <span class="tag other" style="font-size:9px">GOVT</span>':''}
+    </label>`).join('');
+  wrap.querySelectorAll('.cp-site-chk').forEach(chk=>{
+    chk.addEventListener('change', e=>{
+      const siteId = e.target.dataset.site;
+      if(e.target.checked) cpSelectedSites.add(siteId); else cpSelectedSites.delete(siteId);
+      renderCashPosition();
+    });
+  });
+}
+document.getElementById('cpSelectAllBtn').addEventListener('click', ()=>{
+  cpInitSelection();
+  DATA.sites.forEach(s=>cpSelectedSites.add(s.id));
+  renderCashPosition();
+});
+document.getElementById('cpDeselectAllBtn').addEventListener('click', ()=>{
+  cpInitSelection();
+  cpSelectedSites.clear();
+  renderCashPosition();
+});
 
 function renderDashboard(){
-  if(currentRole==='owner') renderCashPosition();
   const filter = document.getElementById('dashSiteFilter').value;
   const exp = filter==='all' ? DATA.expenses : DATA.expenses.filter(e=>e.siteId===filter);
   const ud = filter==='all' ? DATA.udhar : DATA.udhar.filter(u=>u.siteId===filter);
@@ -9417,6 +9642,7 @@ async function init(){
     await loadLetterheadProfile();
   }
   await loadFirmProfiles();
+  await populateHandledByDropdowns();
   await loadApiFestivalCache();
   await maybeRunAutoReport(false);
 }
