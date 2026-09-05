@@ -595,7 +595,12 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
 
       <div class="card owner-only" id="cashPositionCard">
         <h2>💰 Cash Position <small>Kitna paisa account mein aaya, kitna bahar gaya, kitna bacha hai — sab jagah se combine karke</small></h2>
-        <div class="grid cols-2">
+        <div class="field" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <input type="checkbox" id="cpExcludeGovtToggle" style="width:auto;accent-color:var(--blue)">
+          <label for="cpExcludeGovtToggle" style="margin:0;text-transform:none;font-weight:500;cursor:pointer">Government/RA-Bill sites ka client payment is calculation se hatao — sirf Turnkey clients ka andaza dikhao</label>
+        </div>
+        <div class="hint" style="margin-top:-2px">Ye sirf ek "view" hai — real mein paisa mix hi hota hai, Turnkey clients ka fund government/company ke kaam mein bhi use kar sakte ho. Ye toggle sirf ANDAZA lagane ke liye hai ki sirf turnkey clients ka kitna balance bacha hai.</div>
+        <div class="grid cols-2" style="margin-top:10px">
           <div>
             <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--good);margin-bottom:8px">✅ Paisa Aaya (Money In)</div>
             <div id="cpInBreakdown" style="font-size:13px;line-height:2"></div>
@@ -8442,12 +8447,19 @@ function renderChartOfAccounts(){
    that money hasn't actually left the account yet (it's a liability, not
    a paid expense) — only settled amounts (vendor payments) count as "out". */
 function computeCashPosition(){
-  const clientReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const excludeGovt = document.getElementById('cpExcludeGovtToggle') && document.getElementById('cpExcludeGovtToggle').checked;
+  const govtSiteIds = new Set(DATA.sites.filter(s=>s.siteType==='government').map(s=>s.id));
+
+  const clientReceived = DATA.clientPayments
+    .filter(p => !excludeGovt || !govtSiteIds.has(p.siteId))
+    .reduce((a,p)=>a+Number(p.amount),0);
   const consultancyReceived = DATA.consultancyIncome.filter(c=>c.status==='received').reduce((a,c)=>a+Number(c.amount),0);
   const investorTaken = DATA.investorLoans.reduce((a,l)=>a+Number(l.taken),0);
   const totalIn = clientReceived + consultancyReceived + investorTaken;
 
-  const siteExpenses = DATA.expenses.reduce((a,e)=>a+Number(e.amount),0);
+  const siteExpenses = DATA.expenses
+    .filter(e => !excludeGovt || !govtSiteIds.has(e.siteId))
+    .reduce((a,e)=>a+Number(e.amount),0);
   const officeExpenses = DATA.officeExpenses.reduce((a,e)=>a+Number(e.amount),0);
   const personalInvestOut = DATA.personalInvestments.reduce((a,p)=>a+Number(p.amount),0);
   const personalLoansOut = DATA.personalLoans.reduce((a,p)=>a+Number(p.amount),0);
@@ -8466,10 +8478,13 @@ function renderCashPosition(){
   const outEl = document.getElementById('cpOutBreakdown');
   const netEl = document.getElementById('cpNetBalance');
   const c = computeCashPosition();
+  const excludeGovt = document.getElementById('cpExcludeGovtToggle') && document.getElementById('cpExcludeGovtToggle').checked;
 
   // Prominent top-of-dashboard number — this is the answer to "abhi kitna
   // fund hai jeb mein pay karne ke liye", updated live with everything else.
   const fundEl = document.getElementById('statAvailableFund');
+  const fundLblEl = document.querySelector('#statAvailableFundCard .lbl');
+  if(fundLblEl) fundLblEl.textContent = excludeGovt ? '💰 Available Fund (Sirf Turnkey Clients)' : '💰 Available Fund (Jeb Mein Abhi Kitna Hai)';
   const fundCard = document.getElementById('statAvailableFundCard');
   if(fundEl){
     fundEl.textContent = inr(c.net);
@@ -8496,6 +8511,7 @@ function renderCashPosition(){
   netEl.textContent = inr(c.net);
   netEl.style.color = c.net >= 0 ? 'var(--good)' : 'var(--bad)';
 }
+document.getElementById('cpExcludeGovtToggle').addEventListener('change', renderCashPosition);
 
 function renderDashboard(){
   if(currentRole==='owner') renderCashPosition();
