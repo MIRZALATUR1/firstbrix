@@ -517,6 +517,10 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         🏗️ Business — Site Expenses
       </h2>
       <div class="stat-row">
+        <div class="stat owner-only" id="statAvailableFundCard" style="border-left:4px solid var(--good)">
+          <div class="lbl">💰 Available Fund (Jeb Mein Abhi Kitna Hai)</div>
+          <div class="val" id="statAvailableFund" style="font-size:22px">₹0</div>
+        </div>
         <div class="stat brick"><div class="lbl">Total Expense (Udhar Sahit)</div><div class="val" id="statTotal">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_labour">Labour</div><div class="val" id="statLabour">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_material">Material</div><div class="val" id="statMaterial">₹0</div></div>
@@ -587,6 +591,25 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="table-wrap"><table id="recentTable"><thead><tr>
           <th data-i18n="th_date">Date</th><th data-i18n="th_site">Site</th><th data-i18n="th_type">Type</th><th>Category / Item</th><th data-i18n="th_name">Name</th><th data-i18n="th_amount">Amount</th>
         </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card owner-only" id="cashPositionCard">
+        <h2>💰 Cash Position <small>Kitna paisa account mein aaya, kitna bahar gaya, kitna bacha hai — sab jagah se combine karke</small></h2>
+        <div class="grid cols-2">
+          <div>
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--good);margin-bottom:8px">✅ Paisa Aaya (Money In)</div>
+            <div id="cpInBreakdown" style="font-size:13px;line-height:2"></div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--bad);margin-bottom:8px">⬇ Paisa Gaya (Money Out)</div>
+            <div id="cpOutBreakdown" style="font-size:13px;line-height:2"></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:15px;font-weight:700">Bacha Hua Balance</span>
+          <span id="cpNetBalance" style="font-size:22px;font-weight:800"></span>
+        </div>
+        <div class="hint" style="margin-top:10px">Ye calculation sirf paisa (cash/bank/UPI/cheque) ke movement ka hai — Udhar (jo abhi tak actually pay nahi hua) isme shaamil nahi hai, kyunki wo paisa asal mein gaya hi nahi hai abhi tak.</div>
       </div>
 
       <div class="card" id="remindersCard" style="display:none">
@@ -8414,7 +8437,68 @@ function renderChartOfAccounts(){
   }
 }
 
+/* Whole-company cash position — every actual money movement combined,
+   across all sites and all modules. Udhar is deliberately excluded since
+   that money hasn't actually left the account yet (it's a liability, not
+   a paid expense) — only settled amounts (vendor payments) count as "out". */
+function computeCashPosition(){
+  const clientReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const consultancyReceived = DATA.consultancyIncome.filter(c=>c.status==='received').reduce((a,c)=>a+Number(c.amount),0);
+  const investorTaken = DATA.investorLoans.reduce((a,l)=>a+Number(l.taken),0);
+  const totalIn = clientReceived + consultancyReceived + investorTaken;
+
+  const siteExpenses = DATA.expenses.reduce((a,e)=>a+Number(e.amount),0);
+  const officeExpenses = DATA.officeExpenses.reduce((a,e)=>a+Number(e.amount),0);
+  const personalInvestOut = DATA.personalInvestments.reduce((a,p)=>a+Number(p.amount),0);
+  const personalLoansOut = DATA.personalLoans.reduce((a,p)=>a+Number(p.amount),0);
+  const investorReturnsPaid = DATA.investorLoans.reduce((a,l)=>a+investorPaidSoFar(l),0);
+  const vendorPaid = DATA.vendorPayments.reduce((a,v)=>a+Number(v.amount),0);
+  const totalOut = siteExpenses + officeExpenses + personalInvestOut + personalLoansOut + investorReturnsPaid + vendorPaid;
+
+  return {
+    clientReceived, consultancyReceived, investorTaken, totalIn,
+    siteExpenses, officeExpenses, personalInvestOut, personalLoansOut, investorReturnsPaid, vendorPaid, totalOut,
+    net: totalIn - totalOut
+  };
+}
+function renderCashPosition(){
+  const inEl = document.getElementById('cpInBreakdown');
+  const outEl = document.getElementById('cpOutBreakdown');
+  const netEl = document.getElementById('cpNetBalance');
+  const c = computeCashPosition();
+
+  // Prominent top-of-dashboard number — this is the answer to "abhi kitna
+  // fund hai jeb mein pay karne ke liye", updated live with everything else.
+  const fundEl = document.getElementById('statAvailableFund');
+  const fundCard = document.getElementById('statAvailableFundCard');
+  if(fundEl){
+    fundEl.textContent = inr(c.net);
+    if(fundCard) fundCard.style.borderLeftColor = c.net >= 0 ? 'var(--good)' : 'var(--bad)';
+  }
+
+  if(!inEl || !outEl || !netEl) return;
+
+  inEl.innerHTML = `
+    <div style="display:flex;justify-content:space-between"><span>Client Payments</span><strong>${inr(c.clientReceived)}</strong></div>
+    <div style="display:flex;justify-content:space-between"><span>Consultancy Income</span><strong>${inr(c.consultancyReceived)}</strong></div>
+    <div style="display:flex;justify-content:space-between"><span>Investor Funding Liya</span><strong>${inr(c.investorTaken)}</strong></div>
+    <div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:4px;margin-top:4px;font-weight:700"><span>Total In</span><span>${inr(c.totalIn)}</span></div>`;
+
+  outEl.innerHTML = `
+    <div style="display:flex;justify-content:space-between"><span>Site Expenses (Labour+Material+Other)</span><strong>${inr(c.siteExpenses)}</strong></div>
+    <div style="display:flex;justify-content:space-between"><span>Office Expenses</span><strong>${inr(c.officeExpenses)}</strong></div>
+    <div style="display:flex;justify-content:space-between"><span>Personal Investments</span><strong>${inr(c.personalInvestOut)}</strong></div>
+    <div style="display:flex;justify-content:space-between"><span>Personal Lending Diya</span><strong>${inr(c.personalLoansOut)}</strong></div>
+    <div style="display:flex;justify-content:space-between"><span>Investor Returns Paid</span><strong>${inr(c.investorReturnsPaid)}</strong></div>
+    <div style="display:flex;justify-content:space-between"><span>Vendor/Udhar Payments</span><strong>${inr(c.vendorPaid)}</strong></div>
+    <div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:4px;margin-top:4px;font-weight:700"><span>Total Out</span><span>${inr(c.totalOut)}</span></div>`;
+
+  netEl.textContent = inr(c.net);
+  netEl.style.color = c.net >= 0 ? 'var(--good)' : 'var(--bad)';
+}
+
 function renderDashboard(){
+  if(currentRole==='owner') renderCashPosition();
   const filter = document.getElementById('dashSiteFilter').value;
   const exp = filter==='all' ? DATA.expenses : DATA.expenses.filter(e=>e.siteId===filter);
   const ud = filter==='all' ? DATA.udhar : DATA.udhar.filter(u=>u.siteId===filter);
