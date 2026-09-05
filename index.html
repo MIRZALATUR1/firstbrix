@@ -518,6 +518,10 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         🏗️ Business — Site Expenses
       </h2>
       <div class="stat-row">
+        <div class="stat owner-only" id="statAvailableFundCard" style="border-left:4px solid var(--good)">
+          <div class="lbl">💰 Available Fund (Jeb Mein Abhi Kitna Hai)</div>
+          <div class="val" id="statAvailableFund" style="font-size:22px">₹0</div>
+        </div>
         <div class="stat brick"><div class="lbl">Total Expense (Udhar Sahit)</div><div class="val" id="statTotal">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_labour">Labour</div><div class="val" id="statLabour">₹0</div></div>
         <div class="stat steel"><div class="lbl" data-i18n="stat_material">Material</div><div class="val" id="statMaterial">₹0</div></div>
@@ -1095,8 +1099,9 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           </div>
         </div>
         <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="invNote" placeholder="e.g. agreement details"></div>
+        <div class="field"><label>Ye Fund Kisne Handle Kiya — optional</label><select id="invHandledBy"><option value="">— Track nahi karna —</option><option value="Owner">Owner (Mera Apna)</option></select></div>
         <button class="btn btn-primary" id="addInvestorBtn">+ <span data-i18n="btn_addinvestor">Add Investor Entry</span></button>
-        <div class="hint">Agar sirf mool raqam hi wapas deni hai (bina interest ke), to "Total Return Amount" mein wahi amount daalo jo "Amount Taken" mein daala hai.</div>
+        <div class="hint">Agar sirf mool raqam hi wapas deni hai (bina interest ke), to "Total Return Amount" mein wahi amount daalo jo "Amount Taken" mein daala hai. Agar ye fund kisi token/advance ke roop mein kisi ne use kiya hai (jaise land token), to "Ye Fund Kisne Handle Kiya" mein select karo — Cash Position ke "Kaun Kitna Handle Kar Raha Hai" mein dikhega.</div>
       </div>
 
       <div class="card">
@@ -4918,7 +4923,7 @@ async function populateHandledByDropdowns(){
       names = snap.docs.map(d=>d.data().name || d.id.split('@')[0]);
     }catch(e){ /* not critical — dropdown just won't have other staff names */ }
   }
-  const dropdownIds = ['expHandledBy'];
+  const dropdownIds = ['expHandledBy', 'invHandledBy'];
   dropdownIds.forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
@@ -5413,14 +5418,16 @@ document.getElementById('addInvestorBtn').addEventListener('click', async ()=>{
   if(!investorName){ showToast('Investor ka naam daalo'); return; }
   if(!taken || taken<=0){ showToast('Sahi amount daalo jo liya hai'); return; }
   if(!returnAmt || returnAmt<=0) returnAmt = taken;
+  const invHandledBy = document.getElementById('invHandledBy').value;
 
-  DATA.investorLoans.push({ id: uid(), siteId, investorName, investorPhone, date, taken, returnAmt, expDate, status, note });
+  DATA.investorLoans.push({ id: uid(), siteId, investorName, investorPhone, date, taken, returnAmt, expDate, status, note, handledBy: invHandledBy });
   document.getElementById('invName').value='';
   document.getElementById('invPhone').value='';
   document.getElementById('invTaken').value='';
   document.getElementById('invReturn').value='';
   document.getElementById('invExpDate').value='';
   document.getElementById('invNote').value='';
+  document.getElementById('invHandledBy').value='';
   await saveData();
   renderInvestorTable(); renderDashboard();
   showToast('Investor entry add ho gayi ✓');
@@ -5563,6 +5570,8 @@ function editInvestor(id){
   const linkOptions = [{value:'general', label:'General'}]
     .concat(DATA.sites.map(s=>({value:s.id, label:'🏗️ '+s.name})))
     .concat(DATA.personalInvestments.map(p=>({value:'personal:'+p.id, label:'🏠 '+p.name})));
+  const handledByOptions = [{value:'', label:'— Track nahi karna —'}, {value:'Owner', label:'Owner (Mera Apna)'}]
+    .concat(TEAM.filter(t=>!t.disabled).map(t=>({value:t.name, label:t.name})));
   openEditModal('Investor Entry', [
     {key:'investorName', label:'Investor Name', value:r.investorName},
     {key:'investorPhone', label:'Investor Phone', value:r.investorPhone},
@@ -5572,6 +5581,7 @@ function editInvestor(id){
     {key:'returnAmt', label:'Total Return Amount (₹)', value:r.returnAmt, type:'number'},
     {key:'expDate', label:'Expected Return Date', value:r.expDate, type:'date'},
     {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'pending',label:'Pending'},{value:'returned',label:'Returned'}]},
+    {key:'handledBy', label:'Ye Fund Kisne Handle Kiya', value:r.handledBy||'', type:'select', options:handledByOptions},
     {key:'note', label:'Note', value:r.note}
   ], async v=>{ await db.collection('investorLoans').doc(id).update(v); });
 }
@@ -8544,6 +8554,35 @@ function cpInitSelection(){
 }
 let cpKnownSiteIds = new Set();
 
+/* Dashboard's quick-glance number — deliberately ALWAYS uses every site,
+   independent of whatever subset is checked/unchecked on the Cash Position
+   tab (that tab is for deeper "what-if" analysis; this one is the real
+   overall total, always). */
+function computeOverallAvailableFund(){
+  const clientReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
+  const consultancyReceived = DATA.consultancyIncome.filter(c=>c.status==='received').reduce((a,c)=>a+Number(c.amount),0);
+  const investorTaken = DATA.investorLoans.reduce((a,l)=>a+Number(l.taken),0);
+  const totalIn = clientReceived + consultancyReceived + investorTaken;
+
+  const siteExpenses = DATA.expenses.reduce((a,e)=>a+Number(e.amount),0);
+  const officeExpenses = DATA.officeExpenses.reduce((a,e)=>a+Number(e.amount),0);
+  const personalInvestOut = DATA.personalInvestments.reduce((a,p)=>a+Number(p.amount),0);
+  const personalLoansOut = DATA.personalLoans.reduce((a,p)=>a+Number(p.amount),0);
+  const investorReturnsPaid = DATA.investorLoans.reduce((a,l)=>a+investorPaidSoFar(l),0);
+  const vendorPaid = DATA.vendorPayments.reduce((a,v)=>a+Number(v.amount),0);
+  const totalOut = siteExpenses + officeExpenses + personalInvestOut + personalLoansOut + investorReturnsPaid + vendorPaid;
+
+  return totalIn - totalOut;
+}
+function renderOverallAvailableFund(){
+  const fundEl = document.getElementById('statAvailableFund');
+  const fundCard = document.getElementById('statAvailableFundCard');
+  if(!fundEl) return;
+  const net = computeOverallAvailableFund();
+  fundEl.textContent = inr(net);
+  if(fundCard) fundCard.style.borderLeftColor = net >= 0 ? 'var(--good)' : 'var(--bad)';
+}
+
 function computeCashPosition(){
   cpInitSelection();
   const selected = cpSelectedSites;
@@ -8658,11 +8697,14 @@ function computeStaffHandling(){
   const allNames = new Set(['Owner']);
   DATA.staffFloats.forEach(f=>allNames.add(f.person));
   DATA.expenses.forEach(e=>{ if(e.handledBy) allNames.add(e.handledBy); });
+  DATA.investorLoans.forEach(l=>{ if(l.handledBy) allNames.add(l.handledBy); });
 
   return [...allNames].map(person=>{
-    const given = DATA.staffFloats.filter(f=>f.person===person).reduce((a,f)=>a+Number(f.amount),0);
+    const floatGiven = DATA.staffFloats.filter(f=>f.person===person).reduce((a,f)=>a+Number(f.amount),0);
+    const investorGiven = DATA.investorLoans.filter(l=>l.handledBy===person).reduce((a,l)=>a+Number(l.taken),0);
+    const given = floatGiven + investorGiven;
     const spent = DATA.expenses.filter(e=>e.handledBy===person).reduce((a,e)=>a+Number(e.amount),0);
-    return { person, given, spent, balance: given - spent };
+    return { person, given, floatGiven, investorGiven, spent, balance: given - spent };
   }).filter(p => p.given>0 || p.spent>0); // hide people with zero activity
 }
 
@@ -8678,7 +8720,7 @@ function renderStaffHandling(){
     ? `<tr><td colspan="4" class="empty">Abhi tak kisi ko float nahi diya, ya kisi expense mein "Kisne Pay Kiya" set nahi kiya.</td></tr>`
     : rows.map(r=>`<tr>
         <td>${r.person}</td>
-        <td class="amt">${inr(r.given)}</td>
+        <td class="amt">${inr(r.given)}${r.investorGiven>0?`<div class="footnote" style="margin:2px 0 0">Float: ${inr(r.floatGiven)} · Investor Token: ${inr(r.investorGiven)}</div>`:''}</td>
         <td class="amt">${inr(r.spent)}</td>
         <td class="amt" style="color:${r.balance>=0?'var(--good)':'var(--bad)'};font-weight:700">${inr(r.balance)}</td>
       </tr>`).join('');
@@ -8740,6 +8782,7 @@ document.getElementById('cpDeselectAllBtn').addEventListener('click', ()=>{
 });
 
 function renderDashboard(){
+  if(currentRole==='owner') renderOverallAvailableFund();
   const filter = document.getElementById('dashSiteFilter').value;
   const exp = filter==='all' ? DATA.expenses : DATA.expenses.filter(e=>e.siteId===filter);
   const ud = filter==='all' ? DATA.udhar : DATA.udhar.filter(u=>u.siteId===filter);
