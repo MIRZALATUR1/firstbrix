@@ -17,44 +17,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="96x96" href="icons/icon-96.png">
 <link rel="shortcut icon" href="icons/icon-96.png">
+<link rel="manifest" href="manifest.json">
 <script>
-/* PWA manifest — built and attached at runtime as a Blob URL, so the whole
-   app (icons included) stays inside this one HTML file. No separate
-   manifest.json or icon files need to be hosted alongside it. */
-(function(){
-  const manifest = {
-    id: "/",
-    name: "FirstBrix Infratech — Expense Manager",
-    short_name: "FirstBrix",
-    description: "Construction site expense, ledger and client management for FirstBrix Infratech Pvt. Ltd.",
-    start_url: window.location.href.split('#')[0],
-    scope: window.location.href.split('#')[0].replace(/[^/]*$/, ''),
-    display: "standalone",
-    display_override: ["standalone", "minimal-ui"],
-    orientation: "portrait-primary",
-    background_color: "#0E0E10",
-    theme_color: "#6B0F0F",
-    categories: ["business", "finance", "productivity"],
-    prefer_related_applications: false,
-    lang: "hi",
-    dir: "ltr",
-    icons: [
-      { src: "icons/icon-72.png", sizes: "72x72", type: "image/png" },
-      { src: "icons/icon-96.png", sizes: "96x96", type: "image/png" },
-      { src: "icons/icon-128.png", sizes: "128x128", type: "image/png" },
-      { src: "icons/icon-144.png", sizes: "144x144", type: "image/png" },
-      { src: "icons/icon-152.png", sizes: "152x152", type: "image/png" },
-      { src: "icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
-      { src: "icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
-    ]
-  };
-  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-  const link = document.createElement('link');
-  link.rel = 'manifest';
-  link.href = URL.createObjectURL(blob);
-  document.head.appendChild(link);
-})();
-
 /* Service worker — required by Android/Chrome for full "installable"
    status (a fetch handler must exist). Registered from a real file at
    /sw.js, NOT a Blob URL — browsers refuse to run service workers from
