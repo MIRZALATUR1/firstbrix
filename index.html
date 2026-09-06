@@ -2395,7 +2395,10 @@ const IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
    at all (Apple's own restriction) — the only way to install there is the
    Share-sheet "Add to Home Screen" action, so we just show instructions. */
 let deferredInstallPrompt = null;
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+let isStandalone = false;
+try{
+  isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+}catch(e){ /* some browsers/WebViews don't support matchMedia — never let this break the rest of the app */ }
 if(isStandalone){
   const hintEl = document.getElementById('googleStandaloneHint');
   if(hintEl) hintEl.style.display = 'block';
@@ -2409,42 +2412,58 @@ const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream;
    with zero errors. Push page content up by the banner's real height
    whenever it's shown, and remove that padding when it's hidden. */
 function showInstallBanner(){
-  const banner = document.getElementById('installBanner');
-  banner.style.display = 'flex';
-  requestAnimationFrame(()=>{
-    document.body.style.paddingBottom = banner.offsetHeight + 'px';
-  });
+  try{
+    const banner = document.getElementById('installBanner');
+    if(!banner) return;
+    banner.style.display = 'flex';
+    requestAnimationFrame(()=>{
+      try{ document.body.style.paddingBottom = banner.offsetHeight + 'px'; }catch(e){}
+    });
+  }catch(e){}
 }
 function hideInstallBanner(){
-  document.getElementById('installBanner').style.display = 'none';
-  document.body.style.paddingBottom = '';
+  try{
+    const banner = document.getElementById('installBanner');
+    if(banner) banner.style.display = 'none';
+    document.body.style.paddingBottom = '';
+  }catch(e){}
 }
 
-window.addEventListener('beforeinstallprompt', e=>{
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  if(!isStandalone && !localStorage.getItem('installBannerDismissed')){
+try{
+  window.addEventListener('beforeinstallprompt', e=>{
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if(!isStandalone && !localStorage.getItem('installBannerDismissed')){
+      showInstallBanner();
+    }
+  });
+}catch(e){}
+
+try{
+  if(isIOS && !isStandalone && !localStorage.getItem('installBannerDismissed')){
+    const t = document.getElementById('installBannerText');
+    const b = document.getElementById('installBannerBtn');
+    if(t) t.textContent = '📱 App jaisa install karne ke liye: neeche Share (⬆️) button dabao, phir "Add to Home Screen" chuno.';
+    if(b) b.style.display = 'none';
     showInstallBanner();
   }
-});
+}catch(e){}
 
-if(isIOS && !isStandalone && !localStorage.getItem('installBannerDismissed')){
-  document.getElementById('installBannerText').textContent = '📱 App jaisa install karne ke liye: neeche Share (⬆️) button dabao, phir "Add to Home Screen" chuno.';
-  document.getElementById('installBannerBtn').style.display = 'none';
-  showInstallBanner();
-}
-
-document.getElementById('installBannerBtn').addEventListener('click', async ()=>{
-  if(!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  hideInstallBanner();
-});
-document.getElementById('installBannerClose').addEventListener('click', ()=>{
-  hideInstallBanner();
-  localStorage.setItem('installBannerDismissed', '1');
-});
+try{
+  const ib = document.getElementById('installBannerBtn');
+  if(ib) ib.addEventListener('click', async ()=>{
+    if(!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    hideInstallBanner();
+  });
+  const ic = document.getElementById('installBannerClose');
+  if(ic) ic.addEventListener('click', ()=>{
+    hideInstallBanner();
+    try{ localStorage.setItem('installBannerDismissed', '1'); }catch(e){}
+  });
+}catch(e){}
 
 
 async function completeRedirectSignIn(){
