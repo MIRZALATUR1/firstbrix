@@ -410,10 +410,11 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
     </div>
 
     <div id="authBox">
-      <button class="btn btn-ghost" id="googleBtn" style="width:100%;justify-content:center;margin-bottom:14px;gap:10px;padding:12px">
+      <button class="btn btn-ghost" id="googleBtn" style="width:100%;justify-content:center;margin-bottom:6px;gap:10px;padding:12px">
         <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.2-.4-4.7H24v8.9h11.8c-.5 2.7-2.1 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.3z"/><path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.3l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.1H4.3v5.7C7.9 41.1 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.6 28.2c-.4-1.3-.7-2.7-.7-4.2s.3-2.9.7-4.2v-5.7H4.3C2.8 17 2 20.4 2 24s.8 7 2.3 9.9l7.3-5.7z"/><path fill="#EA4335" d="M24 10.7c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 4.1 30 2 24 2 15.4 2 7.9 6.9 4.3 14.1l7.3 5.7c1.7-5.2 6.6-9.1 12.4-9.1z"/></svg>
         <span data-i18n="btn_google">Google se login karo</span>
       </button>
+      <div id="googleStandaloneHint" style="display:none;font-size:11px;color:var(--ink-soft);margin-bottom:14px;text-align:center">⚠️ Installed app mein Google login kaam nahi karta — neeche Email/Password use karo.</div>
 
       <div style="display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--ink-soft);font-size:11px;text-transform:uppercase;letter-spacing:1px">
         <span style="flex:1;height:1px;background:var(--line)"></span>ya email se<span style="flex:1;height:1px;background:var(--line)"></span>
@@ -2395,6 +2396,10 @@ const IS_MOBILE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
    Share-sheet "Add to Home Screen" action, so we just show instructions. */
 let deferredInstallPrompt = null;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+if(isStandalone){
+  const hintEl = document.getElementById('googleStandaloneHint');
+  if(hintEl) hintEl.style.display = 'block';
+}
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream;
 
 window.addEventListener('beforeinstallprompt', e=>{
@@ -2455,7 +2460,9 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
   document.getElementById('loginError').textContent = '';
   if(!email || !pw){ document.getElementById('loginError').textContent = 'Email aur password dono daalo.'; return; }
   const btn = document.getElementById('loginBtn');
+  const originalText = btn.textContent;
   btn.disabled = true;
+  btn.textContent = 'Login ho raha hai… (kuch second lag sakte hain)';
   try{
     await withTimeout(auth.signInWithEmailAndPassword(email, pw), 15000);
   }catch(e){
@@ -2466,6 +2473,7 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
     }
   }
   btn.disabled = false;
+  btn.textContent = originalText;
 });
 
 document.getElementById('signupBtn').addEventListener('click', async ()=>{
@@ -2493,6 +2501,10 @@ document.getElementById('signupBtn').addEventListener('click', async ()=>{
 
 document.getElementById('googleBtn').addEventListener('click', async ()=>{
   document.getElementById('loginError').textContent = '';
+  if(isStandalone){
+    document.getElementById('loginError').textContent = 'Installed app (home screen icon / APK) mein Google Login reliably kaam nahi karta — ye iOS/Android ki apni limitation hai. Neeche Email + Password se login karo (ya isi link ko normal browser mein khol ke Google se try karo).';
+    return;
+  }
   const provider = new firebase.auth.GoogleAuthProvider();
   try{
     await auth.signInWithRedirect(provider);   // redirect is far more reliable than popups, which Google often flags as insecure
