@@ -536,6 +536,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </select>
         <div class="auto-status" id="autoStatus">Auto report status loading…</div>
         <button class="btn btn-ghost" id="manualAutoReportBtn" style="padding:7px 12px;font-size:12px;">Generate 15-day Report Now</button>
+        <button class="btn btn-ghost" id="setPasswordBtn" style="display:none;padding:7px 12px;font-size:12px;background:#25D366;color:#fff;border-color:#25D366">🔑 Password Set Karo</button>
         <button class="btn btn-ghost" id="logoutBtn" style="padding:7px 12px;font-size:12px;"><span data-i18n="btn_logout">Logout</span></button>
       </div>
     </div>
@@ -2346,27 +2347,29 @@ async function initFirebase(){
   storage = firebase.storage();
   db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); // offline cache, ignored if unsupported
 
-  /* iOS's standalone "Add to Home Screen" WebView (and, we now know,
-     Android TWA-wrapped installs too) have a known bug where IndexedDB
-     access can hang indefinitely instead of resolving OR rejecting — and
-     since setPersistence relies on IndexedDB, the whole app used to get
-     stuck here forever on installed apps, never even reaching the login
-     screen. A timeout race + a persistence fallback chain means the app
-     always proceeds, even if full persistent login isn't available on
-     that particular device. withTimeout is global — signInWithEmailAndPassword
-     itself can hang the same way in these broken environments, so the
-     login button also needs this same protection (see loginBtn handler). */
-  /* iOS's standalone "Add to Home Screen" WebView (and, we now know,
-     Android TWA-wrapped installs too) have a known bug where IndexedDB
-     access can hang indefinitely instead of resolving OR rejecting — and
-     since setPersistence relies on IndexedDB, the whole app used to get
-     stuck here forever on installed apps, never even reaching the login
-     screen. Test IndexedDB directly first (with its own short timeout)
-     so we pick the right persistence mode immediately, instead of letting
-     Auth's own LOCAL/SESSION attempts hang and potentially leave the SDK
-     in a half-broken state that then makes signInWithEmailAndPassword
-     hang too. withTimeout is global — the login/signup buttons use the
-     same protection as a second safety net. */
+  /* CRITICAL ORDERING: capture any pending Google-redirect result FIRST,
+     before touching setPersistence at all. Google Sign-In's redirect flow
+     writes its own pending-redirect marker using Firebase's default
+     storage, and reads it back here — if our custom persistence logic
+     below runs first and lands on NONE (which it does whenever IndexedDB
+     looks unreliable), that marker becomes unreadable and the completed
+     Google sign-in silently vanishes: the page returns from Google with
+     no error and no logged-in state, exactly as if nothing happened. */
+  try{ await auth.getRedirectResult(); }
+  catch(e){ showAuthError(e); }
+
+  /* iOS's standalone "Add to Home Screen" WebView (and Android TWA-wrapped
+     installs too) have a known bug where IndexedDB access can hang
+     indefinitely instead of resolving OR rejecting — and since
+     setPersistence relies on IndexedDB, the whole app used to get stuck
+     here forever on installed apps, never even reaching the login screen.
+     Test IndexedDB directly first (with its own short timeout) so we pick
+     the right persistence mode immediately, instead of letting Auth's own
+     LOCAL/SESSION attempts hang and potentially leave the SDK in a
+     half-broken state that then makes signInWithEmailAndPassword hang too.
+     withTimeout is global — the login/signup buttons use the same
+     protection as a second safety net. This now runs AFTER redirect
+     capture above, so it can no longer break Google Sign-In. */
   const indexedDbWorks = await withTimeout(new Promise((resolve)=>{
     try{
       const req = indexedDB.open('__fb_health_check__');
@@ -2465,11 +2468,6 @@ try{
   });
 }catch(e){}
 
-
-async function completeRedirectSignIn(){
-  try{ await auth.getRedirectResult(); }
-  catch(e){ showAuthError(e); }
-}
 
 function authMessage(code){
   const m = {
@@ -2824,6 +2822,55 @@ function hideBootLoader(){
   if(el) el.remove();
 }
 
+/* Accounts created purely via "Google se login karo" have NO password —
+   if Google's redirect-based sign-in ever becomes unreliable on a given
+   device/network (a known, hard-to-fully-fix limitation of that flow),
+   there's no fallback. This lets anyone already signed in add a password
+   to their SAME account once, so future logins never depend on Google's
+   redirect flow working. */
+function checkPasswordProvider(user){
+  const btn = document.getElementById('setPasswordBtn');
+  if(!btn) return;
+  const hasPassword = user.providerData.some(p => p.providerId === 'password');
+  btn.style.display = hasPassword ? 'none' : 'inline-flex';
+}
+
+document.getElementById('setPasswordBtn').addEventListener('click', ()=>{
+  const user = auth.currentUser;
+  if(!user) return;
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal">
+    <h3>🔑 Password Set Karo</h3>
+    <p>Abhi aap sirf Google se login karte ho. Ek password set karke, aage se seedha Email + Password se bhi login kar sakte ho — Google ke redirect pe depend nahi karna padega (jo kabhi-kabhi kuch devices/networks pe reliably kaam nahi karta).</p>
+    <div class="field"><label>Naya Password (min 6 characters)</label><input type="password" id="spNewPw" placeholder="Naya password"></div>
+    <div class="field"><label>Password Dobara Likho</label><input type="password" id="spConfirmPw" placeholder="Confirm karo"></div>
+    <div class="login-error" id="spErr"></div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn btn-ghost" data-cancel style="flex:1;justify-content:center">Cancel</button>
+      <button class="btn btn-primary" data-save style="flex:1;justify-content:center">Save Password</button>
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('[data-cancel]').onclick = ()=>bg.remove();
+  bg.querySelector('[data-save]').onclick = async ()=>{
+    const pw = bg.querySelector('#spNewPw').value;
+    const confirmPw = bg.querySelector('#spConfirmPw').value;
+    const errEl = bg.querySelector('#spErr');
+    if(!pw || pw.length < 6){ errEl.textContent = 'Password kam se kam 6 characters ka rakho.'; return; }
+    if(pw !== confirmPw){ errEl.textContent = 'Dono password match nahi kar rahe.'; return; }
+    try{
+      const cred = firebase.auth.EmailAuthProvider.credential(user.email, pw);
+      await user.linkWithCredential(cred);
+      bg.remove();
+      checkPasswordProvider(user);
+      await uiAlert(`Password set ho gaya ✓\n\nAb aage se aap Email: ${user.email} aur yehi password use karke seedha Login kar sakte ho — Google ki zaroorat nahi padegi.`, 'Success');
+    }catch(e){
+      errEl.textContent = e.code === 'auth/provider-already-linked' ? 'Password pehle se set hai.' : ('Error: ' + e.message);
+    }
+  };
+});
+
 function startAuthWatch(){
   auth.onAuthStateChanged(async (user)=>{
     if(!user){
@@ -2848,6 +2895,7 @@ function startAuthWatch(){
       }
       currentUser = profile;
       currentRole = profile.role;
+      checkPasswordProvider(user);
       await unlockApp();
       hideBootLoader();
     }catch(e){ showAuthError(e); document.getElementById('loginScreen').style.display='flex'; hideBootLoader(); }
@@ -9936,7 +9984,6 @@ async function boot(){
   try{
     const ok = await initFirebase();
     if(!ok){ clearBootTimeout(); return; }
-    await completeRedirectSignIn();
     startAuthWatch();
   }catch(e){
     console.error('boot failed', e);
