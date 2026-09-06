@@ -2342,10 +2342,24 @@ async function initFirebase(){
   db = firebase.firestore();
   storage = firebase.storage();
   db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); // offline cache, ignored if unsupported
-  /* Persistence MUST finish resolving before anything else touches auth,
-     otherwise a race can drop the session — this was why closing the window
-     (or reopening on mobile) was silently logging people out. */
-  try{ await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){}
+
+  /* iOS's standalone "Add to Home Screen" WebView has a known bug where
+     IndexedDB access can hang indefinitely instead of resolving OR
+     rejecting — and since setPersistence relies on IndexedDB, the whole
+     app used to get stuck here forever on installed iOS PWAs, never even
+     reaching the login screen. A timeout race + a persistence fallback
+     chain means the app always proceeds, even if full persistent login
+     isn't available on that particular device. */
+  const withTimeout = (promise, ms) => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(()=>reject(new Error('timeout')), ms))
+  ]);
+  try{
+    await withTimeout(auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL), 3000);
+  }catch(e){
+    try{ await withTimeout(auth.setPersistence(firebase.auth.Auth.Persistence.SESSION), 3000); }
+    catch(e2){ try{ await auth.setPersistence(firebase.auth.Auth.Persistence.NONE); }catch(e3){} }
+  }
   return true;
 }
 
