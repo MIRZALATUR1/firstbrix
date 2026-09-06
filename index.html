@@ -2315,6 +2315,17 @@ const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
    overwriting each other's entries. */
 let serverState = {};
 
+/* Global helper — races any promise against a timeout. Needed because
+   certain installed-app WebView contexts (iOS home-screen PWA, Android
+   TWA wrapper) have broken IndexedDB that can make Firebase Auth calls
+   hang forever instead of resolving or rejecting. Used both during boot
+   (setPersistence) and on the actual login/signup calls, since both can
+   hang the same way in these environments. */
+const withTimeout = (promise, ms) => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(()=>reject(new Error('timeout')), ms))
+]);
+
 async function initFirebase(){
   if(!CONFIG_OK){
     document.getElementById('configWarn').style.display = 'block';
@@ -2328,22 +2339,43 @@ async function initFirebase(){
   storage = firebase.storage();
   db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); // offline cache, ignored if unsupported
 
-  /* iOS's standalone "Add to Home Screen" WebView has a known bug where
-     IndexedDB access can hang indefinitely instead of resolving OR
-     rejecting — and since setPersistence relies on IndexedDB, the whole
-     app used to get stuck here forever on installed iOS PWAs, never even
-     reaching the login screen. A timeout race + a persistence fallback
-     chain means the app always proceeds, even if full persistent login
-     isn't available on that particular device. */
-  const withTimeout = (promise, ms) => Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(()=>reject(new Error('timeout')), ms))
-  ]);
-  try{
-    await withTimeout(auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL), 3000);
-  }catch(e){
-    try{ await withTimeout(auth.setPersistence(firebase.auth.Auth.Persistence.SESSION), 3000); }
-    catch(e2){ try{ await auth.setPersistence(firebase.auth.Auth.Persistence.NONE); }catch(e3){} }
+  /* iOS's standalone "Add to Home Screen" WebView (and, we now know,
+     Android TWA-wrapped installs too) have a known bug where IndexedDB
+     access can hang indefinitely instead of resolving OR rejecting — and
+     since setPersistence relies on IndexedDB, the whole app used to get
+     stuck here forever on installed apps, never even reaching the login
+     screen. A timeout race + a persistence fallback chain means the app
+     always proceeds, even if full persistent login isn't available on
+     that particular device. withTimeout is global — signInWithEmailAndPassword
+     itself can hang the same way in these broken environments, so the
+     login button also needs this same protection (see loginBtn handler). */
+  /* iOS's standalone "Add to Home Screen" WebView (and, we now know,
+     Android TWA-wrapped installs too) have a known bug where IndexedDB
+     access can hang indefinitely instead of resolving OR rejecting — and
+     since setPersistence relies on IndexedDB, the whole app used to get
+     stuck here forever on installed apps, never even reaching the login
+     screen. Test IndexedDB directly first (with its own short timeout)
+     so we pick the right persistence mode immediately, instead of letting
+     Auth's own LOCAL/SESSION attempts hang and potentially leave the SDK
+     in a half-broken state that then makes signInWithEmailAndPassword
+     hang too. withTimeout is global — the login/signup buttons use the
+     same protection as a second safety net. */
+  const indexedDbWorks = await withTimeout(new Promise((resolve)=>{
+    try{
+      const req = indexedDB.open('__fb_health_check__');
+      req.onsuccess = () => { req.result.close(); indexedDB.deleteDatabase('__fb_health_check__'); resolve(true); };
+      req.onerror = () => resolve(false);
+      req.onblocked = () => resolve(false);
+    }catch(e){ resolve(false); }
+  }), 2500).catch(()=>false);
+
+  if(indexedDbWorks){
+    try{ await withTimeout(auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL), 3000); }
+    catch(e){ try{ await auth.setPersistence(firebase.auth.Auth.Persistence.NONE); }catch(e2){} }
+  } else {
+    // IndexedDB is broken in this environment — don't even try LOCAL/SESSION,
+    // go straight to NONE so login itself doesn't inherit the same hang.
+    try{ await auth.setPersistence(firebase.auth.Auth.Persistence.NONE); }catch(e){}
   }
   return true;
 }
@@ -2416,8 +2448,18 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
   const pw    = document.getElementById('loginPw').value;
   document.getElementById('loginError').textContent = '';
   if(!email || !pw){ document.getElementById('loginError').textContent = 'Email aur password dono daalo.'; return; }
-  try{ await auth.signInWithEmailAndPassword(email, pw); }
-  catch(e){ showAuthError(e); }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  try{
+    await withTimeout(auth.signInWithEmailAndPassword(email, pw), 15000);
+  }catch(e){
+    if(e.message === 'timeout'){
+      document.getElementById('loginError').textContent = 'Login response nahi aaya (15 second wait kiya) — is device/app ke storage mein dikkat lag rahi hai. App band karke dobara kholo, ya browser (Chrome) se try karo.';
+    } else {
+      showAuthError(e);
+    }
+  }
+  btn.disabled = false;
 });
 
 document.getElementById('signupBtn').addEventListener('click', async ()=>{
@@ -2428,10 +2470,19 @@ document.getElementById('signupBtn').addEventListener('click', async ()=>{
     document.getElementById('loginError').textContent = 'Email daalo aur password kam se kam 6 characters ka rakho.';
     return;
   }
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true;
   try{
-    await auth.createUserWithEmailAndPassword(email, pw);
+    await withTimeout(auth.createUserWithEmailAndPassword(email, pw), 15000);
     showToast('Account ban gaya ✓');
-  }catch(e){ showAuthError(e); }
+  }catch(e){
+    if(e.message === 'timeout'){
+      document.getElementById('loginError').textContent = 'Response nahi aaya (15 second wait kiya) — is device/app ke storage mein dikkat lag rahi hai. Browser (Chrome) se try karo.';
+    } else {
+      showAuthError(e);
+    }
+  }
+  btn.disabled = false;
 });
 
 document.getElementById('googleBtn').addEventListener('click', async ()=>{
