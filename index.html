@@ -2402,18 +2402,36 @@ if(isStandalone){
 }
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream;
 
+/* The banner is `position:fixed; bottom:0`, which sits on TOP of whatever
+   content happens to be at the bottom of the viewport — including, on many
+   phone screen sizes, the Login button. That silently ate clicks meant for
+   Login (and the Google button), looking exactly like "login does nothing"
+   with zero errors. Push page content up by the banner's real height
+   whenever it's shown, and remove that padding when it's hidden. */
+function showInstallBanner(){
+  const banner = document.getElementById('installBanner');
+  banner.style.display = 'flex';
+  requestAnimationFrame(()=>{
+    document.body.style.paddingBottom = banner.offsetHeight + 'px';
+  });
+}
+function hideInstallBanner(){
+  document.getElementById('installBanner').style.display = 'none';
+  document.body.style.paddingBottom = '';
+}
+
 window.addEventListener('beforeinstallprompt', e=>{
   e.preventDefault();
   deferredInstallPrompt = e;
   if(!isStandalone && !localStorage.getItem('installBannerDismissed')){
-    document.getElementById('installBanner').style.display = 'flex';
+    showInstallBanner();
   }
 });
 
 if(isIOS && !isStandalone && !localStorage.getItem('installBannerDismissed')){
   document.getElementById('installBannerText').textContent = '📱 App jaisa install karne ke liye: neeche Share (⬆️) button dabao, phir "Add to Home Screen" chuno.';
   document.getElementById('installBannerBtn').style.display = 'none';
-  document.getElementById('installBanner').style.display = 'flex';
+  showInstallBanner();
 }
 
 document.getElementById('installBannerBtn').addEventListener('click', async ()=>{
@@ -2421,10 +2439,10 @@ document.getElementById('installBannerBtn').addEventListener('click', async ()=>
   deferredInstallPrompt.prompt();
   await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;
-  document.getElementById('installBanner').style.display = 'none';
+  hideInstallBanner();
 });
 document.getElementById('installBannerClose').addEventListener('click', ()=>{
-  document.getElementById('installBanner').style.display = 'none';
+  hideInstallBanner();
   localStorage.setItem('installBannerDismissed', '1');
 });
 
