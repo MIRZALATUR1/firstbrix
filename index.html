@@ -863,6 +863,33 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card">
+        <h2>↩️ Material Return / Refund <small>Site pe bacha hua material wapas kiya ho aur uske paise mile hon, to yahan record karo — ye paisa Cash Position mein "Money In" ki tarah jud jayega</small></h2>
+        <div class="grid cols-3">
+          <div class="field"><label>Site</label><select id="mrSite"></select></div>
+          <div class="field"><label>Material Type</label>
+            <select id="mrMaterial">
+              <option>Cement</option><option>Steel / TMT Bar</option><option>Bricks</option><option>Sand</option>
+              <option>Aggregate / Gitti</option><option>Tiles</option><option>Paint</option><option>Plumbing Material</option>
+              <option>Electrical Material</option><option>Hardware</option><option>Wood / Furniture</option><option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Supplier — optional</label><input id="mrSupplier" placeholder="Kisko wapas kiya"></div>
+        </div>
+        <div class="grid cols-3">
+          <div class="field"><label>Quantity Returned</label><input id="mrQty" type="number" min="0" placeholder="e.g. 20"></div>
+          <div class="field"><label>Date</label><input id="mrDate" type="date"></div>
+          <div class="field"><label>Amount Wapas Mila (₹)</label><input id="mrAmount" type="number" min="0" placeholder="0"></div>
+        </div>
+        <div class="field"><label>Note — optional</label><input id="mrNote" placeholder="e.g. extra cement bache the, dukaan ko wapas kiya"></div>
+        <button class="btn btn-primary" id="mrAddBtn">+ Material Return Add Karo</button>
+        <div class="hint">Ye site ki material cost se automatically ghata diya jayega (kyunki wo material ab use nahi hua), aur poore business ke "money in" mein jud jayega.</div>
+
+        <div class="table-wrap" style="margin-top:14px"><table id="mrTable"><thead><tr>
+          <th>Date</th><th>Site</th><th>Material</th><th>Qty</th><th>Supplier</th><th>Amount</th><th>Note</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
         <h2>Vendor Ledger <small>Ek vendor se kayi sites pe udhar liya ho, to yahan se lumpsum payment do — system khud purane bill se shuru karke adjust kar dega (chahe wo kisi bhi site ka ho). Overall udhari yahan se automatic deduct hoti hai.</small></h2>
         <div class="table-wrap"><table id="vendorLedgerTable"><thead><tr>
           <th>Vendor</th><th>Total Billed (Sabhi Sites)</th><th>Total Paid</th><th>Outstanding</th><th>Bills</th><th></th>
@@ -2314,7 +2341,7 @@ async function logAudit(action, area, summary){
   }catch(e){ /* never block on audit failure */ }
 }
 
-const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments', leads:'leads', customFestivals:'customFestivals', sentGreetings:'sentGreetings', suppliers:'suppliers', approvals:'approvals', staffFloats:'staffFloats' };
+const PUBLIC_COLS  = { sites:'sites', expenses:'expenses', udhar:'udhar', workAgreements:'agreements', vendorPayments:'vendorPayments', leads:'leads', customFestivals:'customFestivals', sentGreetings:'sentGreetings', suppliers:'suppliers', approvals:'approvals', staffFloats:'staffFloats', materialReturns:'materialReturns' };
 const PRIVATE_COLS = { clientPayments:'clientPayments', investorLoans:'investorLoans', officeExpenses:'officeExpenses', personalInvestments:'personalInvestments', personalLoans:'personalLoans', projectUnits:'projectUnits', paymentSlabs:'paymentSlabs', consultancyIncome:'consultancyIncome', siteInvestments:'siteInvestments', billQuotations:'billQuotations', letterheadDocs:'letterheadDocs' };
 const ALL_COLS = Object.assign({}, PUBLIC_COLS, PRIVATE_COLS);
 
@@ -2925,7 +2952,7 @@ async function unlockApp(){
 }
 
 /* ---------------- Data ---------------- */
-let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [], sentGreetings: [], suppliers: [], approvals: [], staffFloats: [] };
+let DATA = { sites: [], expenses: [], udhar: [], clientPayments: [], investorLoans: [], officeExpenses: [], workAgreements: [], personalInvestments: [], personalLoans: [], projectUnits: [], paymentSlabs: [], consultancyIncome: [], vendorPayments: [], siteInvestments: [], billQuotations: [], letterheadDocs: [], leads: [], customFestivals: [], sentGreetings: [], suppliers: [], approvals: [], staffFloats: [], materialReturns: [] };
 
 function rerenderAll(){
   refreshSuggestions();
@@ -2934,6 +2961,7 @@ function rerenderAll(){
   renderExpenseTable();
   renderUdharTable();
   renderVendorLedger();
+  renderMaterialReturns();
   renderSupplierDirectory();
   renderApprovalsTable();
   if(currentRole==='owner') renderCashPosition();
@@ -3054,6 +3082,7 @@ async function saveData(){
     sync('suppliers', 'suppliers');
     sync('approvals', 'approvals');
     sync('staffFloats', 'staffFloats');
+    sync('materialReturns', 'materialReturns');
 
     if(currentRole === 'owner'){
       sync('clientPayments', 'clientPayments');
@@ -3345,7 +3374,8 @@ function openWhatsApp(phone, message){
 function siteCost(siteId){
   const exp = DATA.expenses.filter(e=>e.siteId===siteId).reduce((a,e)=>a+Number(e.amount),0);
   const ud = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
-  return exp + ud;
+  const returned = DATA.materialReturns.filter(r=>r.siteId===siteId).reduce((a,r)=>a+Number(r.amount),0);
+  return exp + ud - returned;
 }
 /* Remaining balance per udhar entry, accounting for vendor lumpsum payments —
    use this anywhere "Credit Pending" is shown instead of the raw status field. */
@@ -3368,7 +3398,7 @@ function siteReceived(siteId){
 }
 
 function renderSiteSelects(){
-  const selects = ['expSite','udSite','cpSite','agSite','qSite','apSite','cuSite'];
+  const selects = ['expSite','udSite','cpSite','agSite','qSite','apSite','cuSite','mrSite'];
   selects.forEach(id=>{
     const el = document.getElementById(id);
     const cur = el.value;
@@ -4244,6 +4274,55 @@ document.getElementById('udListSiteFilter').addEventListener('change', renderUdh
 document.getElementById('udListStatusFilter').addEventListener('change', renderUdharTable);
 
 /* ---------------- Vendor Ledger UI ---------------- */
+/* ---------------- Material Return / Refund ---------------- */
+document.getElementById('mrAddBtn').addEventListener('click', async ()=>{
+  const siteId = document.getElementById('mrSite').value;
+  const material = document.getElementById('mrMaterial').value;
+  const supplier = document.getElementById('mrSupplier').value.trim();
+  const qty = Number(document.getElementById('mrQty').value);
+  const date = document.getElementById('mrDate').value || todayStr();
+  const amount = Number(document.getElementById('mrAmount').value);
+  const note = document.getElementById('mrNote').value.trim();
+
+  if(!siteId){ showToast('Site chuno'); return; }
+  if(!amount || amount<=0){ showToast('Sahi amount daalo jo wapas mila'); return; }
+
+  try{
+    await db.collection('materialReturns').add({ siteId, material, supplier, qty, date, amount, note });
+    showToast('Material return add ho gaya ✓');
+    logAudit('create','Material Return', `${material} return — ${inr(amount)} wapas mila`);
+    document.getElementById('mrSupplier').value = '';
+    document.getElementById('mrQty').value = '';
+    document.getElementById('mrAmount').value = '';
+    document.getElementById('mrNote').value = '';
+  }catch(e){ showToast('Save nahi hua — dobara try karo'); }
+});
+
+function renderMaterialReturns(){
+  const tbody = document.querySelector('#mrTable tbody');
+  if(!tbody) return;
+  const rows = [...DATA.materialReturns].sort((a,b)=>b.date.localeCompare(a.date));
+  tbody.innerHTML = rows.length===0
+    ? `<tr><td colspan="8" class="empty">Abhi koi material return record nahi hai.</td></tr>`
+    : rows.map(r=>{
+        const site = DATA.sites.find(s=>s.id===r.siteId);
+        return `<tr>
+          <td>${r.date}</td><td>${site?site.name:'—'}</td><td>${r.material}</td>
+          <td>${r.qty||'—'}</td><td>${r.supplier||'—'}</td>
+          <td class="amt" style="color:var(--good)">${inr(r.amount)}</td><td>${r.note||'—'}</td>
+          <td><button class="btn-danger-text" onclick="deleteMaterialReturn('${r.id}')">Delete</button></td>
+        </tr>`;
+      }).join('');
+}
+async function deleteMaterialReturn(id){
+  if(!await uiConfirm('Ye material return record delete karna hai?', 'Haan, delete karo')) return;
+  try{
+    await db.collection('materialReturns').doc(id).delete();
+    showToast('Delete ho gaya');
+    logAudit('delete','Material Return', `Return record delete kiya`);
+  }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
+}
+
 function renderVendorLedger(){
   const tbody = document.querySelector('#vendorLedgerTable tbody');
   if(!tbody) return;
@@ -8832,7 +8911,8 @@ function computeOverallAvailableFund(){
   const clientReceived = DATA.clientPayments.reduce((a,p)=>a+Number(p.amount),0);
   const consultancyReceived = DATA.consultancyIncome.filter(c=>c.status==='received').reduce((a,c)=>a+Number(c.amount),0);
   const investorTaken = DATA.investorLoans.reduce((a,l)=>a+Number(l.taken),0);
-  const totalIn = clientReceived + consultancyReceived + investorTaken;
+  const materialReturned = DATA.materialReturns.reduce((a,r)=>a+Number(r.amount),0);
+  const totalIn = clientReceived + consultancyReceived + investorTaken + materialReturned;
 
   const siteExpenses = DATA.expenses.reduce((a,e)=>a+Number(e.amount),0);
   const officeExpenses = DATA.officeExpenses.reduce((a,e)=>a+Number(e.amount),0);
@@ -8862,7 +8942,8 @@ function computeCashPosition(){
     .reduce((a,p)=>a+Number(p.amount),0);
   const consultancyReceived = DATA.consultancyIncome.filter(c=>c.status==='received').reduce((a,c)=>a+Number(c.amount),0);
   const investorTaken = DATA.investorLoans.reduce((a,l)=>a+Number(l.taken),0);
-  const totalIn = clientReceived + consultancyReceived + investorTaken;
+  const materialReturned = DATA.materialReturns.filter(r => selected.has(r.siteId)).reduce((a,r)=>a+Number(r.amount),0);
+  const totalIn = clientReceived + consultancyReceived + investorTaken + materialReturned;
 
   const siteExpenses = DATA.expenses
     .filter(e => selected.has(e.siteId))
@@ -8875,7 +8956,7 @@ function computeCashPosition(){
   const totalOut = siteExpenses + officeExpenses + personalInvestOut + personalLoansOut + investorReturnsPaid + vendorPaid;
 
   return {
-    clientReceived, consultancyReceived, investorTaken, totalIn,
+    clientReceived, consultancyReceived, investorTaken, materialReturned, totalIn,
     siteExpenses, officeExpenses, personalInvestOut, personalLoansOut, investorReturnsPaid, vendorPaid, totalOut,
     net: totalIn - totalOut
   };
@@ -8894,6 +8975,7 @@ function renderCashPosition(){
     <div style="display:flex;justify-content:space-between"><span>Client Payments</span><strong>${inr(c.clientReceived)}</strong></div>
     <div style="display:flex;justify-content:space-between"><span>Consultancy Income</span><strong>${inr(c.consultancyReceived)}</strong></div>
     <div style="display:flex;justify-content:space-between"><span>Investor Funding Liya</span><strong>${inr(c.investorTaken)}</strong></div>
+    <div style="display:flex;justify-content:space-between"><span>Material Return (Wapas Mila)</span><strong>${inr(c.materialReturned)}</strong></div>
     <div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:4px;margin-top:4px;font-weight:700"><span>Total In</span><span>${inr(c.totalIn)}</span></div>`;
 
   outEl.innerHTML = `
