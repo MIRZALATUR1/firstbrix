@@ -1986,6 +1986,12 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
             <button class="btn btn-ghost" id="tmGenBtn" type="button" style="padding:9px 13px;font-size:12.5px;white-space:nowrap">Generate</button>
           </div>
         </div>
+        <div class="field"><label>Access Level</label>
+          <select id="tmRole">
+            <option value="staff">Limited Access (Staff) — sirf Operations tabs, koi financial data nahi</option>
+            <option value="owner">Full Access — sab kuch dikhega, jaise aap khud</option>
+          </select>
+        </div>
         <div class="login-error" id="tmErr"></div>
         <button class="btn btn-primary" id="tmAddBtn">+ <span data-i18n="btn_sendinvite">Send invite</span></button>
         <div class="hint">Login turant ban jayega — employee ko sirf ye email + password dena hai, use kuch bhi khud banane ki zaroorat nahi. (Agar Gmail hai to wo chahe to seedha "Google se login karo" bhi use kar sakta hai — dono tareeke chalenge.)</div>
@@ -1994,7 +2000,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="card">
         <h2><span data-i18n="h2_teammembers">Team members</span></h2>
         <div class="table-wrap"><table id="teamTable"><thead><tr>
-          <th data-i18n="th_name">Name</th><th>Email</th><th>Joined</th><th data-i18n="th_status">Status</th><th data-i18n="th_actions">Actions</th>
+          <th data-i18n="th_name">Name</th><th>Email</th><th>Joined</th><th data-i18n="th_status">Status</th><th>Access Level</th><th data-i18n="th_actions">Actions</th>
         </tr></thead><tbody></tbody></table></div>
         <div class="footnote">Password Firebase sambhalta hai — na aap dekh sakte ho, na koi aur. Bhool jaye to wo khud "Password bhool gaye?" se reset kar sakta hai.</div>
       </div>
@@ -4940,6 +4946,7 @@ async function loadTeam(){
         joined: u ? (u.joined || '') : '',
         status: u ? 'Joined' : 'Invited',
         disabled: d.data().disabled === true,
+        role: u ? (u.role || 'staff') : null, // null = not joined yet, role unknown until first login
         uid: u ? u.uid : null
       };
     }).sort((a,b)=>a.email.localeCompare(b.email));
@@ -4982,6 +4989,7 @@ document.getElementById('tmAddBtn').addEventListener('click', async ()=>{
   const name  = document.getElementById('tmName').value.trim();
   const email = document.getElementById('tmUser').value.trim().toLowerCase();
   const pw    = document.getElementById('tmPw').value;
+  const chosenRole = document.getElementById('tmRole').value; // 'staff' or 'owner' (full access)
   err.textContent = '';
 
   if(!name){ err.textContent = 'Employee ka naam likho.'; return; }
@@ -4999,7 +5007,7 @@ document.getElementById('tmAddBtn').addEventListener('click', async ()=>{
     try{
       const cred = await sAuth.createUserWithEmailAndPassword(email, pw);
       // Activate the profile immediately — no self-signup step needed.
-      await db.collection('users').doc(cred.user.uid).set({ name, email, role:'staff', joined: todayStr() });
+      await db.collection('users').doc(cred.user.uid).set({ name, email, role: chosenRole, joined: todayStr() });
       await sAuth.signOut();
     }catch(createErr){
       if(createErr.code === 'auth/email-already-in-use'){
@@ -5013,6 +5021,7 @@ document.getElementById('tmAddBtn').addEventListener('click', async ()=>{
     document.getElementById('tmName').value = '';
     document.getElementById('tmUser').value = '';
     document.getElementById('tmPw').value = '';
+    document.getElementById('tmRole').value = 'staff';
     await loadTeam();
     showInviteDetails(name, email, pw);
   }catch(e){
@@ -5033,16 +5042,27 @@ function showInviteDetails(name, email, password){
       <div class="cred-row"><span class="cred-label">Password</span><span class="cred-val">${password}</span></div>
     </div>
     <p style="font-size:12.5px">App link kholkar seedha isi email + password se <strong>Login</strong> dabana hai. Chahein to Gmail hone par <strong>Google se login karo</strong> bhi kaam karega.</p>
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;margin-bottom:10px">
       <button class="btn btn-ghost" data-copy style="flex:1;justify-content:center">Message copy karo</button>
       <button class="btn btn-primary" data-ok style="flex:1;justify-content:center">Done</button>
-    </div></div>`;
+    </div>
+    <button class="btn btn-steel" data-join style="width:100%;justify-content:center;background:#25D366">🔑 Isi Account Se Abhi Login Karo (Test Karne Ke Liye)</button>
+    <div class="hint" style="margin-top:8px">Ye aapko turant is naye account se log in kar dega, taaki aap check kar sako ki access sahi mil raha hai. Aapka apna owner session band ho jayega — wapas aane ke liye khud dobara apne email/password se login karna padega.</div>
+  </div>`;
   document.body.appendChild(bg);
   bg.querySelector('[data-ok]').onclick = ()=>bg.remove();
   bg.querySelector('[data-copy]').onclick = async (e)=>{
     const msg = `FirstBrix Infratech - Expense App\n\nLink: ${link}\nEmail: ${email}\nPassword: ${password}\n\nIsi email aur password se seedha Login karo.`;
     try{ await navigator.clipboard.writeText(msg); e.target.textContent = 'Copied ✓'; }
     catch(_){ e.target.textContent = 'Copy nahi hua'; }
+  };
+  bg.querySelector('[data-join]').onclick = async ()=>{
+    if(!await uiConfirm(`Ab aap "${name}" (${email}) ke account se login ho jaoge, apna owner session band ho jayega. Aage badhna hai?`, 'Haan, Login Karo')) return;
+    try{
+      await auth.signOut();
+      await auth.signInWithEmailAndPassword(email, password);
+      bg.remove();
+    }catch(e){ showToast('Login nahi hua: ' + e.message); }
   };
 }
 
@@ -5075,7 +5095,7 @@ function renderTeamTable(){
   const tbody = document.querySelector('#teamTable tbody');
   if(!tbody) return;
   if(TEAM.length===0){
-    tbody.innerHTML = `<tr><td colspan="5" class="empty">Abhi koi team member nahi hai. Upar se pehla invite bhejo.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Abhi koi team member nahi hai. Upar se pehla invite bhejo.</td></tr>`;
     return;
   }
   tbody.innerHTML = TEAM.map(u=>`<tr>
@@ -5083,7 +5103,9 @@ function renderTeamTable(){
     <td class="amt">${u.email}</td>
     <td>${u.joined||'—'}</td>
     <td><span class="tag ${u.disabled ? 'pending' : (u.status==='Joined'?'paid':'other')}">${u.disabled?'Disabled':u.status}</span></td>
+    <td>${u.role===null ? '—' : `<span class="tag ${u.role==='owner'?'paid':'other'}">${u.role==='owner'?'Full Access':'Limited (Staff)'}</span>`}</td>
     <td>
+      ${u.role!==null ? `<button class="btn-danger-text" style="color:var(--blue)" onclick="changeTeamRole('${u.email}','${u.role}')">${u.role==='owner'?'Limited Karo':'Full Access Do'}</button>&nbsp;·&nbsp;` : ''}
       <button class="btn-danger-text" style="color:var(--blue)" onclick="resetTeamPw('${u.email}')">Reset Password</button>
       &nbsp;·&nbsp;
       <button class="btn-danger-text" style="color:var(--ink-soft)" onclick="toggleTeam('${u.email}')">${u.disabled?'Enable':'Disable'}</button>
@@ -5092,6 +5114,20 @@ function renderTeamTable(){
     </td>
   </tr>`).join('');
 }
+async function changeTeamRole(email, currentRoleOfUser){
+  const member = TEAM.find(u=>u.email===email);
+  if(!member || !member.uid) return;
+  const newRole = currentRoleOfUser === 'owner' ? 'staff' : 'owner';
+  const label = newRole === 'owner' ? 'Full Access (sab kuch dikhega, jaise owner)' : 'Limited Access (sirf Operations tabs)';
+  if(!await uiConfirm(`${member.name} ko "${label}" karna hai?`, 'Haan, Confirm Karo')) return;
+  try{
+    await db.collection('users').doc(member.uid).update({ role: newRole });
+    showToast(`${member.name} ka access level update ho gaya ✓`);
+    logAudit('update','Team', `${member.name} (${email}) → ${newRole==='owner'?'Full Access':'Limited Access'}`);
+    await loadTeam();
+  }catch(e){ showToast('Update nahi hua — dobara try karo'); }
+}
+
 
 async function resetTeamPw(email){
   const pw = genEmployeePassword();
