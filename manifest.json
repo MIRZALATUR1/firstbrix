@@ -1,0 +1,63 @@
+{
+  "id": "/",
+  "name": "FirstBrix Infratech \u2014 Expense Manager",
+  "short_name": "FirstBrix",
+  "description": "Construction site expense, ledger and client management for FirstBrix Infratech Pvt. Ltd.",
+  "start_url": "https://firstbrix.sallumirza64.workers.dev/",
+  "scope": "https://firstbrix.sallumirza64.workers.dev/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait-primary",
+  "background_color": "#0E0E10",
+  "theme_color": "#6B0F0F",
+  "categories": [
+    "business",
+    "finance",
+    "productivity"
+  ],
+  "prefer_related_applications": false,
+  "lang": "hi",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "https://mirzalatur1.github.io/firstbrix/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "https://mirzalatur1.github.io/firstbrix/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "https://mirzalatur1.github.io/firstbrix/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "https://mirzalatur1.github.io/firstbrix/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "https://mirzalatur1.github.io/firstbrix/icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "https://mirzalatur1.github.io/firstbrix/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://mirzalatur1.github.io/firstbrix/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
