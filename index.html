@@ -3156,6 +3156,19 @@ function refreshSuggestions(){
 }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function inr(n){ return '₹' + (Number(n)||0).toLocaleString('en-IN'); }
+/* Dates are always STORED as yyyy-mm-dd (needed for sorting, filtering, and
+   native <input type="date">) — this only reformats for on-screen DISPLAY.
+   Never use this on a value that feeds back into an <input> or a sort/
+   compare — only on text shown to the user. */
+function fmtDate(d){
+  if(!d || typeof d !== 'string' || d.length < 10) return d || '—';
+  const [y,m,day] = d.slice(0,10).split('-');
+  if(!y || !m || !day) return d;
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const mon = MONTHS[Number(m)-1];
+  if(!mon) return d;
+  return `${day}-${mon}-${y.slice(2)}`;
+}
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -3426,7 +3439,7 @@ function renderSiteSelects(){
   if(csLinkEl){
     const csCur = csLinkEl.value;
     const opts = DATA.consultancyIncome.filter(c=>c.status==='received').map(c=>
-      `<option value="${c.id}">${c.client} — ${inr(c.amount)} (${c.date})</option>`
+      `<option value="${c.id}">${c.client} — ${inr(c.amount)} (${fmtDate(c.date)})</option>`
     ).join('');
     csLinkEl.innerHTML = '<option value="">Nahi, normal site expense hai</option>' + opts;
     if(csCur) csLinkEl.value = csCur;
@@ -3794,7 +3807,7 @@ function renderExpenseTable(){
     return;
   }
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td data-label="Date">${r.date}</td>
+    <td data-label="Date">${fmtDate(r.date)}</td>
     <td data-label="Site">${siteName(r.siteId)}</td>
     <td data-label="Type"><span class="tag ${r.type}">${r.kind==='udhar'?'udhar':r.type}</span></td>
     <td data-label="Category">${r.category||'—'}</td>
@@ -3901,7 +3914,7 @@ function renderUdharTable(){
     const tagClass = s==='paid' ? 'paid' : (s==='partial' ? 'other' : 'pending');
     const label = s==='paid' ? 'Paid' : (s==='partial' ? 'Partial' : 'Pending');
     return `<tr>
-      <td>${r.date}</td>
+      <td>${fmtDate(r.date)}</td>
       <td>${siteName(r.siteId)}</td>
       <td>${r.supplier}</td>
       <td>${r.material}${r.qty?(' ('+r.qty+' '+(r.unit||'')+')'):''}</td>
@@ -3933,8 +3946,8 @@ function resendUdharWhatsApp(id){
   const totals = vendorTotals(r.supplier);
   const materialLabel = r.material + (r.qty?` (${r.qty} ${r.unit||''})`:'');
   const extraLine = r.note ? `\n📝 ${r.note}` : '';
-  const enMsg = `Hello,\n\nReminder — material taken on credit for *${siteName(r.siteId)}* site:\n\n📦 Material: ${materialLabel}\n💰 Bill Amount: ₹${Number(r.amount).toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${totals.paid.toLocaleString('en-IN')}\n⏳ Total Outstanding: ₹${totals.outstanding.toLocaleString('en-IN')}\n\nDate: ${r.date}${extraLine}\n\nThank you,\nFirstBrix Infratech`;
-  const mrMsg = `नमस्कार,\n\n*${siteName(r.siteId)}* साइटसाठी उधारीवर घेतलेल्या साहित्याची आठवण:\n\n📦 साहित्य: ${materialLabel}\n💰 बिल रक्कम: ₹${Number(r.amount).toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${totals.paid.toLocaleString('en-IN')}\n⏳ एकूण शिल्लक रक्कम: ₹${totals.outstanding.toLocaleString('en-IN')}\n\nदिनांक: ${r.date}${extraLine}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const enMsg = `Hello,\n\nReminder — material taken on credit for *${siteName(r.siteId)}* site:\n\n📦 Material: ${materialLabel}\n💰 Bill Amount: ₹${Number(r.amount).toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${totals.paid.toLocaleString('en-IN')}\n⏳ Total Outstanding: ₹${totals.outstanding.toLocaleString('en-IN')}\n\nDate: ${fmtDate(r.date)}${extraLine}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार,\n\n*${siteName(r.siteId)}* साइटसाठी उधारीवर घेतलेल्या साहित्याची आठवण:\n\n📦 साहित्य: ${materialLabel}\n💰 बिल रक्कम: ₹${Number(r.amount).toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${totals.paid.toLocaleString('en-IN')}\n⏳ एकूण शिल्लक रक्कम: ₹${totals.outstanding.toLocaleString('en-IN')}\n\nदिनांक: ${fmtDate(r.date)}${extraLine}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
   const msg = bilingualMsg(enMsg, mrMsg);
   offerWhatsAppPrompt(r.supplier, phone, msg);
 }
@@ -4158,7 +4171,7 @@ function renderApprovalsTable(){
       const site = DATA.sites.find(s=>s.id===a.siteId);
       const breakdownLabel = a.pricingType==='perunit' ? `<div class="footnote" style="margin:2px 0 0">${a.qty} ${AP_UNIT_LABELS[a.unit]} × ${inr(a.rate)}/${AP_UNIT_LABELS[a.unit]}</div>` : '';
       return `<tr>
-        <td>${a.date}</td><td>${site?site.name:'—'}</td>
+        <td>${fmtDate(a.date)}</td><td>${site?site.name:'—'}</td>
         <td>${a.type==='extra_work'?'Extra Work':'Over-Budget'}</td>
         <td>${a.category}</td><td>${a.description}${breakdownLabel}</td>
         <td class="amt">${inr(a.amount)}</td>
@@ -4177,7 +4190,7 @@ function renderApprovalsTable(){
     : done.map(a=>{
       const site = DATA.sites.find(s=>s.id===a.siteId);
       return `<tr>
-        <td>${a.date}</td><td>${site?site.name:'—'}</td>
+        <td>${fmtDate(a.date)}</td><td>${site?site.name:'—'}</td>
         <td>${a.category}</td><td>${a.description}</td>
         <td class="amt">${inr(a.amount)}</td>
         <td><span class="tag ${a.status==='approved'?'paid':'pending'}">${a.status}</span></td>
@@ -4228,8 +4241,8 @@ function resendApprovalWhatsApp(id){
   const typeLabelMr = a.type==='extra_work' ? 'अतिरिक्त काम' : 'साहित्य बजेटपेक्षा जास्त';
   const breakdownEn = a.pricingType==='perunit' ? `\n📐 Calculation: ${a.qty} ${AP_UNIT_LABELS[a.unit]} × ₹${a.rate}/${AP_UNIT_LABELS[a.unit]} = ₹${a.amount.toLocaleString('en-IN')}` : '';
   const breakdownMr = a.pricingType==='perunit' ? `\n📐 गणित: ${a.qty} ${AP_UNIT_LABELS[a.unit]} × ₹${a.rate}/${AP_UNIT_LABELS[a.unit]} = ₹${a.amount.toLocaleString('en-IN')}` : '';
-  const enMsg = `Hello,\n\nReminder — we need your approval for *${typeLabelEn}* at *${site.name}*:\n\n🔧 Category: ${a.category}\n📋 Description: ${a.description}${breakdownEn}\n💰 Amount: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 Reason: ${a.reason}`:''}\n\nPlease reply to confirm if this is approved.\n\nDate: ${a.date}`;
-  const mrMsg = `नमस्कार,\n\n*${site.name}* साठी *${typeLabelMr}* ला तुमची मंजुरी हवी आहे (आठवण):\n\n🔧 प्रकार: ${a.category}\n📋 वर्णन: ${a.description}${breakdownMr}\n💰 रक्कम: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 कारण: ${a.reason}`:''}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${a.date}`;
+  const enMsg = `Hello,\n\nReminder — we need your approval for *${typeLabelEn}* at *${site.name}*:\n\n🔧 Category: ${a.category}\n📋 Description: ${a.description}${breakdownEn}\n💰 Amount: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 Reason: ${a.reason}`:''}\n\nPlease reply to confirm if this is approved.\n\nDate: ${fmtDate(a.date)}`;
+  const mrMsg = `नमस्कार,\n\n*${site.name}* साठी *${typeLabelMr}* ला तुमची मंजुरी हवी आहे (आठवण):\n\n🔧 प्रकार: ${a.category}\n📋 वर्णन: ${a.description}${breakdownMr}\n💰 रक्कम: ₹${a.amount.toLocaleString('en-IN')}${a.reason?`\n📝 कारण: ${a.reason}`:''}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${fmtDate(a.date)}`;
   offerWhatsAppPrompt(site.name, site.clientPhone, bilingualMsg(enMsg, mrMsg));
 }
 async function deleteApproval(id){
@@ -4307,7 +4320,7 @@ function renderMaterialReturns(){
     : rows.map(r=>{
         const site = DATA.sites.find(s=>s.id===r.siteId);
         return `<tr>
-          <td>${r.date}</td><td>${site?site.name:'—'}</td><td>${r.material}</td>
+          <td>${fmtDate(r.date)}</td><td>${site?site.name:'—'}</td><td>${r.material}</td>
           <td>${r.qty||'—'}</td><td>${r.supplier||'—'}</td>
           <td class="amt" style="color:var(--good)">${inr(r.amount)}</td><td>${r.note||'—'}</td>
           <td><button class="btn-danger-text" onclick="deleteMaterialReturn('${r.id}')">Delete</button></td>
@@ -4367,7 +4380,7 @@ function renderVendorPayments(){
     return;
   }
   tbody.innerHTML = rows.map(p=>`<tr>
-    <td>${p.date}</td>
+    <td>${fmtDate(p.date)}</td>
     <td><strong>${p.supplier}</strong></td>
     <td class="amt" style="color:var(--good)">${inr(p.amount)}</td>
     <td>${p.note||'—'}</td>
@@ -4380,7 +4393,7 @@ async function deleteVendorPayment(id){
   try{
     await db.collection('vendorPayments').doc(id).delete();
     showToast('Payment record delete ho gaya');
-    if(p) logAudit('delete','Vendor Payment', `${p.supplier} — ${inr(p.amount)} paid on ${p.date}`);
+    if(p) logAudit('delete','Vendor Payment', `${p.supplier} — ${inr(p.amount)} paid on ${fmtDate(p.date)}`);
   }catch(e){ showToast('Delete nahi hua — dobara try karo'); }
 }
 document.getElementById('vpListFilter').addEventListener('change', renderVendorPayments);
@@ -4419,7 +4432,7 @@ function openPayVendorModal(supplier){
     previewEl.innerHTML = `<div class="table-wrap" style="max-height:180px;overflow-y:auto"><table style="font-size:12px"><thead><tr>
       <th>Site</th><th>Material</th><th>Bill Date</th><th>Applied Now</th>
     </tr></thead><tbody>
-      ${preview.map(p=>`<tr><td>${p.site}</td><td>${p.material}</td><td>${p.billDate}</td><td class="amt">${inr(p.appliedNow)}</td></tr>`).join('')}
+      ${preview.map(p=>`<tr><td>${p.site}</td><td>${p.material}</td><td>${fmtDate(p.billDate)}</td><td class="amt">${inr(p.appliedNow)}</td></tr>`).join('')}
     </tbody></table></div>
     ${leftover>0 ? `<div class="footnote" style="color:var(--amber)">⚠ ${inr(leftover)} kisi bill se match nahi hua (sab bills clear ho jayenge) — extra credit reh jayega.</div>` : ''}`;
   };
@@ -4458,7 +4471,7 @@ function openVendorBillsModal(supplier){
       <th>Date</th><th>Site</th><th>Material</th><th>Bill Amount</th><th>Paid (Vendor Ledger)</th><th>Remaining</th>
     </tr></thead><tbody>
       ${bills.map(b=>`<tr>
-        <td>${b.date}</td><td>${siteName(b.siteId)}</td><td>${b.material}</td>
+        <td>${fmtDate(b.date)}</td><td>${siteName(b.siteId)}</td><td>${b.material}</td>
         <td class="amt">${inr(b.amount)}</td>
         <td class="amt" style="color:var(--good)">${inr(billPaid[b.id]||0)}</td>
         <td class="amt" style="color:${billRemaining[b.id]>0?'var(--bad)':'inherit'}">${inr(billRemaining[b.id]||0)}</td>
@@ -4655,7 +4668,7 @@ function renderSiteDetailLedger(siteId){
   const kindTag = r => r.kind==='clientpay' ? 'paid' : (r.kind==='udhar' ? (r.tag==='paid'?'paid':'pending') : r.tag);
   const kindLabel = r => r.kind==='clientpay' ? 'Client Payment' : (r.kind==='udhar' ? 'Udhar' : r.tag);
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td data-label="Date">${r.date}</td>
+    <td data-label="Date">${fmtDate(r.date)}</td>
     <td data-label="Type"><span class="tag ${kindTag(r)}">${kindLabel(r)}</span></td>
     <td data-label="Item / Category">${r.label||'—'}</td>
     <td data-label="Name">${r.name||'—'}</td>
@@ -5725,7 +5738,7 @@ function renderClientPayTable(){
     return;
   }
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.date}</td><td>${siteName(r.siteId)}</td><td>${r.clientName||'—'}</td><td>${r.mode||'—'}</td><td>${r.note||'—'}</td>
+    <td>${fmtDate(r.date)}</td><td>${siteName(r.siteId)}</td><td>${r.clientName||'—'}</td><td>${r.mode||'—'}</td><td>${r.note||'—'}</td>
     <td class="amt">${inr(r.amount)}</td>
     <td><button class="btn-danger-text" style="color:var(--blue)" onclick="editClientPay('${r.id}')">Edit</button>&nbsp;·&nbsp;<button class="btn-danger-text" onclick="deleteClientPay('${r.id}')">Delete</button></td>
   </tr>`).join('');
@@ -5808,7 +5821,7 @@ function renderInvestorTable(){
     const statusLabel = investorStatusLabel(r);
     const tagClass = remaining<=0 ? 'paid' : (paid>0 ? 'other' : 'pending');
     return `<tr>
-      <td>${r.date}</td><td>${linked}</td><td>${r.investorName}</td>
+      <td>${fmtDate(r.date)}</td><td>${linked}</td><td>${r.investorName}</td>
       <td class="amt">${inr(r.taken)}</td><td class="amt">${inr(r.returnAmt)}</td>
       <td class="amt">${extra>0?inr(extra):'—'}</td>
       <td class="amt" style="color:var(--good)">${inr(paid)}</td>
@@ -5837,7 +5850,7 @@ function openInvestorPaymentModal(loanId){
     <h3>Pay ${loan.investorName}</h3>
     <p>Ab tak diya: <strong>${inr(paidSoFar)}</strong> · Remaining: <strong>${inr(remaining)}</strong></p>
     ${history.length ? `<div class="table-wrap" style="margin-bottom:14px;max-height:120px;overflow-y:auto"><table style="font-size:12px"><tbody>
-      ${history.map(p=>`<tr><td>${p.date}</td><td class="amt">${inr(p.amount)}</td><td>${p.note||''}</td></tr>`).join('')}
+      ${history.map(p=>`<tr><td>${fmtDate(p.date)}</td><td class="amt">${inr(p.amount)}</td><td>${p.note||''}</td></tr>`).join('')}
     </tbody></table></div>` : ''}
     <div class="field"><label>Payment Amount (₹)</label><input id="ipAmount" type="number" min="0" max="${remaining}" placeholder="${remaining}"></div>
     <div class="field"><label>Date</label><input id="ipDate" type="date" value="${todayStr()}"></div>
@@ -5986,7 +5999,7 @@ function renderOfficeTable(){
     return;
   }
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.date}</td><td>${r.category}</td><td>${r.paidTo}</td><td>${r.note||'—'}</td>
+    <td>${fmtDate(r.date)}</td><td>${r.category}</td><td>${r.paidTo}</td><td>${r.note||'—'}</td>
     <td class="amt">${inr(r.amount)}</td>
     <td><button class="btn-danger-text" style="color:var(--blue)" onclick="editOffice('${r.id}')">Edit</button>&nbsp;·&nbsp;<button class="btn-danger-text" onclick="deleteOffice('${r.id}')">Delete</button></td>
   </tr>`).join('');
@@ -6053,7 +6066,7 @@ function renderPersonalInvestments(){
     const cv = Number(r.currentValue)||0;
     const gain = cv>0 ? cv - Number(r.amount) : null;
     return `<tr>
-      <td>${r.date}</td><td><span class="tag other">${r.type}</span></td><td>${r.name}</td>
+      <td>${fmtDate(r.date)}</td><td><span class="tag other">${r.type}</span></td><td>${r.name}</td>
       <td class="amt">${inr(r.amount)}</td>
       <td class="amt">${cv>0?inr(cv):'—'}</td>
       <td class="amt" style="color:${gain===null?'var(--ink-soft)':(gain>=0?'var(--good)':'var(--bad)')}">${gain===null?'—':(gain<0?'- ':'')+inr(Math.abs(gain))}</td>
@@ -6109,8 +6122,8 @@ document.getElementById('plAddBtn').addEventListener('click', async ()=>{
   renderPersonalLoans(); renderDashboard();
   showToast('Lending entry add ho gayi ✓');
   if(personPhone){
-    const enMsg = `Hello ${personName},\n\nYou have been given ₹${amount.toLocaleString('en-IN')}.\n${expDate?`Return date: ${expDate}\n`:''}\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
-    const mrMsg = `नमस्कार ${personName},\n\nतुम्हाला ₹${amount.toLocaleString('en-IN')} दिले आहेत.\n${expDate?`परतफेड दिनांक: ${expDate}\n`:''}\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+    const enMsg = `Hello ${personName},\n\nYou have been given ₹${amount.toLocaleString('en-IN')}.\n${expDate?`Return date: ${fmtDate(expDate)}\n`:''}\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
+    const mrMsg = `नमस्कार ${personName},\n\nतुम्हाला ₹${amount.toLocaleString('en-IN')} दिले आहेत.\n${expDate?`परतफेड दिनांक: ${fmtDate(expDate)}\n`:''}\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
     const msg = bilingualMsg(enMsg, mrMsg);
     offerWhatsAppPrompt(personName, personPhone, msg);
   }
@@ -6128,7 +6141,7 @@ function renderPersonalLoans(){
     return;
   }
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.date}</td><td>${r.personName}</td><td class="amt">${inr(r.amount)}</td>
+    <td>${fmtDate(r.date)}</td><td>${r.personName}</td><td class="amt">${inr(r.amount)}</td>
     <td>${r.expDate||'—'}</td>
     <td><span class="tag ${r.status==='returned'?'paid':'pending'}">${r.status}</span></td>
     <td>${r.note||'—'}</td>
@@ -6267,7 +6280,7 @@ function renderProjectUnits(){
       const ourShareCell = c.ourShare===null ? '—' : `${c.ourShare<0?'- ':''}${inr(Math.abs(c.ourShare))}`;
       const invShareCell = c.investorShare===null ? '—' : `${c.investorShare<0?'- ':''}${inr(Math.abs(c.investorShare))}`;
       return `<tr>
-        <td>${u.project}</td><td>${u.unit}</td><td>${u.date}</td>
+        <td>${u.project}</td><td>${u.unit}</td><td>${fmtDate(u.date)}</td>
         <td class="amt">${inr(u.ourAmount)}</td>
         <td class="amt">${u.invAmount?inr(u.invAmount)+(u.investorName?' ('+u.investorName+')':''):'—'}</td>
         <td class="amt">${u.linkedSiteId?inr(c.siteExpense)+' ('+siteName(u.linkedSiteId)+')':'—'}</td>
@@ -6756,7 +6769,7 @@ function renderConsultancyIncome(){
     return `🏦 Client Fund${r.usedOnSite?' · '+siteName(r.usedOnSite)+' pe use':''}`;
   };
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.date}</td><td><span class="tag other">${r.type}</span></td><td>${r.client}</td>
+    <td>${fmtDate(r.date)}</td><td><span class="tag other">${r.type}</span></td><td>${r.client}</td>
     <td class="amt">${inr(r.amount)}</td>
     <td><span class="tag ${r.status==='received'?'paid':'pending'}">${r.status}</span></td>
     <td style="font-size:11.5px">${fundLabel(r)}</td>
@@ -6823,7 +6836,7 @@ function openConsultancyReport(id){
   bg.className = 'modal-bg';
   bg.innerHTML = `<div class="modal" style="width:560px;max-width:96vw">
     <h3>📊 Consultancy Fund Report — ${r.client}</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft)">${r.type} · ${r.date}</p>
+    <p style="font-size:12.5px;color:var(--ink-soft)">${r.type} · ${fmtDate(r.date)}</p>
     <div style="background:var(--surface-2);border-radius:6px;padding:12px;margin-bottom:14px;font-size:13px">
       <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Total Received</span><strong>${inr(Number(r.amount))}</strong></div>
       <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Total Spent</span><strong>${inr(totalSpent)}</strong></div>
@@ -6831,7 +6844,7 @@ function openConsultancyReport(id){
     </div>
     ${items.length ? `<div class="table-wrap" style="max-height:220px;overflow-y:auto;margin-bottom:14px">
       <table style="font-size:12px"><thead><tr><th>Date</th><th>Kya</th><th>Kisko</th><th>Amount</th></tr></thead><tbody>
-        ${items.map(i=>`<tr><td>${i.date}</td><td>${i.label}</td><td>${i.to}</td><td class="amt">${inr(i.amount)}</td></tr>`).join('')}
+        ${items.map(i=>`<tr><td>${fmtDate(i.date)}</td><td>${i.label}</td><td>${i.to}</td><td class="amt">${inr(i.amount)}</td></tr>`).join('')}
       </tbody></table>
     </div>` : '<p class="footnote">Abhi tak koi expense is fund se link nahi hua. Add Expense tab mein "Consultancy Fund se Link Karo" dropdown se link kar sakte ho.</p>'}
     <div style="display:flex;gap:10px">
@@ -6846,8 +6859,8 @@ function openConsultancyReport(id){
   bg.querySelector('#crWhatsApp').onclick = ()=>{
     if(!r.clientPhone){ showToast('Client Phone save nahi hai — pehle "Edit" se add karo'); return; }
     if(!isValidPhone10(r.clientPhone)){ showToast('Client Phone 10 digit ka nahi hai — Edit se theek karo'); return; }
-    const itemLines = items.map(i=>`• ${i.date} — ${i.label} (${i.to}): ${inr(i.amount)}`).join('\n');
-    const itemLinesMr = items.map(i=>`• ${i.date} — ${i.label} (${i.to}): ${inr(i.amount)}`).join('\n');
+    const itemLines = items.map(i=>`• ${fmtDate(i.date)} — ${i.label} (${i.to}): ${inr(i.amount)}`).join('\n');
+    const itemLinesMr = items.map(i=>`• ${fmtDate(i.date)} — ${i.label} (${i.to}): ${inr(i.amount)}`).join('\n');
     const enMsg = `Hello ${r.client},\n\nYour consultancy fund report:\n\n💰 Total Received: ${inr(Number(r.amount))}\n💸 Total Spent: ${inr(totalSpent)}\n${balance>=0?'✅':'⚠️'} Balance: ${inr(balance)}\n${items.length?`\nDetails:\n${itemLines}`:''}\n\nThank you,\nFirstBrix Infratech`;
     const mrMsg = `नमस्कार ${r.client},\n\nतुमच्या कन्सल्टन्सी फंडाचा रिपोर्ट:\n\n💰 एकूण मिळालेली रक्कम: ${inr(Number(r.amount))}\n💸 एकूण खर्च: ${inr(totalSpent)}\n${balance>=0?'✅':'⚠️'} शिल्लक रक्कम: ${inr(balance)}\n${items.length?`\nतपशील:\n${itemLinesMr}`:''}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
     openWhatsApp(r.clientPhone, bilingualMsg(enMsg, mrMsg));
@@ -6981,7 +6994,7 @@ function renderBillPreview(d){
     </div>
     <h2 style="text-align:center;margin:10px 0;color:#101823">${title}</h2>
     <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:12px">
-      <div><strong>Date:</strong> ${d.date}</div>
+      <div><strong>Date:</strong> ${fmtDate(d.date)}</div>
       <div><strong>Number #:</strong> ${d.docNumber}</div>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:12px;gap:20px">
@@ -7032,7 +7045,7 @@ function buildBillPdfDoc(d){
   doc.setFontSize(9); doc.text(pdfSafe(d.companyAddr||''), 105, 21, {align:'center'});
   doc.setFontSize(14); doc.text(d.docType==='bill'?'FINAL BILL':'QUOTATION', 105, 30, {align:'center'});
   doc.setFontSize(10);
-  doc.text(`Date: ${d.date}`, 14, 40);
+  doc.text(`Date: ${fmtDate(d.date)}`, 14, 40);
   doc.text(`Number #: ${d.docNumber}`, 150, 40);
   doc.text(`Bill To: ${pdfSafe(d.customerName)}${d.customerPhone?' ('+pdfSafe(d.customerPhone)+')':''}`, 14, 47);
   doc.text(`Site: ${pdfSafe(d.siteAddress||'-')}`, 14, 53);
@@ -7080,7 +7093,7 @@ document.getElementById('bgDocBtn').addEventListener('click', ()=>{
     <h2 style="text-align:center">${d.companyName}</h2>
     <p style="text-align:center">${d.companyAddr||''}${d.companyGstin?' · GSTIN: '+d.companyGstin:''}</p>
     <h3 style="text-align:center">${d.docType==='bill'?'FINAL BILL':'QUOTATION'}</h3>
-    <p><strong>Date:</strong> ${d.date} &nbsp;&nbsp; <strong>Number #:</strong> ${d.docNumber}</p>
+    <p><strong>Date:</strong> ${fmtDate(d.date)} &nbsp;&nbsp; <strong>Number #:</strong> ${d.docNumber}</p>
     <p><strong>Bill To:</strong> ${d.customerName} (${d.customerPhone||''})<br><strong>Site Address:</strong> ${d.siteAddress||'-'}</p>
     <table style="width:100%">
       <tr><th>Sr.</th><th>Service Description</th><th>Area</th><th>Rate</th><th>Amount</th></tr>
@@ -7126,8 +7139,8 @@ function prepBillShareData(){
   const dueOrTotalMr = d.docType==='bill'
     ? `💰 एकूण रक्कम: ${inr(d.grandTotal)}\n✅ आगाऊ भरलेली रक्कम: ${inr(d.advance)}\n⏳ शिल्लक रक्कम: ${inr(d.amountDue)}`
     : `💰 एकूण रक्कम: ${inr(d.grandTotal)}`;
-  const enMsgBase = `Hello ${d.customerName},\n\nYour ${title} (${d.docNumber}) from *${d.companyName}* is ready.\n\n${dueOrTotalEn}\n\nDate: ${d.date}`;
-  const mrMsgBase = `नमस्कार ${d.customerName},\n\n*${d.companyName}* कडून तुमचे ${title==='Final Bill'?'बिल':'कोटेशन'} (${d.docNumber}) तयार आहे.\n\n${dueOrTotalMr}\n\nदिनांक: ${d.date}`;
+  const enMsgBase = `Hello ${d.customerName},\n\nYour ${title} (${d.docNumber}) from *${d.companyName}* is ready.\n\n${dueOrTotalEn}\n\nDate: ${fmtDate(d.date)}`;
+  const mrMsgBase = `नमस्कार ${d.customerName},\n\n*${d.companyName}* कडून तुमचे ${title==='Final Bill'?'बिल':'कोटेशन'} (${d.docNumber}) तयार आहे.\n\n${dueOrTotalMr}\n\nदिनांक: ${fmtDate(d.date)}`;
   return { blob, friendlyFileName, enMsgBase, mrMsgBase };
 }
 
@@ -7191,7 +7204,7 @@ function renderBillHistory(){
     return;
   }
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.date}</td><td>${r.docNumber}</td><td>${r.customerName}</td>
+    <td>${fmtDate(r.date)}</td><td>${r.docNumber}</td><td>${r.customerName}</td>
     <td>${r.company==='mirza'?'Mirza':'FirstBrix'}</td>
     <td><span class="tag other">${r.docType==='bill'?'Bill':'Quotation'}</span></td>
     <td class="amt">${inr(r.grandTotal)}</td>
@@ -7391,7 +7404,7 @@ function renderLetterheadPreview(d){
     <div style="padding:26px 30px">
       <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:20px">
         <div><strong>To:</strong> ${d.to}</div>
-        <div>${d.date}</div>
+        <div>${fmtDate(d.date)}</div>
       </div>
       ${d.subject?`<div style="font-size:13px;font-weight:700;margin-bottom:14px;text-decoration:underline">Subject: ${d.subject}</div>`:''}
       <div style="font-size:13px;line-height:1.7;color:#1a1a1a">${bodyParas}</div>
@@ -7483,7 +7496,7 @@ document.getElementById('lhPdfBtn').addEventListener('click', ()=>{
   doc.text([p.phone,p.email].filter(Boolean).join('   ·   '), 14, pageHeight-8);
   doc.text([p.address,p.website].filter(Boolean).join('   ·   '), pageWidth-14, pageHeight-8, {align:'right'});
 
-  saveBlob(doc.output('blob'), `Letter_${d.to.replace(/[^a-zA-Z0-9]/g,'_')}_${d.date}.pdf`);
+  saveBlob(doc.output('blob'), `Letter_${d.to.replace(/[^a-zA-Z0-9]/g,'_')}_${fmtDate(d.date)}.pdf`);
   showToast('PDF taiyar ✓');
 });
 
@@ -7500,7 +7513,7 @@ document.getElementById('lhDocBtn').addEventListener('click', ()=>{
       <p style="margin:2px 0;font-size:11px">${p.address||''}</p>
     </div>
     <div style="padding:20px">
-      <p><strong>To:</strong> ${d.to} &nbsp;&nbsp;&nbsp; <strong>Date:</strong> ${d.date}</p>
+      <p><strong>To:</strong> ${d.to} &nbsp;&nbsp;&nbsp; <strong>Date:</strong> ${fmtDate(d.date)}</p>
       ${d.subject?`<p><strong>Subject:</strong> ${d.subject}</p>`:''}
       ${bodyHtml}
       ${tableHtml}
@@ -7509,7 +7522,7 @@ document.getElementById('lhDocBtn').addEventListener('click', ()=>{
     </div>
     </body></html>`;
   const blob = new Blob(['\ufeff', html], {type:'application/msword'});
-  saveBlob(blob, `Letter_${d.to.replace(/[^a-zA-Z0-9]/g,'_')}_${d.date}.doc`);
+  saveBlob(blob, `Letter_${d.to.replace(/[^a-zA-Z0-9]/g,'_')}_${fmtDate(d.date)}.doc`);
   showToast('Word file taiyar ✓');
 });
 
@@ -7518,7 +7531,7 @@ document.getElementById('lhExcelBtn').addEventListener('click', ()=>{
   const ws = XLSX.utils.aoa_to_sheet(currentLetterDoc.table);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data');
-  XLSX.writeFile(wb, `Letter_Table_${currentLetterDoc.date}.xlsx`);
+  XLSX.writeFile(wb, `Letter_Table_${fmtDate(currentLetterDoc.date)}.xlsx`);
   showToast('Excel taiyar ✓');
 });
 
@@ -7541,7 +7554,7 @@ function renderLetterheadHistory(){
     return;
   }
   tbody.innerHTML = rows.map(r=>`<tr>
-    <td>${r.date}</td><td>${r.to}</td><td>${r.subject||'—'}</td>
+    <td>${fmtDate(r.date)}</td><td>${r.to}</td><td>${r.subject||'—'}</td>
     <td>
       <button class="btn-danger-text" style="color:var(--blue)" onclick="reopenLetterDoc('${r.id}')">Reopen</button>
       &nbsp;·&nbsp;
@@ -7850,15 +7863,15 @@ function renderLeadsTable(){
       const nextDate = r.nextFollowUpDate;
       let nextLabel = '—', nextColor = 'inherit';
       if(nextDate){
-        if(nextDate < today){ nextLabel = `⚠ Overdue (${nextDate})`; nextColor = 'var(--bad)'; }
-        else if(nextDate === today){ nextLabel = `📞 Aaj (${nextDate})`; nextColor = 'var(--amber)'; }
+        if(nextDate < today){ nextLabel = `⚠ Overdue (${fmtDate(nextDate)})`; nextColor = 'var(--bad)'; }
+        else if(nextDate === today){ nextLabel = `📞 Aaj (${fmtDate(nextDate)})`; nextColor = 'var(--amber)'; }
         else { nextLabel = nextDate; }
       }
       return `<tr>
         <td>${r.name}</td><td>${r.phone}</td>
         <td>${r.firm==='firm2'?'Firm 2':'Firm 1'}</td>
         <td><span class="tag ${r.type==='client'?'paid':'other'}">${r.type}</span></td>
-        <td style="font-size:11.5px">${last ? `${last.date}: ${(last.note||'').slice(0,40)}${(last.note||'').length>40?'…':''}` : '—'}</td>
+        <td style="font-size:11.5px">${last ? `${fmtDate(last.date)}: ${(last.note||'').slice(0,40)}${(last.note||'').length>40?'…':''}` : '—'}</td>
         <td style="color:${nextColor};font-weight:${nextDate && nextDate<=today ? '700':'400'}">${nextLabel}</td>
         <td>
           <button class="btn-danger-text" style="color:var(--blue)" onclick="openFollowUpModal('${r.id}')">📞 Follow-up</button>
@@ -7935,7 +7948,7 @@ function openFollowUpModal(leadId){
 
     ${history.length ? `<div class="table-wrap" style="max-height:220px;overflow-y:auto;margin-bottom:14px">
       <table style="font-size:12px"><thead><tr><th>Date</th><th>Kisne Baat Ki</th><th>Kya Bola</th><th>Agla Follow-up</th></tr></thead><tbody>
-        ${history.map(h=>`<tr><td>${h.date}</td><td>${h.by||'—'}</td><td>${h.note||'—'}</td><td>${h.nextDate||'—'}</td></tr>`).join('')}
+        ${history.map(h=>`<tr><td>${fmtDate(h.date)}</td><td>${h.by||'—'}</td><td>${h.note||'—'}</td><td>${h.nextDate||'—'}</td></tr>`).join('')}
       </tbody></table>
     </div>` : '<p class="footnote">Abhi tak koi follow-up record nahi hai.</p>'}
 
@@ -8409,7 +8422,7 @@ function renderSiteFunding(){
                   : r.sourceType==='consultancy' ? `📐 Consultancy: ${(DATA.consultancyIncome.find(c=>c.id===r.consultancySourceId)||{}).client||'—'}`
                   : `💰 Personal`;
         return `<tr>
-          <td>${r.date}</td><td>${siteName(r.siteId)}</td><td class="amt">${inr(r.amount)}</td>
+          <td>${fmtDate(r.date)}</td><td>${siteName(r.siteId)}</td><td class="amt">${inr(r.amount)}</td>
           <td>${src}</td><td>${r.note||'—'}</td>
           <td><button class="btn-danger-text" onclick="deleteSiteInvestment('${r.id}')">Delete</button></td>
         </tr>`;
@@ -8487,7 +8500,7 @@ document.getElementById('siSourceType').addEventListener('change', e=>{
     const sel = document.getElementById('siConsultancySource');
     const available = DATA.consultancyIncome.filter(c=>c.status==='received');
     sel.innerHTML = available.length
-      ? available.map(c=>`<option value="${c.id}">${c.client} — ${inr(c.amount)} (${c.date})</option>`).join('')
+      ? available.map(c=>`<option value="${c.id}">${c.client} — ${inr(c.amount)} (${fmtDate(c.date)})</option>`).join('')
       : '<option value="">Koi received consultancy income nahi hai</option>';
   }
 });
@@ -9081,7 +9094,7 @@ function renderStaffHandling(){
   histTbody.innerHTML = history.length===0
     ? `<tr><td colspan="5" class="empty">Abhi koi float record nahi hai.</td></tr>`
     : history.map(f=>`<tr>
-        <td>${f.date}</td><td>${f.person}</td><td class="amt">${inr(f.amount)}</td><td>${f.note||'—'}</td>
+        <td>${fmtDate(f.date)}</td><td>${f.person}</td><td class="amt">${inr(f.amount)}</td><td>${f.note||'—'}</td>
         <td><button class="btn-danger-text" onclick="deleteStaffFloat('${f.id}')">Delete</button></td>
       </tr>`).join('');
 }
@@ -9229,7 +9242,7 @@ function renderDashboard(){
     recentTbody.innerHTML = `<tr><td colspan="6" class="empty">Abhi koi entry nahi hai.</td></tr>`;
   } else {
     recentTbody.innerHTML = recentRows.map(r=>`<tr>
-      <td>${r.date}</td><td>${r.site}</td>
+      <td>${fmtDate(r.date)}</td><td>${r.site}</td>
       <td><span class="tag ${r.type==='udhar'?'other':r.type}">${r.type}</span></td>
       <td>${r.cat}</td><td>${r.name}</td><td class="amt">${inr(r.amount)}</td>
     </tr>`).join('');
@@ -9435,17 +9448,17 @@ function buildSearchIndex(){
   const push = (tab, icon, title, sub, amount) => rows.push({ tab, icon, title, sub, amount });
 
   DATA.sites.forEach(s=> push('sites','🏗️', s.name, s.location||'Site', null));
-  DATA.expenses.forEach(e=> push('expense','₹', e.contractor, `${e.type}${e.category?' · '+e.category:''} · ${siteName(e.siteId)} · ${e.date}`, e.amount));
-  DATA.udhar.forEach(u=> push('udhar','↺', u.supplier, `${u.material} · ${siteName(u.siteId)} · ${u.date}`, u.amount));
+  DATA.expenses.forEach(e=> push('expense','₹', e.contractor, `${e.type}${e.category?' · '+e.category:''} · ${siteName(e.siteId)} · ${fmtDate(e.date)}`, e.amount));
+  DATA.udhar.forEach(u=> push('udhar','↺', u.supplier, `${u.material} · ${siteName(u.siteId)} · ${fmtDate(u.date)}`, u.amount));
   DATA.workAgreements.forEach(ag=> push('contractwork','⚒', ag.contractor, `${ag.category} · ${siteName(ag.siteId)}`, ag.fixedAmount));
   if(currentRole==='owner'){
-    DATA.clientPayments.forEach(p=> push('clientpay','⇩', p.clientName||'Client', `${siteName(p.siteId)} · ${p.date}`, p.amount));
-    DATA.investorLoans.forEach(i=> push('investor','⇧', i.investorName, `${investorLinkName(i.siteId)} · ${i.date}`, i.taken));
-    DATA.officeExpenses.forEach(o=> push('office','⌂', o.paidTo, `${o.category} · ${o.date}`, o.amount));
-    DATA.personalInvestments.forEach(p=> push('personal','💰', p.name, `${p.type} · ${p.date}`, p.amount));
-    DATA.personalLoans.forEach(p=> push('personal','💰', p.personName, `Personal lending · ${p.date}`, p.amount));
+    DATA.clientPayments.forEach(p=> push('clientpay','⇩', p.clientName||'Client', `${siteName(p.siteId)} · ${fmtDate(p.date)}`, p.amount));
+    DATA.investorLoans.forEach(i=> push('investor','⇧', i.investorName, `${investorLinkName(i.siteId)} · ${fmtDate(i.date)}`, i.taken));
+    DATA.officeExpenses.forEach(o=> push('office','⌂', o.paidTo, `${o.category} · ${fmtDate(o.date)}`, o.amount));
+    DATA.personalInvestments.forEach(p=> push('personal','💰', p.name, `${p.type} · ${fmtDate(p.date)}`, p.amount));
+    DATA.personalLoans.forEach(p=> push('personal','💰', p.personName, `Personal lending · ${fmtDate(p.date)}`, p.amount));
     DATA.projectUnits.forEach(u=> push('projects','🏘️', `${u.project} — ${u.unit}`, u.status, u.ourAmount));
-    DATA.consultancyIncome.forEach(c=> push('consultancy','📐', c.client, `${c.type} · ${c.date}`, c.amount));
+    DATA.consultancyIncome.forEach(c=> push('consultancy','📐', c.client, `${c.type} · ${fmtDate(c.date)}`, c.amount));
     allVendorNames().forEach(v=> push('udhar','🏪', v, 'Vendor', null));
   }
   return rows;
@@ -9512,7 +9525,7 @@ function renderReminders(){
     } else if(lastBackupDate){
       const days = daysBetween(lastBackupDate);
       if(days !== null && days >= 7){
-        items.push({ urgency: days>=14 ? 'high':'medium', text:`Last Backup <strong>${days} din</strong> pehle li thi (${lastBackupDate}) — ek nayi le lena chahiye.` });
+        items.push({ urgency: days>=14 ? 'high':'medium', text:`Last Backup <strong>${days} din</strong> pehle li thi (${fmtDate(lastBackupDate)}) — ek nayi le lena chahiye.` });
       }
     }
 
@@ -9522,7 +9535,7 @@ function renderReminders(){
       if(!i.expDate) return;
       const days = daysBetween(i.expDate);
       if(days !== null && days > 0){
-        items.push({ urgency:'high', text:`<strong>${i.investorName}</strong> ka return ${days} din se overdue hai (${inr(investorRemaining(i))} baaki) — expected date thi ${i.expDate}.` });
+        items.push({ urgency:'high', text:`<strong>${i.investorName}</strong> ka return ${days} din se overdue hai (${inr(investorRemaining(i))} baaki) — expected date thi ${fmtDate(i.expDate)}.` });
       }
     });
 
@@ -9957,7 +9970,7 @@ function updateAutoStatusUI(lastDate){
     el.innerHTML = `Auto report: <strong>pehli report is session mein banegi</strong>`;
   } else {
     const nextDue = addDays(lastDate, AUTO_REPORT_DAYS);
-    el.innerHTML = `Last auto report: <strong>${lastDate}</strong> · Next due: <strong>${nextDue}</strong>`;
+    el.innerHTML = `Last auto report: <strong>${fmtDate(lastDate)}</strong> · Next due: <strong>${nextDue}</strong>`;
   }
 }
 
