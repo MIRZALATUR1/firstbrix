@@ -689,6 +689,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field" style="flex:2"><label data-i18n="lbl_location_opt">Location (optional)</label><input id="newSiteLocation" list="dl-sites-location" placeholder="e.g. Nashik, Maharashtra"></div>
           <div class="field owner-only" style="flex:1.4"><label data-i18n="lbl_contractvalue">Contract / Project Value (₹)</label><input id="newSiteContract" type="number" min="0" placeholder="Total project value"></div>
           <div class="field owner-only" style="flex:1"><label>Client Phone — optional</label><input id="newSiteClientPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
+          <div class="field owner-only" style="flex:1"><label>Message Language</label><select id="newSiteClientLang"><option value="mr">Marathi</option><option value="hi">Hindi</option></select></div>
           <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="addSiteBtn">+ <span data-i18n="btn_addsite">Add Site</span></button></div>
         </div>
         <div class="field owner-only" style="max-width:420px">
@@ -855,10 +856,13 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         <div class="grid cols-3">
           <div class="field"><label>Supplier Name</label><input id="supDirName" list="dl-suppliers" placeholder="e.g. Shree Hardware Store"></div>
           <div class="field"><label>Phone Number</label><input id="supDirPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
-          <div style="align-self:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="supDirSaveBtn">💾 Save</button></div>
+          <div class="field"><label>Message Language</label>
+            <select id="supDirLang"><option value="mr">Marathi</option><option value="hi">Hindi</option></select>
+          </div>
         </div>
+        <button class="btn btn-primary" id="supDirSaveBtn">💾 Save</button>
         <div class="table-wrap" style="max-height:220px;overflow-y:auto"><table id="supDirTable"><thead><tr>
-          <th>Supplier Name</th><th>Phone</th><th></th>
+          <th>Supplier Name</th><th>Phone</th><th>Language</th><th></th>
         </tr></thead><tbody></tbody></table></div>
       </div>
 
@@ -943,6 +947,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
           <div class="field"><label data-i18n="lbl_fixedamount">Fixed Work Amount (₹)</label><input id="agAmount" type="number" min="0" placeholder="Total kaam kitne mein fix hua hai"></div>
           <div class="field"><label>Contractor Phone — optional</label><input id="agContractorPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9876543210"></div>
         </div>
+        <div class="field"><label>Message Language</label><select id="agContractorLang"><option value="mr">Marathi</option><option value="hi">Hindi</option></select></div>
         <div class="grid cols-2">
           <div class="field"><label>Uska Aadmi / Sub-contractor Naam — optional</label><input id="agAltName" placeholder="e.g. Suresh (site supervisor)"></div>
           <div class="field"><label>Uska Aadmi ka Phone — optional</label><input id="agAltPhone" class="phone10" type="tel" inputmode="numeric" maxlength="10" placeholder="e.g. 9123456780"></div>
@@ -1165,6 +1170,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
         </div>
         <div class="field"><label data-i18n="lbl_note_opt">Note (optional)</label><input id="invNote" placeholder="e.g. agreement details"></div>
         <div class="field"><label>Ye Fund Kisne Handle Kiya — optional</label><select id="invHandledBy"><option value="">— Track nahi karna —</option><option value="Owner">Owner (Mera Apna)</option></select></div>
+        <div class="field"><label>Message Language</label><select id="invLang"><option value="mr">Marathi</option><option value="hi">Hindi</option></select></div>
         <button class="btn btn-primary" id="addInvestorBtn">+ <span data-i18n="btn_addinvestor">Add Investor Entry</span></button>
         <div class="hint">Agar sirf mool raqam hi wapas deni hai (bina interest ke), to "Total Return Amount" mein wahi amount daalo jo "Amount Taken" mein daala hai. Agar ye fund kisi token/advance ke roop mein kisi ne use kiya hai (jaise land token), to "Ye Fund Kisne Handle Kiya" mein select karo — Cash Position ke "Kaun Kitna Handle Kar Raha Hai" mein dikhega.</div>
       </div>
@@ -3041,6 +3047,7 @@ function applySiteFinance(){
     s.gstRate = fin.gstRate !== undefined ? fin.gstRate : 18;
     s.hsn = fin.hsn || '';
     s.clientPhone = fin.clientPhone || '';
+    s.clientLang = fin.clientLang || 'mr';
   });
 }
 
@@ -3278,18 +3285,30 @@ function vendorPhone(supplier){
   return withPhone.length ? withPhone[0].supplierPhone : '';
 }
 
+/* Some vendors don't read Marathi — this lets each supplier have their own
+   preferred second language (Marathi or Hindi) for WhatsApp messages,
+   defaulting to Marathi (the original behaviour) if never set. */
+function vendorLang(supplier){
+  const key = vendorNameKey(supplier);
+  const dirEntry = DATA.suppliers.find(s=>vendorNameKey(s.name)===key);
+  return (dirEntry && dirEntry.lang) || 'mr';
+}
+
 /* Permanently remembers a supplier's phone the moment it's typed anywhere
    in the app — independent of any single transaction, so it survives even
    if that particular udhar entry is later edited or deleted. */
-async function saveSupplierPhone(name, phone){
+async function saveSupplierPhone(name, phone, lang){
   if(!name || !phone) return;
   const key = vendorNameKey(name);
   const existing = DATA.suppliers.find(s=>vendorNameKey(s.name)===key);
   try{
     if(existing){
-      if(existing.phone !== phone) await db.collection('suppliers').doc(existing.id).update({ phone, name });
+      const patch = {};
+      if(existing.phone !== phone) patch.phone = phone;
+      if(lang && existing.lang !== lang) patch.lang = lang;
+      if(Object.keys(patch).length) await db.collection('suppliers').doc(existing.id).update({ ...patch, name });
     } else {
-      await db.collection('suppliers').add({ name, phone });
+      await db.collection('suppliers').add({ name, phone, lang: lang || 'mr' });
     }
   }catch(e){ /* non-critical — the per-entry fallback still works */ }
 }
@@ -3334,12 +3353,20 @@ function vendorTotals(supplier){
    plus an optional line for anything important worth flagging. */
 function buildUdharWhatsAppMsg(siteId, supplier, material, amountNow, date, extraNote){
   const before = vendorTotals(supplier); // live totals BEFORE this new bill lands via Firestore
-  const totalPaid = before.paid;
-  const outstandingAfter = before.outstanding + amountNow;
-  const extraLine = extraNote ? `\n📝 ${extraNote}` : '';
-  const enMsg = `Hello,\n\nMaterial taken on credit for *${siteName(siteId)}* site:\n\n📦 Material: ${material}\n💰 Amount Taken Now: ₹${amountNow.toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${totalPaid.toLocaleString('en-IN')}\n⏳ Total Outstanding: ₹${outstandingAfter.toLocaleString('en-IN')}\n\nDate: ${date}${extraLine}\n\nThank you,\nFirstBrix Infratech`;
-  const mrMsg = `नमस्कार,\n\n*${siteName(siteId)}* साइटसाठी उधारीवर घेतलेले साहित्य:\n\n📦 साहित्य: ${material}\n💰 आत्ता घेतलेली रक्कम: ₹${amountNow.toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${totalPaid.toLocaleString('en-IN')}\n⏳ एकूण शिल्लक रक्कम: ₹${outstandingAfter.toLocaleString('en-IN')}\n\nदिनांक: ${date}${extraLine}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
-  return bilingualMsg(enMsg, mrMsg);
+  const prevOutstanding = before.outstanding;
+  const outstandingAfter = prevOutstanding + amountNow;
+  const extraLine = extraNote ? `\n📝 Note: ${extraNote}` : '';
+  const extraLineMr = extraNote ? `\n📝 टीप: ${extraNote}` : '';
+  const extraLineHi = extraNote ? `\n📝 नोट: ${extraNote}` : '';
+  const dateStr = fmtDate(date);
+
+  const enMsg = `Hello,\n\n📋 *UDHAR BILL — ${siteName(siteId)}*\n\nMaterial: ${material}\nAaj Ka Bill: ₹${amountNow.toLocaleString('en-IN')}\nDate: ${dateStr}\n\n──────────────\n*Total Udhar Bacha Hua (Jama Karne Ke Baad): ₹${outstandingAfter.toLocaleString('en-IN')}*\n──────────────${extraLine}\n\nThank you,\nFirstBrix Infratech`;
+
+  const mrMsg = `नमस्कार,\n\n📋 *उधार बिल — ${siteName(siteId)}*\n\nसाहित्य: ${material}\nआजचे बिल: ₹${amountNow.toLocaleString('en-IN')}\nदिनांक: ${dateStr}\n\n──────────────\n*एकूण शिल्लक रक्कम (जमा केल्यानंतर बाकी): ₹${outstandingAfter.toLocaleString('en-IN')}*\n──────────────${extraLineMr}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+
+  const hiMsg = `नमस्ते,\n\n📋 *उधार बिल — ${siteName(siteId)}*\n\nसामान: ${material}\nआज का बिल: ₹${amountNow.toLocaleString('en-IN')}\nदिनांक: ${dateStr}\n\n──────────────\n*कुल बकाया राशि (जमा करने के बाद बाकी): ₹${outstandingAfter.toLocaleString('en-IN')}*\n──────────────${extraLineHi}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+
+  return bilingualMsg(enMsg, vendorLang(supplier)==='hi' ? hiMsg : mrMsg);
 }
 
 /* Preview only — used to show "yeh payment kahan jayegi" before saving */
@@ -3480,9 +3507,10 @@ document.getElementById('addSiteBtn').addEventListener('click', async ()=>{
   const gstRate = Number(document.getElementById('newSiteGstRate').value) || 18;
   const hsn = document.getElementById('newSiteHsn').value.trim();
   const clientPhone = document.getElementById('newSiteClientPhone').value.trim();
+  const clientLang = document.getElementById('newSiteClientLang').value;
   if(clientPhone && !isValidPhone10(clientPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
   if(!name){ showToast('Site ka naam daalo'); return; }
-  DATA.sites.push({ id: uid(), name, location: loc, contractValue, siteType, gstApplicable, gstin, gstRate, hsn, clientPhone, createdAt: todayStr() });
+  DATA.sites.push({ id: uid(), name, location: loc, contractValue, siteType, gstApplicable, gstin, gstRate, hsn, clientPhone, clientLang, createdAt: todayStr() });
   document.getElementById('newSiteName').value='';
   document.getElementById('newSiteLocation').value='';
   document.getElementById('newSiteContract').value='';
@@ -3515,7 +3543,8 @@ function editSite(id){
     {key:'gstin', label:'Client GSTIN', value:s.gstin},
     {key:'gstRate', label:'GST Rate (%)', value:s.gstRate!==undefined?s.gstRate:18, type:'number'},
     {key:'hsn', label:'HSN/SAC Code', value:s.hsn},
-    {key:'clientPhone', label:'Client Phone (WhatsApp ke liye)', value:s.clientPhone}
+    {key:'clientPhone', label:'Client Phone (WhatsApp ke liye)', value:s.clientPhone},
+    {key:'clientLang', label:'Message Language', value:s.clientLang||'mr', type:'select', options:[{value:'mr',label:'Marathi'},{value:'hi',label:'Hindi'}]}
   ], async v=>{
     await db.collection('sites').doc(id).update({ name:v.name, location:v.location });
     await db.collection('siteFinance').doc(id).set({
@@ -3525,7 +3554,8 @@ function editSite(id){
       gstin: v.gstin,
       gstRate: Number(v.gstRate)||18,
       hsn: v.hsn,
-      clientPhone: v.clientPhone
+      clientPhone: v.clientPhone,
+      clientLang: v.clientLang
     });
     logAudit('update','Site', `"${v.name}" ke details edit kiye`);
   });
@@ -3695,6 +3725,11 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   if(mode === 'udhar'){
     const supplierPhone = document.getElementById('expUdharPhone').value.trim();
   if(supplierPhone && !isValidPhone10(supplierPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
+    // Built BEFORE the write, so vendorTotals() reads pre-entry state —
+    // buildUdharWhatsAppMsg adds this amount on top itself.
+    const matVal = document.getElementById('expUdharMaterial').value;
+    const extraNote = document.getElementById('expUdharWaNote').value.trim();
+    const msg = supplierPhone ? buildUdharWhatsAppMsg(siteId, contractor, matVal, amount, date, extraNote) : null;
     try{
       await db.collection('udhar').add({
         siteId, supplier: contractor,
@@ -3707,9 +3742,6 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
       });
       showToast('Udhar entry add ho gayi ✓');
       if(supplierPhone){
-        const matVal = document.getElementById('expUdharMaterial').value;
-        const extraNote = document.getElementById('expUdharWaNote').value.trim();
-        const msg = buildUdharWhatsAppMsg(siteId, contractor, matVal, amount, date, extraNote);
         saveSupplierPhone(contractor, supplierPhone);
         offerWhatsAppPrompt(contractor, supplierPhone, msg);
       }
@@ -3946,21 +3978,24 @@ function resendUdharWhatsApp(id){
   const totals = vendorTotals(r.supplier);
   const materialLabel = r.material + (r.qty?` (${r.qty} ${r.unit||''})`:'');
   const extraLine = r.note ? `\n📝 ${r.note}` : '';
-  const enMsg = `Hello,\n\nReminder — material taken on credit for *${siteName(r.siteId)}* site:\n\n📦 Material: ${materialLabel}\n💰 Bill Amount: ₹${Number(r.amount).toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${totals.paid.toLocaleString('en-IN')}\n⏳ Total Outstanding: ₹${totals.outstanding.toLocaleString('en-IN')}\n\nDate: ${fmtDate(r.date)}${extraLine}\n\nThank you,\nFirstBrix Infratech`;
-  const mrMsg = `नमस्कार,\n\n*${siteName(r.siteId)}* साइटसाठी उधारीवर घेतलेल्या साहित्याची आठवण:\n\n📦 साहित्य: ${materialLabel}\n💰 बिल रक्कम: ₹${Number(r.amount).toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${totals.paid.toLocaleString('en-IN')}\n⏳ एकूण शिल्लक रक्कम: ₹${totals.outstanding.toLocaleString('en-IN')}\n\nदिनांक: ${fmtDate(r.date)}${extraLine}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
-  const msg = bilingualMsg(enMsg, mrMsg);
+  const enMsg = `Hello,\n\nReminder — material taken on credit for *${siteName(r.siteId)}* site:\n\n📦 Material: ${materialLabel}\n💰 Bill Amount: ₹${Number(r.amount).toLocaleString('en-IN')}\n\n──────────────\n*Total Udhar Bacha Hua (Jama Karne Ke Baad): ₹${totals.outstanding.toLocaleString('en-IN')}*\n──────────────\n\nDate: ${fmtDate(r.date)}${extraLine}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार,\n\n*${siteName(r.siteId)}* साइटसाठी उधारीवर घेतलेल्या साहित्याची आठवण:\n\n📦 साहित्य: ${materialLabel}\n💰 बिल रक्कम: ₹${Number(r.amount).toLocaleString('en-IN')}\n\n──────────────\n*एकूण शिल्लक रक्कम (जमा केल्यानंतर बाकी): ₹${totals.outstanding.toLocaleString('en-IN')}*\n──────────────\n\nदिनांक: ${fmtDate(r.date)}${extraLine}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const hiMsg = `नमस्ते,\n\n*${siteName(r.siteId)}* साइट के लिए उधार सामान की याद:\n\n📦 सामान: ${materialLabel}\n💰 बिल राशि: ₹${Number(r.amount).toLocaleString('en-IN')}\n\n──────────────\n*कुल बकाया राशि (जमा करने के बाद बाकी): ₹${totals.outstanding.toLocaleString('en-IN')}*\n──────────────\n\nदिनांक: ${fmtDate(r.date)}${extraLine}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const msg = bilingualMsg(enMsg, vendorLang(r.supplier)==='hi' ? hiMsg : mrMsg);
   offerWhatsAppPrompt(r.supplier, phone, msg);
 }
 
 document.getElementById('supDirSaveBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('supDirName').value.trim();
   const phone = document.getElementById('supDirPhone').value.trim();
+  const lang = document.getElementById('supDirLang').value;
   if(!name){ showToast('Supplier ka naam daalo'); return; }
   if(!isValidPhone10(phone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
-  await saveSupplierPhone(name, phone);
+  await saveSupplierPhone(name, phone, lang);
   showToast(`${name} ka number save ho gaya ✓`);
   document.getElementById('supDirName').value = '';
   document.getElementById('supDirPhone').value = '';
+  document.getElementById('supDirLang').value = 'mr';
 });
 function renderSupplierDirectory(){
   const tbody = document.querySelector('#supDirTable tbody');
@@ -3983,22 +4018,34 @@ function renderSupplierDirectory(){
 
   const dirRows = [...DATA.suppliers].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   if(dirRows.length===0 && legacyRows.length===0){
-    tbody.innerHTML = `<tr><td colspan="3" class="empty">Abhi koi supplier save nahi hua.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">Abhi koi supplier save nahi hua.</td></tr>`;
     return;
   }
-  const dirHtml = dirRows.map(r=>`<tr>
+  const dirHtml = dirRows.map(r=>{
+    const lang = r.lang || 'mr';
+    return `<tr>
     <td>${r.name}</td><td>${r.phone}</td>
+    <td><button class="btn-danger-text" onclick="toggleSupplierLang('${r.id}','${lang}')">${lang==='hi'?'🇮🇳 Hindi':'🟢 Marathi'} (badlo)</button></td>
     <td>
       <button class="btn-danger-text" style="color:var(--blue)" onclick="editSupplierDirEntry('${r.id}')">Edit</button>
       &nbsp;·&nbsp;
       <button class="btn-danger-text" onclick="deleteSupplierDirEntry('${r.id}')">Delete</button>
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
   const legacyHtml = legacyRows.map(r=>`<tr style="opacity:0.75">
     <td>${r.name} <span class="footnote" style="margin:0">(purani entry se)</span></td><td>${r.phone}</td>
+    <td>—</td>
     <td><button class="btn-danger-text" style="color:var(--good)" onclick="migrateLegacySupplier('${encodeURIComponent(r.name).replace(/'/g,'%27')}','${r.phone}')">💾 Directory mein Save Karo</button></td>
   </tr>`).join('');
   tbody.innerHTML = dirHtml + legacyHtml;
+}
+async function toggleSupplierLang(id, currentLang){
+  const newLang = currentLang === 'hi' ? 'mr' : 'hi';
+  try{
+    await db.collection('suppliers').doc(id).update({ lang: newLang });
+    showToast(`Language ${newLang==='hi'?'Hindi':'Marathi'} set ho gayi ✓`);
+  }catch(e){ showToast('Update nahi hua — dobara try karo'); }
 }
 function editSupplierDirEntry(id){
   const r = DATA.suppliers.find(x=>x.id===id);
@@ -4137,8 +4184,8 @@ document.getElementById('apSendAllBtn').addEventListener('click', async ()=>{
     const site = DATA.sites.find(s=>s.id===siteId);
     const grandTotal = items.reduce((a,it)=>a+it.amount,0);
     const itemLines = items.map(lineEn).join('\n');
-    const enMsg = `Hello,\n\nWe need your approval for the following extra work/material items at *${site?site.name:''}*:\n\n${itemLines}\n\n💰 Grand Total: ₹${grandTotal.toLocaleString('en-IN')}\n\nPlease reply to confirm if these are approved.\n\nDate: ${date}`;
-    const mrMsg = `नमस्कार,\n\n*${site?site.name:''}* साठी खालील अतिरिक्त काम/साहित्यासाठी तुमची मंजुरी हवी आहे:\n\n${itemLines}\n\n💰 एकूण रक्कम: ₹${grandTotal.toLocaleString('en-IN')}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${date}`;
+    const enMsg = `Hello,\n\nWe need your approval for the following extra work/material items at *${site?site.name:''}*:\n\n${itemLines}\n\n💰 Grand Total: ₹${grandTotal.toLocaleString('en-IN')}\n\nPlease reply to confirm if these are approved.\n\nDate: ${fmtDate(date)}`;
+    const mrMsg = `नमस्कार,\n\n*${site?site.name:''}* साठी खालील अतिरिक्त काम/साहित्यासाठी तुमची मंजुरी हवी आहे:\n\n${itemLines}\n\n💰 एकूण रक्कम: ₹${grandTotal.toLocaleString('en-IN')}\n\nकृपया मंजुरीसाठी उत्तर द्या.\n\nदिनांक: ${fmtDate(date)}`;
     return { site, msg: bilingualMsg(enMsg, mrMsg) };
   });
 
@@ -4445,16 +4492,24 @@ function openPayVendorModal(supplier){
     const errEl = document.getElementById('vpErr');
     if(!amount || amount<=0){ errEl.textContent = 'Sahi amount daalo.'; return; }
     try{
+      // Calculated BEFORE the write, on purpose — reading it back right after
+      // .add() is a race against the real-time listener's own refresh, which
+      // could show the pre- or post-payment number unpredictably.
+      const { billRemaining } = computeVendorAllocations(supplier);
+      const outstandingBefore = Object.values(billRemaining).reduce((a,v)=>a+Math.max(v,0),0);
+      const outstandingAfter = Math.max(outstandingBefore - amount, 0);
+      const outStrAfter = outstandingAfter>0 ? '₹'+outstandingAfter.toLocaleString('en-IN') : '0 (Fully Paid)';
+      const dateStr = fmtDate(date);
+
       await db.collection('vendorPayments').add({ supplier, amount, date, note });
       close();
       showToast(`${supplier} ko payment record ho gaya ✓`);
       logAudit('create','Vendor Payment', `${supplier} ko ${inr(amount)} paid on ${date}`);
-      const { billRemaining } = computeVendorAllocations(supplier);
-      const outstanding = Object.values(billRemaining).reduce((a,v)=>a+Math.max(v,0),0);
-      const outStr = outstanding>0 ? '₹'+outstanding.toLocaleString('en-IN') : '0 (Fully Paid)';
-      const enMsg = `Hello,\n\nPayment made to *${supplier}*:\n\n✅ Paid Now: ₹${amount.toLocaleString('en-IN')}\n⏳ Outstanding Balance: ${outStr}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
-      const mrMsg = `नमस्कार,\n\n*${supplier}* यांना केलेले पेमेंट:\n\n✅ आत्ता दिलेली रक्कम: ₹${amount.toLocaleString('en-IN')}\n⏳ शिल्लक रक्कम: ${outStr}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
-      const msg = bilingualMsg(enMsg, mrMsg);
+
+      const enMsg = `Hello,\n\n✅ *PAYMENT MADE — ${supplier}*\n\nAmount Paid: ₹${amount.toLocaleString('en-IN')}\nDate: ${dateStr}\n\n──────────────\nPehla Outstanding: ₹${outstandingBefore.toLocaleString('en-IN')}\n- Payment Kiya: ₹${amount.toLocaleString('en-IN')}\n──────────────\n*Naya Outstanding: ${outStrAfter}*\n──────────────\n\nThank you,\nFirstBrix Infratech`;
+      const mrMsg = `नमस्कार,\n\n✅ *पेमेंट केले — ${supplier}*\n\nदिलेली रक्कम: ₹${amount.toLocaleString('en-IN')}\nदिनांक: ${dateStr}\n\n──────────────\nआधीची शिल्लक रक्कम: ₹${outstandingBefore.toLocaleString('en-IN')}\n- दिलेली रक्कम: ₹${amount.toLocaleString('en-IN')}\n──────────────\n*नवीन शिल्लक रक्कम: ${outStrAfter}*\n──────────────\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+      const hiMsg = `नमस्ते,\n\n✅ *भुगतान किया गया — ${supplier}*\n\nभुगतान की गई राशि: ₹${amount.toLocaleString('en-IN')}\nदिनांक: ${dateStr}\n\n──────────────\nपहले की बकाया राशि: ₹${outstandingBefore.toLocaleString('en-IN')}\n- भुगतान की गई राशि: ₹${amount.toLocaleString('en-IN')}\n──────────────\n*नई बकाया राशि: ${outStrAfter}*\n──────────────\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+      const msg = bilingualMsg(enMsg, vendorLang(supplier)==='hi' ? hiMsg : mrMsg);
       offerWhatsAppPrompt(supplier, vendorPhone(supplier), msg);
     }catch(e){ errEl.textContent = 'Error: ' + e.message; }
   };
@@ -4745,6 +4800,7 @@ document.getElementById('addAgreementBtn').addEventListener('click', async ()=>{
   const amount = Number(document.getElementById('agAmount').value);
   const note = document.getElementById('agNote').value.trim();
   const contractorPhone = document.getElementById('agContractorPhone').value.trim();
+  const contractorLang = document.getElementById('agContractorLang').value;
   if(contractorPhone && !isValidPhone10(contractorPhone)){ showToast('Phone number 10 digit ka hona chahiye'); return; }
   const altName = document.getElementById('agAltName').value.trim();
   const altPhone = document.getElementById('agAltPhone').value.trim();
@@ -4755,7 +4811,7 @@ document.getElementById('addAgreementBtn').addEventListener('click', async ()=>{
   if(!contractor){ showToast('Contractor ka naam daalo'); return; }
   if(!amount || amount<=0){ showToast('Sahi fixed amount daalo'); return; }
 
-  DATA.workAgreements.push({ id: uid(), siteId, contractor, category, fixedAmount: amount, note, contractorPhone, altName, altPhone });
+  DATA.workAgreements.push({ id: uid(), siteId, contractor, category, fixedAmount: amount, note, contractorPhone, contractorLang, altName, altPhone });
   document.getElementById('agContractor').value='';
   document.getElementById('agAmount').value='';
   document.getElementById('agNote').value='';
@@ -4847,9 +4903,14 @@ function openContractorWhatsAppPrompt(ag, amountPaidNow){
   const todayLineMr = amountPaidNow
     ? `✅ आज दिलेली रक्कम: ₹${Number(amountPaidNow).toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}`
     : `📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${paid.toLocaleString('en-IN')}`;
-  const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n${todayLine}\n\nDate: ${new Date().toLocaleDateString('en-IN')}\n\nThank you,\nFirstBrix Infratech`;
-  const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n${todayLineMr}\n\nदिनांक: ${new Date().toLocaleDateString('en-IN')}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
-  const msg = bilingualMsg(enMsg, mrMsg);
+  const todayLineHi = amountPaidNow
+    ? `✅ आज दी गई राशि: ₹${Number(amountPaidNow).toLocaleString('en-IN')}\n📊 अब तक दी गई कुल राशि: ₹${paid.toLocaleString('en-IN')}`
+    : `📊 अब तक दी गई कुल राशि: ₹${paid.toLocaleString('en-IN')}`;
+  const dateStr = new Date().toLocaleDateString('en-IN');
+  const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n${todayLine}\n\nDate: ${dateStr}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n${todayLineMr}\n\nदिनांक: ${dateStr}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const hiMsg = `नमस्ते ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइट (${ag.category} काम) के लिए भुगतान अपडेट:\n\n${todayLineHi}\n\nदिनांक: ${dateStr}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const msg = bilingualMsg(enMsg, (ag.contractorLang==='hi') ? hiMsg : mrMsg);
   const altRecipient = ag.altPhone ? { name: ag.altName || 'Uska Aadmi', phone: ag.altPhone } : null;
   offerWhatsAppPrompt(ag.contractor, ag.contractorPhone, msg, altRecipient);
 }
@@ -4886,6 +4947,7 @@ function editAgreement(id){
     {key:'category', label:'Work Category', value:r.category, type:'select', options:cats.map(c=>({value:c,label:c==='All'?'All / Mixed Work':c}))},
     {key:'fixedAmount', label:'Fixed Work Amount (₹)', value:r.fixedAmount, type:'number'},
     {key:'contractorPhone', label:'Contractor Phone', value:r.contractorPhone},
+    {key:'contractorLang', label:'Message Language', value:r.contractorLang||'mr', type:'select', options:[{value:'mr',label:'Marathi'},{value:'hi',label:'Hindi'}]},
     {key:'altName', label:'Uska Aadmi / Sub-contractor Naam', value:r.altName},
     {key:'altPhone', label:'Uska Aadmi ka Phone', value:r.altPhone},
     {key:'note', label:'Note', value:r.note}
@@ -5425,6 +5487,10 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
   if(mode === 'udhar'){
     const supplierPhone = document.getElementById('qUdharPhone').value.trim();
     if(supplierPhone && !isValidPhone10(supplierPhone)){ err.textContent = 'Phone number 10 digit ka hona chahiye.'; return; }
+    // Built BEFORE the write, so vendorTotals() reads pre-entry state.
+    const matVal = document.getElementById('qUdharMaterial').value;
+    const extraNote = document.getElementById('qUdharWaNote').value.trim();
+    const msg = supplierPhone ? buildUdharWhatsAppMsg(siteId, name, matVal, amount, date, extraNote) : null;
     try{
       await db.collection('udhar').add({
         siteId, supplier: name,
@@ -5437,9 +5503,6 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
         supplierPhone
       });
       if(supplierPhone){
-        const matVal = document.getElementById('qUdharMaterial').value;
-        const extraNote = document.getElementById('qUdharWaNote').value.trim();
-        const msg = buildUdharWhatsAppMsg(siteId, name, matVal, amount, date, extraNote);
         saveSupplierPhone(name, supplierPhone);
         offerWhatsAppPrompt(name, supplierPhone, msg);
       }
@@ -5577,9 +5640,10 @@ document.getElementById('addClientPayBtn').addEventListener('click', async ()=>{
     const pending = contract - received;
     const contractStr = contract ? '₹'+contract.toLocaleString('en-IN') : '—';
     const pendingStr = pending>0 ? '₹'+pending.toLocaleString('en-IN') : '0 (Fully Paid)';
-    const enMsg = `Hello,\n\nPayment receipt for *${site.name}* project:\n\n✅ Received Now: ₹${amount.toLocaleString('en-IN')}\n📊 Total Received So Far: ₹${received.toLocaleString('en-IN')}\n📋 Total Contract Value: ${contractStr}\n⏳ Pending: ${pendingStr}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
-    const mrMsg = `नमस्कार,\n\n*${site.name}* प्रकल्पासाठी पेमेंट पावती:\n\n✅ आत्ता मिळालेली रक्कम: ₹${amount.toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण मिळालेली रक्कम: ₹${received.toLocaleString('en-IN')}\n📋 एकूण कराराची रक्कम: ${contractStr}\n⏳ शिल्लक रक्कम: ${pendingStr}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
-    const msg = bilingualMsg(enMsg, mrMsg);
+    const enMsg = `Hello,\n\nPayment receipt for *${site.name}* project:\n\n✅ Received Now: ₹${amount.toLocaleString('en-IN')}\n📊 Total Received So Far: ₹${received.toLocaleString('en-IN')}\n📋 Total Contract Value: ${contractStr}\n⏳ Pending: ${pendingStr}\n\nDate: ${fmtDate(date)}\n\nThank you,\nFirstBrix Infratech`;
+    const mrMsg = `नमस्कार,\n\n*${site.name}* प्रकल्पासाठी पेमेंट पावती:\n\n✅ आत्ता मिळालेली रक्कम: ₹${amount.toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण मिळालेली रक्कम: ₹${received.toLocaleString('en-IN')}\n📋 एकूण कराराची रक्कम: ${contractStr}\n⏳ शिल्लक रक्कम: ${pendingStr}\n\nदिनांक: ${fmtDate(date)}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+    const hiMsg = `नमस्ते,\n\n*${site.name}* प्रोजेक्ट के लिए भुगतान रसीद:\n\n✅ अभी मिली राशि: ₹${amount.toLocaleString('en-IN')}\n📊 अब तक मिली कुल राशि: ₹${received.toLocaleString('en-IN')}\n📋 कुल अनुबंध राशि: ${contractStr}\n⏳ बकाया राशि: ${pendingStr}\n\nदिनांक: ${fmtDate(date)}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+    const msg = bilingualMsg(enMsg, (site.clientLang==='hi') ? hiMsg : mrMsg);
     offerWhatsAppPrompt(clientName||site.name, site.clientPhone, msg);
   }
 });
@@ -5677,8 +5741,8 @@ document.getElementById('cuGenerateBtn').addEventListener('click', ()=>{
   const scheduleEn = cuStages.length ? `\n\n🗓️ Upcoming Payment Schedule:\n${cuStages.map((s,i)=>`${i+1}. ${s.desc}: ₹${s.amt.toLocaleString('en-IN')}${s.note?` (${s.note})`:''}`).join('\n')}` : '';
   const scheduleMr = cuStages.length ? `\n\n🗓️ पुढील पेमेंटचे वेळापत्रक:\n${cuStages.map((s,i)=>`${i+1}. ${s.desc}: ₹${s.amt.toLocaleString('en-IN')}${s.note?` (${s.note})`:''}`).join('\n')}` : '';
 
-  const enMsg = `Hello,\n\nHere is the payment update${cuStages.length?' and the upcoming schedule':''} for the *${site.name}* project:\n\n📊 Payment Summary:\n• Total Contract Value: ₹${contract.toLocaleString('en-IN')}\n• Total Received: ₹${received.toLocaleString('en-IN')}\n• Pending Amount: ₹${pending.toLocaleString('en-IN')}${scheduleEn}${extraNote?`\n\nNote: ${extraNote}`:''}${request?`\n\n${request}`:''}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
-  const mrMsg = `नमस्कार,\n\n*${site.name}* प्रकल्पाची आतापर्यंतची पेमेंट माहिती${cuStages.length?' आणि पुढील कामाचे वेळापत्रक':''} खालीलप्रमाणे आहे:\n\n📊 पेमेंट तपशील:\n• एकूण कराराची रक्कम: ₹${contract.toLocaleString('en-IN')}\n• एकूण मिळालेली रक्कम: ₹${received.toLocaleString('en-IN')}\n• शिल्लक रक्कम: ₹${pending.toLocaleString('en-IN')}${scheduleMr}${extraNote?`\n\nटीप: ${extraNote}`:''}${request?`\n\n${request}`:''}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+  const enMsg = `Hello,\n\nHere is the payment update${cuStages.length?' and the upcoming schedule':''} for the *${site.name}* project:\n\n📊 Payment Summary:\n• Total Contract Value: ₹${contract.toLocaleString('en-IN')}\n• Total Received: ₹${received.toLocaleString('en-IN')}\n• Pending Amount: ₹${pending.toLocaleString('en-IN')}${scheduleEn}${extraNote?`\n\nNote: ${extraNote}`:''}${request?`\n\n${request}`:''}\n\nDate: ${fmtDate(date)}\n\nThank you,\nFirstBrix Infratech`;
+  const mrMsg = `नमस्कार,\n\n*${site.name}* प्रकल्पाची आतापर्यंतची पेमेंट माहिती${cuStages.length?' आणि पुढील कामाचे वेळापत्रक':''} खालीलप्रमाणे आहे:\n\n📊 पेमेंट तपशील:\n• एकूण कराराची रक्कम: ₹${contract.toLocaleString('en-IN')}\n• एकूण मिळालेली रक्कम: ₹${received.toLocaleString('en-IN')}\n• शिल्लक रक्कम: ₹${pending.toLocaleString('en-IN')}${scheduleMr}${extraNote?`\n\nटीप: ${extraNote}`:''}${request?`\n\n${request}`:''}\n\nदिनांक: ${fmtDate(date)}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
 
   currentClientUpdate = { site, msg: bilingualMsg(enMsg, mrMsg) };
   const box = document.getElementById('cuPreviewBox');
@@ -5781,8 +5845,9 @@ document.getElementById('addInvestorBtn').addEventListener('click', async ()=>{
   if(!taken || taken<=0){ showToast('Sahi amount daalo jo liya hai'); return; }
   if(!returnAmt || returnAmt<=0) returnAmt = taken;
   const invHandledBy = document.getElementById('invHandledBy').value;
+  const invLang = document.getElementById('invLang').value;
 
-  DATA.investorLoans.push({ id: uid(), siteId, investorName, investorPhone, date, taken, returnAmt, expDate, status, note, handledBy: invHandledBy });
+  DATA.investorLoans.push({ id: uid(), siteId, investorName, investorPhone, date, taken, returnAmt, expDate, status, note, handledBy: invHandledBy, lang: invLang });
   document.getElementById('invName').value='';
   document.getElementById('invPhone').value='';
   document.getElementById('invTaken').value='';
@@ -5881,9 +5946,10 @@ function openInvestorPaymentModal(loanId){
       showToast('Payment record ho gaya ✓');
       const paidSoFarNow = payments.reduce((a,p)=>a+Number(p.amount),0);
       const remStr = newRemaining>0 ? '₹'+newRemaining.toLocaleString('en-IN') : '0 (Fully Paid)';
-      const enMsg = `Hello ${loan.investorName},\n\nUpdate on the payment made to you:\n\n✅ Paid Now: ₹${amount.toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${paidSoFarNow.toLocaleString('en-IN')}\n📋 Total Return Due: ₹${Number(loan.returnAmt).toLocaleString('en-IN')}\n⏳ Balance: ${remStr}\n\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
-      const mrMsg = `नमस्कार ${loan.investorName},\n\nतुम्हाला केलेल्या पेमेंटची माहिती:\n\n✅ आत्ता दिलेली रक्कम: ₹${amount.toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${paidSoFarNow.toLocaleString('en-IN')}\n📋 एकूण परतफेड रक्कम: ₹${Number(loan.returnAmt).toLocaleString('en-IN')}\n⏳ शिल्लक रक्कम: ${remStr}\n\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
-      const msg = bilingualMsg(enMsg, mrMsg);
+      const enMsg = `Hello ${loan.investorName},\n\nUpdate on the payment made to you:\n\n✅ Paid Now: ₹${amount.toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${paidSoFarNow.toLocaleString('en-IN')}\n📋 Total Return Due: ₹${Number(loan.returnAmt).toLocaleString('en-IN')}\n⏳ Balance: ${remStr}\n\nDate: ${fmtDate(date)}\n\nThank you,\nFirstBrix Infratech`;
+      const mrMsg = `नमस्कार ${loan.investorName},\n\nतुम्हाला केलेल्या पेमेंटची माहिती:\n\n✅ आत्ता दिलेली रक्कम: ₹${amount.toLocaleString('en-IN')}\n📊 आतापर्यंत एकूण दिलेली रक्कम: ₹${paidSoFarNow.toLocaleString('en-IN')}\n📋 एकूण परतफेड रक्कम: ₹${Number(loan.returnAmt).toLocaleString('en-IN')}\n⏳ शिल्लक रक्कम: ${remStr}\n\nदिनांक: ${fmtDate(date)}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+      const hiMsg = `नमस्ते ${loan.investorName},\n\nआपको किए गए भुगतान की जानकारी:\n\n✅ अभी दी गई राशि: ₹${amount.toLocaleString('en-IN')}\n📊 अब तक दी गई कुल राशि: ₹${paidSoFarNow.toLocaleString('en-IN')}\n📋 कुल वापसी राशि: ₹${Number(loan.returnAmt).toLocaleString('en-IN')}\n⏳ बकाया राशि: ${remStr}\n\nदिनांक: ${fmtDate(date)}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+      const msg = bilingualMsg(enMsg, (loan.lang==='hi') ? hiMsg : mrMsg);
       offerWhatsAppPrompt(loan.investorName, loan.investorPhone, msg);
     }catch(e){ errEl.textContent = 'Error: ' + e.message; }
   };
@@ -5944,6 +6010,7 @@ function editInvestor(id){
     {key:'expDate', label:'Expected Return Date', value:r.expDate, type:'date'},
     {key:'status', label:'Status', value:r.status, type:'select', options:[{value:'pending',label:'Pending'},{value:'returned',label:'Returned'}]},
     {key:'handledBy', label:'Ye Fund Kisne Handle Kiya', value:r.handledBy||'', type:'select', options:handledByOptions},
+    {key:'lang', label:'Message Language', value:r.lang||'mr', type:'select', options:[{value:'mr',label:'Marathi'},{value:'hi',label:'Hindi'}]},
     {key:'note', label:'Note', value:r.note}
   ], async v=>{ await db.collection('investorLoans').doc(id).update(v); });
 }
@@ -6122,8 +6189,8 @@ document.getElementById('plAddBtn').addEventListener('click', async ()=>{
   renderPersonalLoans(); renderDashboard();
   showToast('Lending entry add ho gayi ✓');
   if(personPhone){
-    const enMsg = `Hello ${personName},\n\nYou have been given ₹${amount.toLocaleString('en-IN')}.\n${expDate?`Return date: ${fmtDate(expDate)}\n`:''}\nDate: ${date}\n\nThank you,\nFirstBrix Infratech`;
-    const mrMsg = `नमस्कार ${personName},\n\nतुम्हाला ₹${amount.toLocaleString('en-IN')} दिले आहेत.\n${expDate?`परतफेड दिनांक: ${fmtDate(expDate)}\n`:''}\nदिनांक: ${date}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
+    const enMsg = `Hello ${personName},\n\nYou have been given ₹${amount.toLocaleString('en-IN')}.\n${expDate?`Return date: ${fmtDate(expDate)}\n`:''}\nDate: ${fmtDate(date)}\n\nThank you,\nFirstBrix Infratech`;
+    const mrMsg = `नमस्कार ${personName},\n\nतुम्हाला ₹${amount.toLocaleString('en-IN')} दिले आहेत.\n${expDate?`परतफेड दिनांक: ${fmtDate(expDate)}\n`:''}\nदिनांक: ${fmtDate(date)}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
     const msg = bilingualMsg(enMsg, mrMsg);
     offerWhatsAppPrompt(personName, personPhone, msg);
   }
