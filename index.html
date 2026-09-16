@@ -3776,7 +3776,7 @@ document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
   document.getElementById('expHandledBy').value='';
   await saveData();
   renderExpenseTable(); renderDashboard(); renderSitesTable();
-  if(isNewLabourEntry) maybeOfferContractorWhatsApp(siteId, contractor, type, amount);
+  if(isNewLabourEntry) maybeOfferContractorWhatsApp(siteId, contractor, type, amount, date);
 });
 
 function editExpense(id){
@@ -4853,12 +4853,12 @@ function renderAgreementsTable(){
 }
 /* Auto-offered right after a labour expense is saved — only fires if the
    contractor has a matching Work Agreement with a saved phone number. */
-function maybeOfferContractorWhatsApp(siteId, contractorName, type, amountPaidNow){
+function maybeOfferContractorWhatsApp(siteId, contractorName, type, amountPaidNow, date){
   if(type !== 'labour') return;
   const key = vendorNameKey(contractorName);
   const ag = DATA.workAgreements.find(a => a.siteId===siteId && vendorNameKey(a.contractor)===key && a.contractorPhone);
   if(!ag) return;
-  openContractorWhatsAppPrompt(ag, amountPaidNow);
+  openContractorWhatsAppPrompt(ag, amountPaidNow, date);
 }
 /* Generic popup — used by contractor, investor, vendor, and personal
    lending flows. Send opens WhatsApp AND closes the popup; Skip just closes. */
@@ -4895,7 +4895,7 @@ function offerWhatsAppPrompt(name, phone, message, altRecipient){
 /* Fixed/final amount is only our internal, approximate figure until final
    measurement — it never goes into a contractor-facing message. Only the
    actual amount paid (today's + running total) is shown. */
-function openContractorWhatsAppPrompt(ag, amountPaidNow){
+function openContractorWhatsAppPrompt(ag, amountPaidNow, date){
   const paid = computePaidForAgreement(ag);
   const todayLine = amountPaidNow
     ? `✅ Paid Today: ₹${Number(amountPaidNow).toLocaleString('en-IN')}\n📊 Total Paid So Far: ₹${paid.toLocaleString('en-IN')}`
@@ -4906,7 +4906,7 @@ function openContractorWhatsAppPrompt(ag, amountPaidNow){
   const todayLineHi = amountPaidNow
     ? `✅ आज दी गई राशि: ₹${Number(amountPaidNow).toLocaleString('en-IN')}\n📊 अब तक दी गई कुल राशि: ₹${paid.toLocaleString('en-IN')}`
     : `📊 अब तक दी गई कुल राशि: ₹${paid.toLocaleString('en-IN')}`;
-  const dateStr = new Date().toLocaleDateString('en-IN');
+  const dateStr = date ? fmtDate(date) : new Date().toLocaleDateString('en-IN');
   const enMsg = `Hello ${ag.contractor},\n\nPayment update for *${siteName(ag.siteId)}* site (${ag.category} work):\n\n${todayLine}\n\nDate: ${dateStr}\n\nThank you,\nFirstBrix Infratech`;
   const mrMsg = `नमस्कार ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइटवरील (${ag.category} काम) पेमेंट अपडेट:\n\n${todayLineMr}\n\nदिनांक: ${dateStr}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
   const hiMsg = `नमस्ते ${ag.contractor},\n\n*${siteName(ag.siteId)}* साइट (${ag.category} काम) के लिए भुगतान अपडेट:\n\n${todayLineHi}\n\nदिनांक: ${dateStr}\n\nधन्यवाद,\nफर्स्टब्रिक्स इन्फ्राटेक`;
@@ -5538,7 +5538,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
     renderSiteDetailLedger(siteId);
     renderSiteDetailChart(siteId, currentRole==='owner'?siteReceived(siteId):0, siteCost(siteId));
   }
-  maybeOfferContractorWhatsApp(siteId, name, type, amount);
+  maybeOfferContractorWhatsApp(siteId, name, type, amount, date);
 
   // Keep the modal open so several entries can be logged in a row.
   document.getElementById('qSavedHint').textContent = `Saved: ${name} — ${inr(amount)} (${siteName(siteId)})`;
