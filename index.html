@@ -614,7 +614,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       <div class="card">
         <h2><span data-i18n="h2_sitesummary">Site-wise Summary</span></h2>
         <div class="table-wrap"><table id="siteSummaryTable"><thead><tr>
-          <th data-i18n="th_site">Site</th><th>Labour</th><th>Material</th><th>Other</th><th>Udhar (Total)</th><th data-i18n="th_total">Total</th>
+          <th data-i18n="th_site">Site</th><th>Labour</th><th>Material</th><th>Other</th><th>Udhar Liya (Total)</th><th>Udhar Baaki (Pending)</th><th>Material Return</th><th data-i18n="th_total">Total Kharch</th>
         </tr></thead><tbody></tbody></table></div>
       </div>
 
@@ -9287,7 +9287,7 @@ function renderDashboard(){
 
   const tbody = document.querySelector('#siteSummaryTable tbody');
   if(DATA.sites.length===0){
-    tbody.innerHTML = `<tr><td colspan="6" class="empty">Koi site nahi hai. "Sites" tab se ek site add karo.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Koi site nahi hai. "Sites" tab se ek site add karo.</td></tr>`;
   } else {
     tbody.innerHTML = DATA.sites.map(s=>{
       const se = DATA.expenses.filter(e=>e.siteId===s.id);
@@ -9295,8 +9295,12 @@ function renderDashboard(){
       const l = se.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
       const m = se.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
       const o = se.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
-      const u = su.reduce((a,x)=>a+Number(x.amount),0);
-      return `<tr><td><a href="javascript:void(0)" onclick="openSiteDetail('${s.id}')" style="color:var(--blue);font-weight:600;text-decoration:none">${s.name} →</a></td><td class="amt">${inr(l)}</td><td class="amt">${inr(m)}</td><td class="amt">${inr(o)}</td><td class="amt">${inr(u)}</td><td class="amt" style="font-weight:700">${inr(l+m+o+u)}</td></tr>`;
+      const u = su.reduce((a,x)=>a+Number(x.amount),0); // gross - everything ever taken on credit here
+      const udharRemainingMap = udharRemainingForEntries(su);
+      const uPending = su.reduce((a,x)=>a+Math.max(udharRemainingMap[x.id]||0,0),0); // net - still actually owed
+      const returned = DATA.materialReturns.filter(r=>r.siteId===s.id).reduce((a,r)=>a+Number(r.amount),0);
+      const totalCost = l+m+o+u-returned; // accrual total: full value of everything used here
+      return `<tr><td><a href="javascript:void(0)" onclick="openSiteDetail('${s.id}')" style="color:var(--blue);font-weight:600;text-decoration:none">${s.name} →</a></td><td class="amt">${inr(l)}</td><td class="amt">${inr(m)}</td><td class="amt">${inr(o)}</td><td class="amt">${inr(u)}</td><td class="amt" style="color:${uPending>0?'var(--bad)':'var(--good)'};font-weight:600">${inr(uPending)}</td><td class="amt">${returned>0?inr(returned):'—'}</td><td class="amt" style="font-weight:700">${inr(totalCost)}</td></tr>`;
     }).join('');
   }
 
@@ -9380,7 +9384,11 @@ function renderCharts(exp, ud){
   // 1) Site-wise stacked bar: labour / material / other / udhar
   const siteLabels = DATA.sites.map(s=>s.name);
   const byType = t => DATA.sites.map(s => DATA.expenses.filter(e=>e.siteId===s.id && e.type===t).reduce((a,e)=>a+Number(e.amount),0));
-  const byUdhar = () => DATA.sites.map(s => DATA.udhar.filter(u=>u.siteId===s.id).reduce((a,u)=>a+Number(u.amount),0));
+  const byUdhar = () => DATA.sites.map(s => {
+    const su = DATA.udhar.filter(u=>u.siteId===s.id);
+    const remainingMap = udharRemainingForEntries(su);
+    return su.reduce((a,u)=>a+Math.max(remainingMap[u.id]||0,0),0);
+  });
   killChart('site');
   const barEl = document.getElementById('chartSiteBar');
   if(barEl && siteLabels.length){
@@ -9390,7 +9398,7 @@ function renderCharts(exp, ud){
         { label:'Labour',   data:byType('labour'),   backgroundColor:'#1B4F8C' },
         { label:'Material', data:byType('material'), backgroundColor:'#5C6B7E' },
         { label:'Other',    data:byType('other'),     backgroundColor:'#E8940C' },
-        { label:'Udhar Material', data:byUdhar(),     backgroundColor:'#B3372C' },
+        { label:'Udhar Pending', data:byUdhar(),     backgroundColor:'#B3372C' },
       ]},
       options: Object.assign(chartDefaults(), {
         scales:{ x:{ stacked:true, grid:{display:false} }, y:{ stacked:true, ticks:{ callback:v=>inr(v) } } }
@@ -9402,13 +9410,14 @@ function renderCharts(exp, ud){
   const labourTotal   = exp.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
   const materialTotal = exp.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
   const otherTotal     = exp.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
-  const udharTotalForChart = ud.reduce((a,u)=>a+Number(u.amount),0);
+  const udharRemainingMapDonut = udharRemainingForEntries(ud);
+  const udharTotalForChart = ud.reduce((a,u)=>a+Math.max(udharRemainingMapDonut[u.id]||0,0),0);
   killChart('donut');
   const donutEl = document.getElementById('chartTypeDonut');
   if(donutEl && (labourTotal+materialTotal+otherTotal+udharTotalForChart) > 0){
     charts.donut = new Chart(donutEl, {
       type:'doughnut',
-      data:{ labels:['Labour','Material','Other','Udhar Material'], datasets:[{
+      data:{ labels:['Labour','Material','Other','Udhar Pending'], datasets:[{
         data:[labourTotal, materialTotal, otherTotal, udharTotalForChart],
         backgroundColor:['#1B4F8C','#5C6B7E','#E8940C','#B3372C']
       }]},
