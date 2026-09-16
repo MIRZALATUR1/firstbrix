@@ -9780,9 +9780,13 @@ function computeReportData(type, site='all', from='', to=''){
 
   if(type==='udhar'){
     const raw = DATA.udhar.filter(u => (site==='all'||u.siteId===site) && inRange(u.date));
-    cols = ['Date','Site','Supplier','Material','Qty','Unit','Amount','Status','Note'];
+    cols = ['Date','Site','Supplier','Material','Qty','Unit','Bill Amount','Remaining (Aaj Tak)','Note'];
     title = 'Udhar Material Report';
-    rows = raw.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>({Date:r.date, Site:siteName(r.siteId), Supplier:r.supplier, Material:r.material, Qty:r.qty||'', Unit:r.unit||'', Amount:Number(r.amount), Status:r.status, Note:r.note||''}));
+    const remainingMap = udharRemainingForEntries(raw);
+    rows = raw.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>{
+      const remaining = Math.max(remainingMap[r.id]||0, 0);
+      return {Date:r.date, Site:siteName(r.siteId), Supplier:r.supplier, Material:r.material, Qty:r.qty||'', Unit:r.unit||'', 'Bill Amount':Number(r.amount), 'Remaining (Aaj Tak)':remaining, Note:r.note||'', Amount:remaining};
+    });
   } else if(type==='agreements'){
     let raw = site==='all' ? DATA.workAgreements : DATA.workAgreements.filter(a=>a.siteId===site);
     cols = ['Site','Contractor','Category','Fixed Amount','Paid Till Date','Balance Due','Note'];
@@ -9800,11 +9804,12 @@ function computeReportData(type, site='all', from='', to=''){
   } else if(type==='investor'){
     let raw = DATA.investorLoans.filter(i => inRange(i.date));
     if(site!=='all') raw = raw.filter(i=> i.siteId===site);
-    cols = ['Date','Site','Investor','Amount Taken','Return Due','Extra (Interest)','Expected Date','Status','Note'];
+    cols = ['Date','Site','Investor','Amount Taken','Return Due','Paid Till Date','Remaining','Expected Date','Note'];
     title = 'Investor Funding Report';
     rows = raw.sort((a,b)=>a.date.localeCompare(b.date)).map(r=>{
-      const extra = Number(r.returnAmt) - Number(r.taken);
-      return {Date:r.date, Site:investorLinkName(r.siteId), Investor:r.investorName, 'Amount Taken':Number(r.taken), 'Return Due':Number(r.returnAmt), 'Extra (Interest)':extra>0?extra:0, 'Expected Date':r.expDate||'—', Status:r.status, Note:r.note||'', Amount:Number(r.returnAmt)};
+      const paid = investorPaidSoFar(r);
+      const remaining = investorRemaining(r);
+      return {Date:r.date, Site:investorLinkName(r.siteId), Investor:r.investorName, 'Amount Taken':Number(r.taken), 'Return Due':Number(r.returnAmt), 'Paid Till Date':paid, Remaining:remaining, 'Expected Date':r.expDate||'—', Note:r.note||'', Amount:remaining};
     });
   } else if(type==='office'){
     const raw = DATA.officeExpenses.filter(r=> inRange(r.date));
