@@ -619,7 +619,7 @@ const OWNER_EMAIL = "sallumirza64@gmail.com";
       </div>
 
       <div class="card">
-        <h2>Material-wise Breakdown <small>Kitna Cement, Steel, Tiles waghera laga — Material expense + Udhar dono milaake (upar wali site-filter ke hisaab se)</small></h2>
+        <h2>Material-wise Breakdown <small>Kitna Cement, Steel, Tiles waghera laga — Material expense (poora paid) + Udhar Pending (abhi jo baaki hai) dono milaake (upar wali site-filter ke hisaab se)</small></h2>
         <div class="table-wrap"><table id="materialBreakdownTable"><thead><tr>
           <th>Material Type</th><th>Amount</th>
         </tr></thead><tbody></tbody></table></div>
@@ -3417,6 +3417,17 @@ function siteCost(siteId){
   const returned = DATA.materialReturns.filter(r=>r.siteId===siteId).reduce((a,r)=>a+Number(r.amount),0);
   return exp + ud - returned;
 }
+/* Net-of-payments version — for anywhere showing "what's currently owed"
+   (Site Detail's Performance Breakdown, its chart, etc.) rather than
+   accrual total cost (used for Profit & Loss, WIP valuation, COGS). */
+function siteCostNet(siteId){
+  const exp = DATA.expenses.filter(e=>e.siteId===siteId).reduce((a,e)=>a+Number(e.amount),0);
+  const su = DATA.udhar.filter(u=>u.siteId===siteId);
+  const remainingMap = udharRemainingForEntries(su);
+  const udPending = su.reduce((a,u)=>a+Math.max(remainingMap[u.id]||0,0),0);
+  const returned = DATA.materialReturns.filter(r=>r.siteId===siteId).reduce((a,r)=>a+Number(r.amount),0);
+  return exp + udPending - returned;
+}
 /* Remaining balance per udhar entry, accounting for vendor lumpsum payments —
    use this anywhere "Credit Pending" is shown instead of the raw status field. */
 function udharRemainingForEntries(entries){
@@ -4572,7 +4583,17 @@ function openSiteDetail(siteId){
   if(!site) return;
   siteLedgerFilter = null;
 
-  const cost = siteCost(siteId);
+  // Computed net-of-payments here (not the accrual siteCost() used for P&L
+  // elsewhere) so every number shown in this modal — the stat cards above
+  // and the breakdown table below — reconciles with the others instead of
+  // mixing a gross Udhar figure into an otherwise net picture.
+  const udharForSiteEarly = DATA.udhar.filter(u=>u.siteId===siteId);
+  const siteUdharRemainingMapEarly = udharRemainingForEntries(udharForSiteEarly);
+  const udharNetForCost = udharForSiteEarly.reduce((a,u)=>a+Math.max(siteUdharRemainingMapEarly[u.id]||0,0),0);
+  const expEarly = DATA.expenses.filter(e=>e.siteId===siteId);
+  const nonUdharCost = expEarly.reduce((a,e)=>a+Number(e.amount),0);
+  const returnedEarly = DATA.materialReturns.filter(r=>r.siteId===siteId).reduce((a,r)=>a+Number(r.amount),0);
+  const cost = nonUdharCost + udharNetForCost - returnedEarly;
   const received = currentRole==='owner' ? siteReceived(siteId) : 0;
   const net = received - cost;
   const isOwner = currentRole === 'owner';
@@ -4583,7 +4604,9 @@ function openSiteDetail(siteId){
   const labourCost = exp.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
   const materialCost = exp.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
   const otherCost = exp.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
-  const udharCost = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
+  const udharForSite = udharForSiteEarly;
+  const siteUdharRemainingMap = siteUdharRemainingMapEarly;
+  const udharCost = udharNetForCost; // net — actually still owed
   const contractorPending = DATA.workAgreements.filter(ag=>ag.siteId===siteId).reduce((a,ag)=>{
     const bal = Number(ag.fixedAmount) - computePaidForAgreement(ag);
     return a + (bal>0?bal:0);
@@ -4591,16 +4614,17 @@ function openSiteDetail(siteId){
   const contractValue = Number(site.contractValue)||0;
   const clientPending = contractValue ? Math.max(contractValue-received,0) : 0;
 
-  // Material-wise breakdown: combines both "Material" type expenses AND
-  // Udhar entries, since both represent material bought for the site.
+  // Material-wise breakdown: combines both "Material" type expenses (already
+  // fully paid) AND Udhar's net pending (what's still actually owed) — using
+  // gross udhar here would double-count whatever's already been paid off.
   const matBreakdown = {};
   exp.filter(e=>e.type==='material').forEach(e=>{
     const key = e.category || 'Other';
     matBreakdown[key] = (matBreakdown[key]||0) + Number(e.amount);
   });
-  DATA.udhar.filter(u=>u.siteId===siteId).forEach(u=>{
+  udharForSite.forEach(u=>{
     const key = u.material || 'Other';
-    matBreakdown[key] = (matBreakdown[key]||0) + Number(u.amount);
+    matBreakdown[key] = (matBreakdown[key]||0) + Math.max(siteUdharRemainingMap[u.id]||0, 0);
   });
   const matRows = Object.entries(matBreakdown).sort((a,b)=>b[1]-a[1]);
 
@@ -4633,7 +4657,7 @@ function openSiteDetail(siteId){
           <tr style="cursor:pointer" onclick="filterSiteLedgerByType('${siteId}','expense','labour','Labour')"><td>Labour</td><td class="amt">${inr(labourCost)}</td></tr>
           <tr style="cursor:pointer" onclick="filterSiteLedgerByType('${siteId}','expense','material','Material')"><td>Material</td><td class="amt">${inr(materialCost)}</td></tr>
           <tr style="cursor:pointer" onclick="filterSiteLedgerByType('${siteId}','expense','other','Other')"><td>Other</td><td class="amt">${inr(otherCost)}</td></tr>
-          <tr style="cursor:pointer" onclick="filterSiteLedgerByType('${siteId}','udhar','','Udhar Material')"><td>Udhar Material</td><td class="amt">${inr(udharCost)}</td></tr>
+          <tr style="cursor:pointer" onclick="filterSiteLedgerByType('${siteId}','udhar','','Udhar Material')"><td>Udhar Pending</td><td class="amt">${inr(udharCost)}</td></tr>
           <tr><td>Contractor Balance Still Due</td><td class="amt" style="color:${contractorPending>0?'var(--bad)':'inherit'}">${inr(contractorPending)}</td></tr>
           <tr style="background:var(--surface-2);font-weight:700"><td>Total Cost (Outcome)</td><td class="amt">${inr(cost)}</td></tr>
         </tbody></table></div>
@@ -4754,9 +4778,11 @@ function renderSiteDetailChart(siteId, received, cost){
   const labour = exp.filter(e=>e.type==='labour').reduce((a,e)=>a+Number(e.amount),0);
   const material = exp.filter(e=>e.type==='material').reduce((a,e)=>a+Number(e.amount),0);
   const other = exp.filter(e=>e.type==='other').reduce((a,e)=>a+Number(e.amount),0);
-  const udharAmt = DATA.udhar.filter(u=>u.siteId===siteId).reduce((a,u)=>a+Number(u.amount),0);
+  const udharForChart = DATA.udhar.filter(u=>u.siteId===siteId);
+  const udharChartRemainingMap = udharRemainingForEntries(udharForChart);
+  const udharAmt = udharForChart.reduce((a,u)=>a+Math.max(udharChartRemainingMap[u.id]||0,0),0);
 
-  const labels = ['Labour','Material','Other','Udhar'];
+  const labels = ['Labour','Material','Other','Udhar Pending'];
   const values = [labour, material, other, udharAmt];
   if(currentRole === 'owner'){ labels.unshift('Income'); values.unshift(received); }
 
@@ -5509,7 +5535,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
     }catch(e){ err.textContent = 'Error: ' + e.message; return; }
     if(document.getElementById('siteDetailBg')){
       renderSiteDetailLedger(siteId);
-      renderSiteDetailChart(siteId, currentRole==='owner'?siteReceived(siteId):0, siteCost(siteId));
+      renderSiteDetailChart(siteId, currentRole==='owner'?siteReceived(siteId):0, siteCostNet(siteId));
     }
     document.getElementById('qSavedHint').textContent = `Saved: ${name} — ${inr(amount)} (${siteName(siteId)}) — Udhar`;
     document.getElementById('qName').value = '';
@@ -5536,7 +5562,7 @@ document.getElementById('qSave').addEventListener('click', async ()=>{
   renderExpenseTable(); renderDashboard(); renderSitesTable(); renderAgreementsTable();
   if(document.getElementById('siteDetailBg')){
     renderSiteDetailLedger(siteId);
-    renderSiteDetailChart(siteId, currentRole==='owner'?siteReceived(siteId):0, siteCost(siteId));
+    renderSiteDetailChart(siteId, currentRole==='owner'?siteReceived(siteId):0, siteCostNet(siteId));
   }
   maybeOfferContractorWhatsApp(siteId, name, type, amount, date);
 
@@ -8856,9 +8882,13 @@ function computeChartOfAccounts(){
   const netIncome = revenue - totalCogs - totalOverhead - (investorInterest>0?investorInterest:0);
 
   // A rough cash proxy: money actually collected, minus money actually paid
-  // out in cash/bank (i.e. NOT sitting as a payable — udhar and unpaid
-  // contractor balances haven't left the bank yet).
-  const cashPaidOut = (labourTotal + materialTotal + otherTotal - udharPendingAll)
+  // out in cash/bank. Labour/Material/Other (from Add Expense) are already
+  // 100% cash by definition — Udhar entries are the ones that may be only
+  // partly paid, so only the PAID portion of udhar (total taken minus what's
+  // still pending) has actually left the bank; same logic for contractor
+  // balances.
+  const udharPaidOff = udharAllTotal - udharPendingAll;
+  const cashPaidOut = (labourTotal + materialTotal + otherTotal) + udharPaidOff
     + (agreementsFixedTotal - contractorBalanceDue)
     + totalOffice + investorPaidBack + personalInvestTotal
     + DATA.personalLoans.filter(l=>l.status!=='returned').reduce((a,l)=>a+Number(l.amount),0);
@@ -9334,9 +9364,10 @@ function renderMaterialBreakdown(exp, ud){
     const key = e.category || 'Other';
     map[key] = (map[key]||0) + Number(e.amount);
   });
+  const materialUdharRemainingMap = udharRemainingForEntries(ud);
   ud.forEach(u=>{
     const key = u.material || 'Other';
-    map[key] = (map[key]||0) + Number(u.amount);
+    map[key] = (map[key]||0) + Math.max(materialUdharRemainingMap[u.id]||0, 0);
   });
   const rows = Object.entries(map).sort((a,b)=>b[1]-a[1]);
   if(rows.length===0){
